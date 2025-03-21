@@ -1,0 +1,29 @@
+{
+  "canisters": {
+    "icrc1_ledger_canister": {
+      "type": "custom",
+      "candid": "src/ledger-suite-icrc/2025-01-21/ledger.did",
+      "wasm": "src/ledger-suite-icrc/2025-01-21/ic-icrc1-ledger.wasm.gz",
+      "init_arg": "(variant { Init = record { token_symbol = \"ckBTC\"; token_name = \"Test ckBTC\"; minting_account = record { owner = principal \"oqduc-oz3zz-rxohm-q6usa-khhwz-nln4s-7jslu-bc4kk-xt7gd-gkfkx-yae\"; subaccount = null }; transfer_fee = 0; decimals = opt 8; max_memo_length = opt 32; metadata = vec {}; initial_balances = vec { record { record { owner = principal \"oqduc-oz3zz-rxohm-q6usa-khhwz-nln4s-7jslu-bc4kk-xt7gd-gkfkx-yae\"; subaccount = null }; 1000_00000000 } }; feature_flags = opt record { icrc2 = true }; archive_options = record { num_blocks_to_archive = 0 : nat64; trigger_threshold = 10000 : nat64; controller_id = principal \"oqduc-oz3zz-rxohm-q6usa-khhwz-nln4s-7jslu-bc4kk-xt7gd-gkfkx-yae\"; cycles_for_archive_creation = opt (10000000000000 : nat64); max_transactions_per_response = opt (1000 : nat64); max_message_size_bytes = opt (3000000 : nat64); node_max_memory_size_bytes = opt (3000000000 : nat64); more_controller_ids = opt vec {} } }})"
+    },
+    "canister_main": {
+      "type": "kybra",
+      "main": "src/canister_main/main.py"
+    },
+    "canister_frontend": {
+      "source": [
+        "src/canister_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "canister_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}

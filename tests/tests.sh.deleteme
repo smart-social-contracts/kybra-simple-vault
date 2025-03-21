@@ -1,0 +1,17 @@
+#!/bin/sh
+
+# Exit on error
+# set -e
+
+export CANISTER_ID=`dfx canister id canister_main`
+
+# Run pytest and store its exit code
+#PYTHONPATH=$PWD/../src/canister_main python -m pytest -s tests.py
+sleep 99999
+
+exit $?
+
+# python test_stress.py
+# ic-repl test.sh 
+# python test-ai./py
+
