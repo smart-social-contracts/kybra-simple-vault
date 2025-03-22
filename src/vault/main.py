@@ -1,6 +1,3 @@
-from kybra import query, update, Principal, nat64, Opt, Variant, Record, Vec, ic, null, void
-from ckbtc_ledger import ckBTC_Ledger, TransferRequest, TransferResponse
-
 from kybra import (
     Async,
     CallResult,
@@ -20,6 +17,11 @@ from kybra import (
     null,
     ic,
 )
+
+MAINNET_CKBTC_LEDGER_CANISTER = 'mxzaz-hqaaa-aaaar-qaada-cai'
+
+CKBTC_CANISTER = MAINNET_CKBTC_LEDGER_CANISTER
+# CKBTC_INDEX_CANISTER = 'bkyz2-fmaaa-aaaaa-qaaaq-cai'
 
 
 class Account(Record):
@@ -87,39 +89,28 @@ class ICRCLedger(Service):
         ...
 
 
-def get_canister_balance_2() -> Async[int]:
-    # def get_canister_balance_2() -> int:
-    ic.print('get_canister_balance_2')
-    ledger = ICRCLedger(Principal.from_str('bkyz2-fmaaa-aaaaa-qaaaq-cai'))
-    account = Account(owner=ic.id(), subaccount=None)
-
-    ic.print(ic.id())
-
-    result: CallResult[int] = yield ledger.icrc1_balance_of(account)
-
-    ic.print(result)
-
-    return match(result, {
-        "Ok": lambda ok: ok,
-        "Err": lambda err: 0  # Return 0 balance on error
-    })
+@query
+def get_canister_id() -> Async[Principal]:
+    return ic.id()
 
 
 @query
 def get_canister_balance() -> Async[nat]:
-    return get_canister_balance_2()
+    # TODO: this one doesn't work but it doesn't matter...
+    ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
+    account = Account(owner=ic.id(), subaccount=None)
+
+    result: CallResult[nat] = yield ledger.icrc1_balance_of(account)
+
+    return match(result, {
+        "Ok": lambda ok: ok,
+        "Err": lambda err: -1  # Return -1 balance on error
+    })
 
 
-def do_transfer_2(to: Principal, amount: nat) -> Async[int]:
-    '''
-    transfer the tokens from this canister to `to`
-    '''
-
-    ic.print('transfer_2')
-    ledger = ICRCLedger(Principal.from_str('mxzaz-hqaaa-aaaar-qaada-cai'))
-
-    ic.print('to = %s' % to)
-    ic.print('amount = %d' % amount)
+@update
+def do_transfer(to: Principal, amount: nat) -> Async[nat]:
+    ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
 
     args: TransferArg = TransferArg(
         to=Account(owner=to, subaccount=None),
@@ -132,75 +123,12 @@ def do_transfer_2(to: Principal, amount: nat) -> Async[int]:
 
     result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
 
-    ic.print('result')
-    ic.print(str(result))
-
     return match(result, {
-        "Ok": lambda ok: 1,
-        "Err": lambda err: 0
+        "Ok": lambda ok: 0,
+        "Err": lambda err: -1
     })
-
-# {
-#             "BadFee": lambda bad_fee: 0,
-#             "BadBurn": lambda bad_burn: 0,
-#             "InsufficientFunds": lambda insufficient_funds: 0,
-#             "TooOld": lambda too_old: 0,
-#             "CreatedInFuture": lambda created_in_future: 0,
-#             "Duplicate": lambda duplicate: 0,
-#             "TemporarilyUnavailable": lambda temporarily_unavailable: 0,
-#             "GenericError": lambda generic_error: 0
-#         }
-
-
-@update
-def do_transfer(to: Principal, amount: nat) -> Async[nat]:
-    ret = do_transfer_2(to, amount)
-    ic.print('ret = %s' % ret)
-    return ret
-
-# class TransferResult(Variant):
-#     Ok: nat64
-#     Err: str
 
 
 @query
 def version() -> str:
-    return '0.6.11'
-
-
-# @update
-# def transfer(to: Principal, amount: nat64) -> TransferResult:
-#     ic.print('transfer')
-#     ic.print(to)
-#     ic.print(amount)
-#     """Transfers ckBTC to another user using the ckBTC Ledger canister"""
-#     caller = ic.caller()
-
-#     # Call the ckBTC ledger canister
-#     try:
-#         ic.print('1')
-#         response = ic.call(
-#             Principal.from_str("bkyz2-fmaaa-aaaaa-qaaaq-cai"),  # Local ckBTC Ledger Canister ID
-#             "icrc1_transfer",
-#             {
-#                 "to": {"owner": to, "subaccount": Opt.none()},
-#                 "amount": amount,
-#                 "fee": Opt.none(),
-#                 "memo": Opt.none(),
-#                 "from_subaccount": Opt.none(),
-#                 "created_at_time": Opt.none()
-#             }
-#         )
-#         ic.print('2')
-#         ic.print(str(response))
-#         if "Ok" in response:
-#             print('3a')
-#             return TransferResult.Ok(response["Ok"])
-#         else:
-#             print('3b')
-#             return TransferResult.Err("Transfer failed")
-#     except Exception as e:
-#         print('4')
-#         return TransferResult.Err(str(e))
-
-#     print('0000')
+    return '0.6.24'
