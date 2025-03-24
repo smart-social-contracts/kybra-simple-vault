@@ -149,11 +149,11 @@ TRANSACTION_FIELD_MAPPINGS = {
 
 
 class ExecuteCallRawResult(Variant, total=False):
-    Ok: str
+    Ok: dict
     Err: str
 
 
-def map_fields(obj, field_mappings):
+def map_fields(obj: dict, field_mappings: dict) -> dict:
     """Maps numeric field IDs to human-readable names."""
     return {
         field_mappings.get(key, key): value
@@ -161,7 +161,7 @@ def map_fields(obj, field_mappings):
     }
 
 
-def parse_transactions(transactions):
+def parse_transactions(transactions: list) -> list:
     """Parses a list of transaction records."""
     return [
         map_fields(tx, TRANSACTION_FIELD_MAPPINGS)
@@ -169,7 +169,7 @@ def parse_transactions(transactions):
     ]
 
 
-def parse_response(response):
+def parse_response(response: dict) -> dict:
     """Parses the entire response structure."""
     parsed = map_fields(response, RESPONSE_FIELD_MAPPINGS)
 
@@ -193,24 +193,17 @@ def my_get_transactions(
         0
     )
 
-    if call_result.Err:
-        return {"Err": call_result.Err}
-
-    response: str = parse_response(ic.candid_decode(call_result.Ok))
-
-    return {"Ok": response}
-
-    # match(
-    #     call_result,
-    #     {
-    #         "Ok": lambda ok: {
-    #             "Ok": response
-    #         },
-    #         "Err": lambda err: {"Err": err},
-    #     },
-    # )
+    return match(
+        call_result,
+        {
+            "Ok": lambda ok: {
+                "Ok": parse_response(ic.candid_decode(ok))
+            },
+            "Err": lambda err: {"Err": err},
+        },
+    )
 
 
 @query
 def version() -> str:
-    return '0.6.36'
+    return '0.6.33'
