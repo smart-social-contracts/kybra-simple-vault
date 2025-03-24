@@ -196,7 +196,8 @@ def my_get_transactions(
     if call_result.Err:
         return {"Err": call_result.Err}
 
-    response: str = parse_response(ic.candid_decode(call_result.Ok))
+    # response: str = parse_response(ic.candid_decode(call_result.Ok))
+    response: str = "test"
 
     return {"Ok": response}
 
@@ -213,4 +214,4 @@ def my_get_transactions(
 
 @query
 def version() -> str:
-    return '0.6.36'
+    return '0.6.37'
