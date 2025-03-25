@@ -134,57 +134,66 @@ def do_transfer(to: Principal, amount: nat) -> Async[nat]:
     })
 
 
-# Define your field mappings based on the CKBTC canister's Candid interface
-RESPONSE_FIELD_MAPPINGS = {
-    1_779_015_299: "oldest_tx_id",
-    2_799_807_105: "total_transactions",
-    3_650_848_786: "transactions",
-}
-
-TRANSACTION_FIELD_MAPPINGS = {
-    2_215_343_202: "start",
-    2_668_074_214: "length",
-    2_131_139_013: "func",
-}
-
-
-class ExecuteCallRawResult(Variant, total=False):
-    Ok: str
-    Err: str
-
-
-def map_fields(obj, field_mappings):
-    """Maps numeric field IDs to human-readable names."""
-    return {
-        field_mappings.get(key, key): value
-        for key, value in obj.items()
+def parse(input_str: str):
+    # Field mapping
+    field_map = {
+        "1_779_015_299": "first_index",
+        "2_799_807_105": "log_length",
+        "3_331_539_157": "transactions",
+        "3_650_848_786": "archived_transactions",
+        "2_131_139_013": "callback",
+        "2_215_343_202": "start",
+        "2_668_074_214": "length"
     }
 
+    # Clean up lines
+    lines = [line.strip().strip(';') for line in input_str.splitlines() if '=' in line]
 
-def parse_transactions(transactions):
-    """Parses a list of transaction records."""
-    return [
-        map_fields(tx, TRANSACTION_FIELD_MAPPINGS)
-        for tx in transactions
-    ]
+    # Output dictionary
+    output = {
+        "transactions": [],
+        "archived_transactions": []
+    }
 
+    # Temporary storage for archived_transaction
+    archived = {}
 
-def parse_response(response):
-    """Parses the entire response structure."""
-    parsed = map_fields(response, RESPONSE_FIELD_MAPPINGS)
+    for line in lines:
+        parts = line.split('=', 1)
+        key = parts[0].strip()
+        value = parts[1].strip()
 
-    if "transactions" in parsed:
-        parsed["transactions"] = parse_transactions(parsed["transactions"])
+        if key == "1_779_015_299":
+            output["first_index"] = value.split(':')[0].strip()
+        elif key == "2_799_807_105":
+            output["log_length"] = value.split(':')[0].strip()
+        elif key == "3_650_848_786":
+            pass  # Skip vector keyword line
+        elif key == "2_131_139_013":
+            value = value.replace('func', '').strip()
+            principal, method = value.split('"')[1], value.split('.')[-1]
+            archived["callback"] = {
+                "principal": principal,
+                "code": method
+            }
+        elif key == "2_215_343_202":
+            archived["start"] = value.split(':')[0].strip()
+        elif key == "2_668_074_214":
+            archived["length"] = value.split(':')[0].strip()
 
-    return parsed
+    # Only add archived transaction if callback was found
+    if "callback" in archived:
+        output["archived_transactions"].append(archived)
+
+    return output
 
 
 @update
 def my_get_transactions(
     start: nat, length: nat
-) -> Async[ExecuteCallRawResult]:
-    # Correct argument encoding using Python dict
-    candid_args = {"start": start, "length": length}
+) -> str:
+    # Example: '(record { start = 2_324_900 : nat; length = 2 : nat })'
+    candid_args = '(record { start = %s : nat; length = %s : nat })' % (start, length)
 
     call_result: CallResult[blob] = yield ic.call_raw(
         Principal.from_str(CKBTC_CANISTER),
@@ -193,13 +202,24 @@ def my_get_transactions(
         0
     )
 
-    if call_result.Err:
-        return {"Err": call_result.Err}
+    # response = parse(ic.candid_decode(call_result.Ok))
+    return str(ic.candid_decode(call_result.Ok))
 
-    # response: str = parse_response(ic.candid_decode(call_result.Ok))
-    response: str = "test"
+    # return match(
+    #     call_result,
+    #     {
+    #         "Ok": lambda ok: str(ic.candid_decode(ok)),
+    #         "Err": lambda err: str(err),
+    #     },
+    # )
 
-    return {"Ok": response}
+    # if call_result.Err:
+    #     return str(call_result.Err)
+
+    # # response: str = parse_response(ic.candid_decode(call_result.Ok))
+    # response: str = "test"
+
+    # return str(response)
 
     # match(
     #     call_result,
@@ -214,4 +234,4 @@ def my_get_transactions(
 
 @query
 def version() -> str:
-    return '0.6.37'
+    return '0.6.46'
