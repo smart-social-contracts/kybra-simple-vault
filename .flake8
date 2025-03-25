@@ -1,0 +1,11 @@
+[flake8]
+# Ignore line length, blank line at end of file, and line break before binary operator
+ignore = E501,W391,W503
+
+# Other style checks will still be enforced
+exclude = 
+    .git,
+    __pycache__,
+    build,
+    dist,
+    *.egg-info

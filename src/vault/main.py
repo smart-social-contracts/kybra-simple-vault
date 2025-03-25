@@ -25,6 +25,18 @@ from kybra import (
 from kybra import Principal, query, update, blob, Vec, nat, Record, ic
 
 
+from kybra_simple_db import *  # TODO
+db_storage = StableBTreeMap[str, str](
+    memory_id=0, max_key_size=100_000, max_value_size=1_000_000
+)
+db_audit = StableBTreeMap[str, str](
+    memory_id=1, max_key_size=100_000, max_value_size=1_000_000
+)
+
+Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
+
+
+
 MAINNET_CKBTC_LEDGER_CANISTER = 'mxzaz-hqaaa-aaaar-qaada-cai'
 
 CKBTC_CANISTER = MAINNET_CKBTC_LEDGER_CANISTER
