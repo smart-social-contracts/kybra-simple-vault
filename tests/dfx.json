@@ -1,6 +1,6 @@
 {
   "canisters": {
-    "test": {
+    "vault": {
       "type": "kybra",
       "main": "src/main.py"
     }

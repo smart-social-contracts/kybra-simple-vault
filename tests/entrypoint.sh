@@ -6,6 +6,8 @@ set -x
 echo "Starting dfx..."
 dfx start --background --clean
 
+
+sleep 9999
 # Deploy the test canister
 echo "Deploying test canister..."
 dfx deploy
