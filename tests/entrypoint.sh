@@ -6,6 +6,8 @@ set -x
 echo "Starting dfx..."
 dfx start --background --clean
 
+# sleep 999999
+
 # Deploy the test canister
 echo "Deploying test canister..."
 dfx deploy
@@ -28,7 +30,7 @@ TEST_IDS=('parse_candid')
 # Loop through each test identifier
 for TEST_ID in "${TEST_IDS[@]}"; do
   echo "Testing test_${TEST_ID} module..."
-  TEST_RESULT=$(dfx canister call test run_test ${TEST_ID})
+  TEST_RESULT=$(dfx canister call vault run_test ${TEST_ID})
   if [ "$TEST_RESULT" != '(0 : int)' ]; then
     echo "Error: test_${TEST_ID}.run() function returned unexpected result: $TEST_RESULT"
     dfx stop

@@ -1,4 +1,6 @@
 
+import ast
+
 def parse_candid(i: str) -> str:
     i = i.strip()
     i = i.replace('record {', '{')
