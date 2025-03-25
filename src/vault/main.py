@@ -17,7 +17,9 @@ from kybra import (
     query,
     blob,
     null,
-    ic
+    ic,
+    heartbeat,
+    void
 )
 
 from kybra import Principal, query, update, blob, Vec, nat, Record, ic
@@ -226,31 +228,24 @@ def my_get_transactions(
     response = parse_candid(ic.candid_decode(call_result.Ok))
     return str(response)
 
-    # return match(
-    #     call_result,
-    #     {
-    #         "Ok": lambda ok: str(ic.candid_decode(ok)),
-    #         "Err": lambda err: str(err),
-    #     },
-    # )
 
-    # if call_result.Err:
-    #     return str(call_result.Err)
 
-    # # response: str = parse_response(ic.candid_decode(call_result.Ok))
-    # response: str = "test"
+last_heartbeat_time = 0
+time_period_seconds = 10
 
-    # return str(response)
+@heartbeat
+def heartbeat_() -> void:
+    # ic.print("this runs ~1 time per second")
+    global last_heartbeat_time
+    now = ic.time()
+    if (now - last_heartbeat_time) / 1e9 > time_period_seconds:
+        last_heartbeat_time = now
+    # ic.print("last_heartbeat_time: %s" % last_heartbeat_time)
 
-    # match(
-    #     call_result,
-    #     {
-    #         "Ok": lambda ok: {
-    #             "Ok": response
-    #         },
-    #         "Err": lambda err: {"Err": err},
-    #     },
-    # )
+@query
+def get_last_heartbeat_time() -> str:
+    return str(last_heartbeat_time / 1e9)
+
 
 
 @query
