@@ -22,7 +22,7 @@ from kybra import (
     void
 )
 
-from kybra import Principal, query, update, blob, Vec, nat, Record, ic
+
 
 
 from kybra_simple_db import *  # TODO
