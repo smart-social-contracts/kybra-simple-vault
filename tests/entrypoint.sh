@@ -6,8 +6,6 @@ set -x
 echo "Starting dfx..."
 dfx start --background --clean
 
-
-sleep 9999
 # Deploy the test canister
 echo "Deploying test canister..."
 dfx deploy
@@ -23,22 +21,22 @@ dfx deploy
 #   echo "greet function test passed!"
 # fi
 
-# # Define a list of test identifiers
-# TEST_IDS=('example_1' 'example_2' 'entity' 'mixins' 'properties' 'relationships' 'database' 'audit')
+# Define a list of test identifiers
+TEST_IDS=('parse_candid')
 
 
-# # Loop through each test identifier
-# for TEST_ID in "${TEST_IDS[@]}"; do
-#   echo "Testing test_${TEST_ID} module..."
-#   TEST_RESULT=$(dfx canister call test run_test ${TEST_ID})
-#   if [ "$TEST_RESULT" != '(0 : int)' ]; then
-#     echo "Error: test_${TEST_ID}.run() function returned unexpected result: $TEST_RESULT"
-#     dfx stop
-#     exit 1
-#   else
-#     echo "test_${TEST_ID}.run() function test passed!"
-#   fi
-# done
+# Loop through each test identifier
+for TEST_ID in "${TEST_IDS[@]}"; do
+  echo "Testing test_${TEST_ID} module..."
+  TEST_RESULT=$(dfx canister call test run_test ${TEST_ID})
+  if [ "$TEST_RESULT" != '(0 : int)' ]; then
+    echo "Error: test_${TEST_ID}.run() function returned unexpected result: $TEST_RESULT"
+    dfx stop
+    exit 1 
+  else
+    echo "test_${TEST_ID}.run() function test passed!"
+  fi
+done
 
 echo "Stopping dfx..."
 dfx stop
