@@ -1,4 +1,4 @@
-import base64
+import ast
 
 from kybra import (
     Async,
@@ -134,8 +134,55 @@ def do_transfer(to: Principal, amount: nat) -> Async[nat]:
     })
 
 
-def parse(input_str: str):
-    # Field mapping
+
+def parse_candid(i: str) -> str:
+    i = i.strip()
+    i = i.replace('record {', '{')
+    i = i.replace('opt', '')
+    i = i.replace('blob', '')
+    i = i.replace('vec', '')
+    i = i.replace('principal', '')
+    i = i.replace('null', 'None')
+    i = i.replace(': nat64', '')
+    i = i.replace(': nat', '')
+    i = i.replace(';', '')
+    i = i.replace('_', '')
+    i = i.replace(' = ', ': ')
+    i = i.replace('\x00', '')
+
+    i2 = []
+    is_inside_transactions = False
+    level = 0
+    lines = i.split('\n')
+    for i, l in enumerate(lines):
+        if is_inside_transactions:
+            if '{' in l:
+                level += 1
+            if '}' in l:
+                level -= 1
+                if level < 0:
+                    is_inside_transactions = False
+                    l = ']'
+
+        if '1349681965' in l:
+            continue
+        if '5094982' in l:
+            continue
+        if l == '}' and is_inside_transaction:
+            l = ']'
+        if '{' not in l and '(' not in l:
+            if ',' not in l and i != len(lines) - 1:
+                l += ','
+        if '3331539157:  {' in l:
+            l = '3331539157 : ['
+            is_inside_transactions = True
+            level = 0
+
+        i2.append(l)
+
+
+    i2 = '\n'.join(i2)
+
     field_map = {
         "1_779_015_299": "first_index",
         "2_799_807_105": "log_length",
@@ -143,49 +190,23 @@ def parse(input_str: str):
         "3_650_848_786": "archived_transactions",
         "2_131_139_013": "callback",
         "2_215_343_202": "start",
-        "2_668_074_214": "length"
+        "2_668_074_214": "length",
+        "2781795542": "timestamp",
+        "1191829844": "kind",
+        "3573748184": "amount",
+        "3664621355": "transfer",
+        "1136829802": "from",
+        "947296307": "owner",
+        "25979": "to",
     }
 
-    # Clean up lines
-    lines = [line.strip().strip(';') for line in input_str.splitlines() if '=' in line]
+    for k, v in field_map.items():
+        i2 = i2.replace(k.replace('_', ''), '"%s"' % v)
 
-    # Output dictionary
-    output = {
-        "transactions": [],
-        "archived_transactions": []
-    }
+    print(i2)
+    d = ast.literal_eval(i2)
 
-    # Temporary storage for archived_transaction
-    archived = {}
-
-    for line in lines:
-        parts = line.split('=', 1)
-        key = parts[0].strip()
-        value = parts[1].strip()
-
-        if key == "1_779_015_299":
-            output["first_index"] = value.split(':')[0].strip()
-        elif key == "2_799_807_105":
-            output["log_length"] = value.split(':')[0].strip()
-        elif key == "3_650_848_786":
-            pass  # Skip vector keyword line
-        elif key == "2_131_139_013":
-            value = value.replace('func', '').strip()
-            principal, method = value.split('"')[1], value.split('.')[-1]
-            archived["callback"] = {
-                "principal": principal,
-                "code": method
-            }
-        elif key == "2_215_343_202":
-            archived["start"] = value.split(':')[0].strip()
-        elif key == "2_668_074_214":
-            archived["length"] = value.split(':')[0].strip()
-
-    # Only add archived transaction if callback was found
-    if "callback" in archived:
-        output["archived_transactions"].append(archived)
-
-    return output
+    return d
 
 
 @update
@@ -202,8 +223,8 @@ def my_get_transactions(
         0
     )
 
-    # response = parse(ic.candid_decode(call_result.Ok))
-    return str(ic.candid_decode(call_result.Ok))
+    response = parse_candid(ic.candid_decode(call_result.Ok))
+    return str(response)
 
     # return match(
     #     call_result,
