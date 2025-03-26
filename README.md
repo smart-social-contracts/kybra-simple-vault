@@ -1,5 +1,31 @@
 # kybra-simple-vault
 
+
+A canister written in Python using Kybra that allows to:
+- receive ckBTC/ckETH/ckUSDC from any principal and keep track of the balance for each principal
+- withdraw ckBTC/ckETH/ckUSDC to a specific address
+- set admins (who can withdraw)
+- get the balance of a principal
+- get the list of admins
+
+
+methods to:
+	get balances
+	withdrawt to a specific address
+	see status
+	
+make the heartbeat:
+	check if any transfer from anywhere to the canister
+	if so, increase the balance (create a key if not yet)
+  do the test in non-ic first
+	
+
+# dfx commands
+dfx cycles top-up vault 1T --network ic
+
+
+
+
 This project allows to:
 
 
