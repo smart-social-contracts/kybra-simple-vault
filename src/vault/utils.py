@@ -70,4 +70,4 @@ def parse_candid(i: str) -> str:
     print(i2)
     d = ast.literal_eval(i2)
 
-    return d
+    return d[0]

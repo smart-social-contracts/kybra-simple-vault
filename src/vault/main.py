@@ -35,7 +35,8 @@ db_audit = StableBTreeMap[str, str](
 
 Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
 
-
+import utils_icp
+from entities import app_data
 
 # Transaction(_id='...', ..)
 
@@ -148,24 +149,9 @@ def do_transfer(to: Principal, amount: nat) -> Async[nat]:
         "Err": lambda err: -1
     })
 
-
 @update
-def my_get_transactions(
-    start: nat, length: nat
-) -> str:
-    # Example: '(record { start = 2_324_900 : nat; length = 2 : nat })'
-    candid_args = '(record { start = %s : nat; length = %s : nat })' % (start, length)
-
-    call_result: CallResult[blob] = yield ic.call_raw(
-        Principal.from_str(CKBTC_CANISTER),
-        "get_transactions",
-        ic.candid_encode(candid_args),
-        0
-    )
-
-    response = parse_candid(ic.candid_decode(call_result.Ok))
-    return str(response)
-
+def get_transactions(start: nat, length: nat) -> str:
+    return str(utils_icp.get_transactions(start, length))
 
 last_heartbeat_time = 0
 time_period_seconds = 10
@@ -185,7 +171,11 @@ def heartbeat_() -> void:
 def get_last_heartbeat_time() -> str:
     return str(last_heartbeat_time / 1e9)
 
+@query
+def stats() -> str:
+    return str(app_data.to_dict())
+
 
 @query
 def version() -> str:
-    return '0.6.50'
+    return '0.6.51'

@@ -1,2 +1,4 @@
-MAINNET_CKBTC_LEDGER_CANISTER = 'mxzaz-hqaaa-aaaar-qaada-cai'
-MAINNET_CKETH_LEDGER_CANISTER = 'ss2fx-dyaaa-aaaar-qacoq-cai'
+_MAINNET_CKBTC_LEDGER_CANISTER = 'mxzaz-hqaaa-aaaar-qaada-cai'
+_MAINNET_CKETH_LEDGER_CANISTER = 'ss2fx-dyaaa-aaaar-qacoq-cai'
+
+CKBTC_CANISTER = _MAINNET_CKBTC_LEDGER_CANISTER

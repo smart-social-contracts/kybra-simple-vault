@@ -6,13 +6,14 @@ echo "Running tests..."
 
 exit_code=0
 
-TEST_IDS=('parse_candid')
+TEST_IDS=('parse_candid' 'basic')
+TEST_PYTHON_PATH="tests/src/vault:src/vault"
 
 # Check if a specific test ID is provided as an argument
 if [ "$1" ]; then
   if [[ " ${TEST_IDS[@]} " =~ " $1 " ]]; then
     echo "Running test $1..."
-    PYTHONPATH="src/vault:tests/src/vault" python tests/src/vault/tests/test_$1.py || exit_code=1
+    PYTHONPATH=$TEST_PYTHON_PATH python tests/src/vault/tests/test_$1.py || exit_code=1
     exit $exit_code
   else
     echo "Invalid test ID: $1"
@@ -22,7 +23,7 @@ if [ "$1" ]; then
 fi
 
 for TEST_ID in "${TEST_IDS[@]}"; do
-  PYTHONPATH="src/vault:tests/src/vault" python tests/src/vault/tests/test_${TEST_ID}.py || exit_code=1
+  PYTHONPATH=$TEST_PYTHON_PATH python tests/src/vault/tests/test_${TEST_ID}.py || exit_code=1
 done
 
 if [ $exit_code -eq 0 ]; then

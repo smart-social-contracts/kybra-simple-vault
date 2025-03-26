@@ -2,4 +2,4 @@
 .dfx
 venv
 kybra_simple_db
-
+__pycache__
