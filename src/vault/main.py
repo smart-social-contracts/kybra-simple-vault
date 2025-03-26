@@ -1,5 +1,5 @@
-from core import parse_candid
 import ast
+import constants
 
 from kybra import (
     Async,
@@ -36,32 +36,11 @@ db_audit = StableBTreeMap[str, str](
 Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
 
 
-class Application(Entity, TimestampedMixin):
-    log_length = Integer(min_value=0)
-    admin_principal = String(min_length=2, max_length=50)
-    balance = Integer(min_value=0)
-    total_inflow = Integer(min_value=0)
-    total_outflow = Integer(min_value=0)
-
-
-class Category(Entity, TimestampedMixin):
-    name = String(min_length=2, max_length=50)
-
-
-class Transaction(Entity, TimestampedMixin):
-    principal_from = String(min_length=2, max_length=50)
-    principal_to = String(min_length=2, max_length=50)
-    amount = Integer(min_value=0)
-    timestamp = Integer(min_value=0)
-    categories = ManyToMany("Category", "transactions")
-
 
 # Transaction(_id='...', ..)
 
 
-MAINNET_CKBTC_LEDGER_CANISTER = 'mxzaz-hqaaa-aaaar-qaada-cai'
-
-CKBTC_CANISTER = MAINNET_CKBTC_LEDGER_CANISTER
+CKBTC_CANISTER = constants.MAINNET_CKBTC_LEDGER_CANISTER
 # CKBTC_INDEX_CANISTER = 'bkyz2-fmaaa-aaaaa-qaaaq-cai'
 
 
