@@ -1,8 +1,3 @@
-from entities import app_data
-import utils_icp
-import ast
-import constants
-
 from kybra import (
     Async,
     CallResult,
@@ -26,8 +21,8 @@ from kybra import (
     StableBTreeMap
 )
 
-
 from kybra_simple_db import *  # TODO
+
 db_storage = StableBTreeMap[str, str](
     memory_id=0, max_key_size=100_000, max_value_size=1_000_000
 )
@@ -35,15 +30,14 @@ db_audit = StableBTreeMap[str, str](
     memory_id=1, max_key_size=100_000, max_value_size=1_000_000
 )
 
-try:
-    Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
-except:
-    pass
+Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
 
+from entities import app_data
+if not app_data.vault_principal:
+    app_data.vault_principal = ic.id()
 
-# Transaction(_id='...', ..)
-
-
+import utils_icp
+import constants
 
 from services import TransactionTracker, transactions_tracker_hearbeat
 from constants import TIME_PERIOD_SECONDS, CKBTC_CANISTER

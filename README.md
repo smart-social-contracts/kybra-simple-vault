@@ -1,5 +1,16 @@
 # kybra-simple-vault
 
+TODO:
+  deploy (update) the canister in prod and see if it works now (error)
+  implement withdrawal
+  implement admin
+  implement rest of ck currencies
+
+  test:
+    check 
+
+
+
 
 A canister written in Python using Kybra that allows to:
 - receive ckBTC/ckETH/ckUSDC from any principal and keep track of the balance for each principal

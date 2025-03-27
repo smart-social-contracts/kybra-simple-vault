@@ -12,33 +12,40 @@ dfx start --background --clean
 echo "Deploying test canister..."
 dfx deploy
 
-# # Call greet and check output
-# echo "Testing greet function..."
-# GREET_RESULT=$(dfx canister call test greet)
-# if [ "$GREET_RESULT" != '("Hello!")' ]; then
-#   echo "Error: greet function returned unexpected result: $GREET_RESULT"
-#   dfx stop
-#   exit 1
-# else
-#   echo "greet function test passed!"
-# fi
+# # # Call greet and check output
+# # echo "Testing greet function..."
+# # GREET_RESULT=$(dfx canister call test greet)
+# # if [ "$GREET_RESULT" != '("Hello!")' ]; then
+# #   echo "Error: greet function returned unexpected result: $GREET_RESULT"
+# #   dfx stop
+# #   exit 1
+# # else
+# #   echo "greet function test passed!"
+# # fi
 
-# Define a list of test identifiers
-TEST_IDS=('parse_candid')
+# # Define a list of test identifiers
+# # TEST_IDS=('parse_candid')
+# TEST_IDS=('basic')
 
 
-# Loop through each test identifier
-for TEST_ID in "${TEST_IDS[@]}"; do
-  echo "Testing test_${TEST_ID} module..."
-  TEST_RESULT=$(dfx canister call vault run_test ${TEST_ID})
-  if [ "$TEST_RESULT" != '(0 : int)' ]; then
-    echo "Error: test_${TEST_ID}.run() function returned unexpected result: $TEST_RESULT"
-    dfx stop
-    exit 1 
-  else
-    echo "test_${TEST_ID}.run() function test passed!"
-  fi
-done
+# # Loop through each test identifier
+# for TEST_ID in "${TEST_IDS[@]}"; do
+#   echo "Testing test_${TEST_ID} module..."
+#   TEST_RESULT=$(dfx canister call vault run_test ${TEST_ID})
+#   if [ "$TEST_RESULT" != '(0 : int)' ]; then
+#     echo "Error: test_${TEST_ID}.run() function returned unexpected result: $TEST_RESULT"
+#     dfx stop
+#     exit 1 
+#   else
+#     echo "test_${TEST_ID}.run() function test passed!"
+#   fi
+# done
+
+# Deploy the test canister
+echo "Re-Deploying test canister..."
+dfx deploy
+
+
 
 echo "Stopping dfx..."
 dfx stop

@@ -1,7 +1,7 @@
 import utils_icp
 import utils
-from entities import app_data, Transaction
-
+from entities import app_data, Transaction, Balance
+import traceback
 
 def transactions_tracker_hearbeat():
     # ic.print("this runs ~1 time per second")
@@ -16,37 +16,42 @@ class TransactionTracker:
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(TransactionTracker, cls).__new__(cls)
-            cls._instance.reset()
         return cls._instance
 
-    def reset(self, vault_principal: str):
-        app_data.vault_principal = vault_principal
-        app_data.log_length = 0
-        app_data.balance = 0  # TODO: add support for initial default values in kybra-simple-db
-        app_data.total_inflow = 0
-        app_data.total_outflow = 0
-        app_data.initial_index = 0
-
     def check_transactions(self):
-        get_transactions_response = utils_icp.get_transactions(app_data.log_length, 100)
+        if not app_data.last_processed_index:
+            get_transactions_response = utils_icp.get_transactions(0, 1)
+            log_length = get_transactions_response['log_length']
+            app_data.last_processed_index = log_length
+            return
+
+        get_transactions_response = utils_icp.get_transactions(app_data.last_processed_index, 100)
         transactions = get_transactions_response['transactions']
-        first_index = get_transactions_response['first_index']
-
+        
         for i, transaction in enumerate(transactions):
-            transaction_index = first_index + i
-            if not app_data.initial_index:
-                app_data.initial_index = transaction_index
-            t = Transaction(_id=transaction_index,
-                            principal_from=transaction['transfer']['from']['owner'],
-                            principal_to=transaction['transfer']['to']['owner'],
-                            amount=transaction['transfer']['amount'],
-                            timestamp=transaction['timestamp'],
-                            kind=transaction['kind'],
-                            )
-            # TODO: add categories
+            transaction_index = app_data.last_processed_index
+            print('transaction %d' % transaction_index)
 
-        app_data.log_length = get_transactions_response['log_length']
-        print('** app_data', app_data.to_dict())
+            try:
+                principal_from = transaction['transfer']['from']['owner']
+                principal_to = transaction['transfer']['to']['owner']
+                relevant = app_data.vault_principal in (principal_from, principal_to)
+                if relevant:
+                    amount = int(transaction['transfer']['amount'])
+                    t = Transaction(_id=str(transaction_index),
+                                    principal_from=principal_from,
+                                    principal_to=principal_to,
+                                    amount=amount,
+                                    timestamp=transaction['timestamp'],
+                                    kind=transaction['kind'])
+                    balance_from = Balance[principal_from] or Balance(_id=principal_from)
+                    balance_to = Balance[principal_to] or Balance(_id=principal_to)
+                    balance_from.amount = balance_from.amount - amount
+                    balance_to.amount = balance_to.amount + amount
+            except:
+                print(traceback.format_exc())
 
-
+            app_data.last_processed_index = app_data.last_processed_index + 1
+            if not app_data.first_processed_index:
+                app_data.first_processed_index = transaction_index
 

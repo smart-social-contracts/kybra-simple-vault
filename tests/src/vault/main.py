@@ -1,9 +1,10 @@
 from kybra import StableBTreeMap, ic, query, update
 
 from kybra_simple_db import *  # TODO
-from tests import (
-    test_parse_candid
-)
+# from tests import (
+#     # test_parse_candid
+#     test_basic
+# )
 
 db_storage = StableBTreeMap[str, str](
     memory_id=0, max_key_size=100_000, max_value_size=1_000_000

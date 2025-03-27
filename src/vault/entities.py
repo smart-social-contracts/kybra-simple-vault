@@ -2,35 +2,27 @@ from kybra_simple_db import *
 
 
 class ApplicationData(Entity, TimestampedMixin):
-    initial_index = Integer(min_value=0)
-    log_length = Integer(min_value=0)
-    admin_principal = String(min_length=2, max_length=50)
-    vault_principal = String(min_length=2, max_length=50)
-    balance = Integer(min_value=0)
-    total_inflow = Integer(min_value=0)
-    total_outflow = Integer(min_value=0)
-
+    first_processed_index = Integer(min_value=0, default=0)
+    last_processed_index = Integer(min_value=0, default=0)
+    admin_principal = String()
+    vault_principal = String()
     last_heartbeat_time = Integer(min_value=0)
-
 
 app_data = ApplicationData(_id='main')
 
 
-# def app_data():
-#     global _app_data
-#     if not _app_data:
-#         _app_data = ApplicationData['main']
-#     return _app_data
-
-
 class Category(Entity, TimestampedMixin):
-    name = String(min_length=2, max_length=50)
+    name = String()
 
 
 class Transaction(Entity, TimestampedMixin):
-    principal_from = String(min_length=2, max_length=50)
-    principal_to = String(min_length=2, max_length=50)
+    principal_from = String()
+    principal_to = String()
     amount = Integer(min_value=0)
     timestamp = Integer(min_value=0)
-    kind = String(min_length=2, max_length=50)
+    kind = String()
     categories = ManyToMany("Category", "transactions")
+
+class Balance(Entity, TimestampedMixin):
+    amount = Integer(default=0)
+    currency = String()
