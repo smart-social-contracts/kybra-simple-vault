@@ -1,3 +1,6 @@
+from vault.utils import log
+from vault.services import TransactionTracker, transactions_tracker_hearbeat
+from vault.entities import app_data
 from kybra import (
     Async,
     CallResult,
@@ -32,15 +35,11 @@ db_audit = StableBTreeMap[str, str](
 
 Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
 
-from entities import app_data
-if not app_data.vault_principal:
-    app_data.vault_principal = ic.id().to_str()
+if not app_data().vault_principal:
+    app_data().vault_principal = ic.id().to_str()
 
-import utils_icp
-import constants
+# import utils_icp
 
-from services import TransactionTracker, transactions_tracker_hearbeat
-from constants import TIME_PERIOD_SECONDS, CKBTC_CANISTER
 
 class Account(Record):
     owner: Principal
@@ -112,54 +111,57 @@ def get_canister_id() -> Async[Principal]:
     return ic.id()
 
 
-@query
-def get_canister_balance() -> Async[nat]:
-    # TODO: this one doesn't work but it doesn't matter...
-    ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
-    account = Account(owner=ic.id(), subaccount=None)
+# @query
+# def get_canister_balance() -> Async[nat]:
+#     # TODO: this one doesn't work but it doesn't matter...
+#     ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
+#     account = Account(owner=ic.id(), subaccount=None)
 
-    result: CallResult[nat] = yield ledger.icrc1_balance_of(account)
+#     result: CallResult[nat] = yield ledger.icrc1_balance_of(account)
 
-    return match(result, {
-        "Ok": lambda ok: ok,
-        "Err": lambda err: -1  # Return -1 balance on error
-    })
-
-
-@update
-def do_transfer(to: Principal, amount: nat) -> Async[nat]:
-    ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
-
-    args: TransferArg = TransferArg(
-        to=Account(owner=to, subaccount=None),
-        amount=amount,
-        fee=None,  # Optional fee, will use default
-        memo=None,  # Optional memo field
-        from_subaccount=None,  # No subaccount specified
-        created_at_time=None  # System will use current time
-    )
-
-    result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
-
-    return match(result, {
-        "Ok": lambda ok: 0,
-        "Err": lambda err: -1
-    })
+#     return match(result, {
+#         "Ok": lambda ok: ok,
+#         "Err": lambda err: -1  # Return -1 balance on error
+#     })
 
 
-@update
-def get_transactions(start: nat, length: nat) -> str:
-    return str(utils_icp.get_transactions(start, length))
+# @update
+# def do_transfer(to: Principal, amount: nat) -> Async[nat]:
+#     ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
+
+#     args: TransferArg = TransferArg(
+#         to=Account(owner=to, subaccount=None),
+#         amount=amount,
+#         fee=None,  # Optional fee, will use default
+#         memo=None,  # Optional memo field
+#         from_subaccount=None,  # No subaccount specified
+#         created_at_time=None  # System will use current time
+#     )
+
+#     result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
+
+#     return match(result, {
+#         "Ok": lambda ok: 0,
+#         "Err": lambda err: -1
+#     })
+
+
+# @update
+# def get_transactions(start: nat, length: nat) -> str:
+#     return str(utils_icp.get_transactions(start, length))
 
 
 @heartbeat
 def heartbeat_() -> void:
+    ic.print("Heartbeat stats")
+    # log('Heartbeat 2')
     transactions_tracker_hearbeat()
+    ic.print("Heartbeat stats end")
 
 
 @query
 def stats() -> str:
-    return str(app_data.to_dict())
+    return str(app_data().to_dict())
 
 
 @update
@@ -170,4 +172,4 @@ def reset() -> str:
 
 @query
 def version() -> str:
-    return '0.6.53'
+    return '0.6.58'

@@ -6,8 +6,8 @@ from kybra import (
     ic
 )
 
-from constants import CKBTC_CANISTER
-# from utils import parse_candid
+from vault.constants import CKBTC_CANISTER
+from vault.utils import parse_candid
 
 
 def get_transactions(start: nat, length: nat) -> str:
@@ -21,6 +21,4 @@ def get_transactions(start: nat, length: nat) -> str:
         0
     )
 
-    return 'aaa'
-
-    # return parse_candid(ic.candid_decode(call_result.Ok))
+    return parse_candid(ic.candid_decode(call_result.Ok))

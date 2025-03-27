@@ -13,17 +13,17 @@ from kybra_simple_db import *
 
 class TestBasic:
     def test_basic(self):
-        app_data.vault_principal = 'aaaa-test'
+        app_data().vault_principal = 'aaaa-test'
         transaction_tracker = TransactionTracker()
         transaction_tracker.check_transactions()
 
-        d = app_data.to_dict()
+        d = app_data().to_dict()
         print('d', d)
         assert d['first_processed_index'] == 0
         assert d['last_processed_index'] == 2328395
 
         transaction_tracker.check_transactions()
-        d = app_data.to_dict()
+        d = app_data().to_dict()
         
         assert d['first_processed_index'] == 2328395
         assert d['last_processed_index'] == 2328398

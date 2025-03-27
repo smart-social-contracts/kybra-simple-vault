@@ -1,5 +1,6 @@
 import ast
 
+
 def parse_candid(i: str) -> str:
     i = i.strip()
     i = i.replace('record {', '{')
@@ -71,3 +72,24 @@ def parse_candid(i: str) -> str:
     d = ast.literal_eval(i2)
 
     return d[0]
+
+
+def running_on_ic() -> bool:
+    try:
+        from kybra import ic
+        if hasattr(ic, '_kybra_ic'):
+            return True
+    except ImportError:
+        pass
+    return False
+
+
+def log(text: str):
+    print(text)
+
+
+if running_on_ic():
+    from kybra import ic
+
+    def log(text: str):
+        ic.print(text)

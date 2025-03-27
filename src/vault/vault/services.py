@@ -1,14 +1,26 @@
-import utils_icp
-from entities import app_data, Transaction, Balance
+from vault.utils_icp import get_transactions
+from vault.entities import app_data, Transaction, Balance
 import traceback
+from vault.constants import TIME_PERIOD_SECONDS
+from kybra import ic
+from vault.utils import log
 
 
 def transactions_tracker_hearbeat():
-    # ic.print("this runs ~1 time per second")
+    ic.print('transactions_tracker_hearbeat')
     now = ic.time()
-    if (now - app_data.last_heartbeat_time) / 1e9 > TIME_PERIOD_SECONDS:
-        app_data.last_heartbeat_time = now
-        TransactionTracker().check_transactions()
+    ic.print('now = %s' % now)
+    if app_data().last_heartbeat_time is None:
+        app_data().last_heartbeat_time = 0
+    ic.print('last_heartbeat_time = %s' % app_data().last_heartbeat_time)
+    if (now - app_data().last_heartbeat_time) / 1e9 > TIME_PERIOD_SECONDS:
+        try:
+            ic.print('check_transactions')
+            app_data().last_heartbeat_time = now
+            TransactionTracker().check_transactions()
+        except:
+            ic.print(traceback.format_exc())
+    ic.print('transactions_tracker_hearbeat end')
 
 
 class TransactionTracker:
@@ -20,22 +32,22 @@ class TransactionTracker:
         return cls._instance
 
     def check_transactions(self):
-        if not app_data.last_processed_index:
-            get_transactions_response = utils_icp.get_transactions(0, 1)
+        if not app_data().last_processed_index:
+            get_transactions_response = get_transactions(0, 1)
             log_length = get_transactions_response['log_length']
-            app_data.last_processed_index = log_length
+            app_data().last_processed_index = log_length
             return
 
-        get_transactions_response = utils_icp.get_transactions(app_data.last_processed_index, 100)
+        get_transactions_response = get_transactions(app_data().last_processed_index, 100)
         transactions = get_transactions_response['transactions']
 
         for i, transaction in enumerate(transactions):
-            transaction_index = app_data.last_processed_index
+            transaction_index = app_data().last_processed_index
 
             try:
                 principal_from = transaction['transfer']['from']['owner']
                 principal_to = transaction['transfer']['to']['owner']
-                relevant = app_data.vault_principal in (principal_from, principal_to)
+                relevant = app_data().vault_principal in (principal_from, principal_to)
                 if relevant:
                     amount = int(transaction['transfer']['amount'])
                     t = Transaction(_id=str(transaction_index),
@@ -51,7 +63,6 @@ class TransactionTracker:
             except:
                 print(traceback.format_exc())
 
-            app_data.last_processed_index = app_data.last_processed_index + 1
-            if not app_data.first_processed_index:
-                app_data.first_processed_index = transaction_index
-
+            app_data().last_processed_index = app_data().last_processed_index + 1
+            if not app_data().first_processed_index:
+                app_data().first_processed_index = transaction_index

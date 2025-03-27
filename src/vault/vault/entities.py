@@ -6,9 +6,11 @@ class ApplicationData(Entity, TimestampedMixin):
     last_processed_index = Integer(min_value=0, default=0)
     admin_principal = String()
     vault_principal = String()
-    last_heartbeat_time = Integer(min_value=0)
+    last_heartbeat_time = Integer(min_value=0, default=0)
 
-app_data = ApplicationData(_id='main')
+
+def app_data():
+    return ApplicationData['main'] or ApplicationData(_id='main')
 
 
 class Category(Entity, TimestampedMixin):
@@ -22,6 +24,7 @@ class Transaction(Entity, TimestampedMixin):
     timestamp = Integer(min_value=0)
     kind = String()
     categories = ManyToMany("Category", "transactions")
+
 
 class Balance(Entity, TimestampedMixin):
     amount = Integer(default=0)
