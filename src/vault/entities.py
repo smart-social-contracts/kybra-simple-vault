@@ -2,12 +2,15 @@ from kybra_simple_db import *
 
 
 class ApplicationData(Entity, TimestampedMixin):
+    initial_index = Integer(min_value=0)
     log_length = Integer(min_value=0)
     admin_principal = String(min_length=2, max_length=50)
     vault_principal = String(min_length=2, max_length=50)
     balance = Integer(min_value=0)
     total_inflow = Integer(min_value=0)
     total_outflow = Integer(min_value=0)
+
+    last_heartbeat_time = Integer(min_value=0)
 
 
 app_data = ApplicationData(_id='main')
@@ -29,4 +32,5 @@ class Transaction(Entity, TimestampedMixin):
     principal_to = String(min_length=2, max_length=50)
     amount = Integer(min_value=0)
     timestamp = Integer(min_value=0)
+    kind = String(min_length=2, max_length=50)
     categories = ManyToMany("Category", "transactions")

@@ -1,12 +1,12 @@
 
 def get_transactions(start: int, length: int) -> str:
-
+    print('** get_transactions', start, length)
     if start == 0:
-        return {'first_index': 2328390,
-                'log_length': 2328398,
+        return {'first_index': 2328300,
+                'log_length':  2328398,
                 'transactions': [], 'archived_transactions': {}}
     else:
-        return {'first_index': 2328390,
+        return {'first_index': 2328396,
                 'log_length': 2328398,
                 'transactions': [
                     {1092621391: None,

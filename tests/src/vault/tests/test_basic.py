@@ -12,12 +12,16 @@ from services import TransactionTracker
 
 class TestBasic:
     def test_basic(self):
-        print('app_data', app_data.to_dict())
-
         transaction_tracker = TransactionTracker('vault', 0)
         transaction_tracker.check_transactions()
 
-        print('app_data', app_data.to_dict())
+        d = app_data.to_dict()
+        assert d['initial_index'] == 2328390
+        assert d['log_length'] == 2328398
+        assert d['vault_principal'] == 'vault'
+        assert d['balance'] == 0
+        assert d['total_inflow'] == 0
+        assert d['total_outflow'] == 0
 
         return 0
 

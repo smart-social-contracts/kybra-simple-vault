@@ -1,3 +1,5 @@
+from entities import app_data
+import utils_icp
 import ast
 import constants
 
@@ -33,17 +35,18 @@ db_audit = StableBTreeMap[str, str](
     memory_id=1, max_key_size=100_000, max_value_size=1_000_000
 )
 
-Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
+try:
+    Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
+except:
+    pass
 
-import utils_icp
-from entities import app_data
 
 # Transaction(_id='...', ..)
 
 
-CKBTC_CANISTER = constants.MAINNET_CKBTC_LEDGER_CANISTER
-# CKBTC_INDEX_CANISTER = 'bkyz2-fmaaa-aaaaa-qaaaq-cai'
 
+from services import TransactionTracker, transactions_tracker_hearbeat
+from constants import TIME_PERIOD_SECONDS, CKBTC_CANISTER
 
 class Account(Record):
     owner: Principal
@@ -149,33 +152,28 @@ def do_transfer(to: Principal, amount: nat) -> Async[nat]:
         "Err": lambda err: -1
     })
 
+
 @update
 def get_transactions(start: nat, length: nat) -> str:
     return str(utils_icp.get_transactions(start, length))
 
-last_heartbeat_time = 0
-time_period_seconds = 10
-
 
 @heartbeat
 def heartbeat_() -> void:
-    # ic.print("this runs ~1 time per second")
-    global last_heartbeat_time
-    now = ic.time()
-    if (now - last_heartbeat_time) / 1e9 > time_period_seconds:
-        last_heartbeat_time = now
-    # ic.print("last_heartbeat_time: %s" % last_heartbeat_time)
+    transactions_tracker_hearbeat()
 
-
-@query
-def get_last_heartbeat_time() -> str:
-    return str(last_heartbeat_time / 1e9)
 
 @query
 def stats() -> str:
     return str(app_data.to_dict())
 
 
+@update
+def reset() -> str:
+    TransactionTracker().reset(ic.id().to_str())
+    return stats()
+
+
 @query
 def version() -> str:
-    return '0.6.51'
+    return '0.6.52'
