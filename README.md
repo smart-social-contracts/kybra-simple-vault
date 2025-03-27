@@ -33,8 +33,10 @@ make the heartbeat:
 
 # dfx commands
 dfx cycles top-up vault 1T --network ic
-
-
+dfx canister --network ic call aaaaa-aa stored_chunks '(record { canister_id = principal "guja4-2aaaa-aaaam-qdhjq-cai" })'
+dfx canister --network ic call aaaaa-aa clear_chunk_store '(record {
+  canister_id = principal "guja4-2aaaa-aaaam-qdhjq-cai"
+})'
 
 
 This project allows to:

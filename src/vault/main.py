@@ -34,7 +34,7 @@ Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
 
 from entities import app_data
 if not app_data.vault_principal:
-    app_data.vault_principal = ic.id()
+    app_data.vault_principal = ic.id().to_str()
 
 import utils_icp
 import constants
@@ -170,4 +170,4 @@ def reset() -> str:
 
 @query
 def version() -> str:
-    return '0.6.52'
+    return '0.6.53'

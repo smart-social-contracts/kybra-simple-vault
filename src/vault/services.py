@@ -1,7 +1,7 @@
 import utils_icp
-import utils
 from entities import app_data, Transaction, Balance
 import traceback
+
 
 def transactions_tracker_hearbeat():
     # ic.print("this runs ~1 time per second")
@@ -9,6 +9,7 @@ def transactions_tracker_hearbeat():
     if (now - app_data.last_heartbeat_time) / 1e9 > TIME_PERIOD_SECONDS:
         app_data.last_heartbeat_time = now
         TransactionTracker().check_transactions()
+
 
 class TransactionTracker:
     _instance = None
@@ -27,10 +28,9 @@ class TransactionTracker:
 
         get_transactions_response = utils_icp.get_transactions(app_data.last_processed_index, 100)
         transactions = get_transactions_response['transactions']
-        
+
         for i, transaction in enumerate(transactions):
             transaction_index = app_data.last_processed_index
-            print('transaction %d' % transaction_index)
 
             try:
                 principal_from = transaction['transfer']['from']['owner']

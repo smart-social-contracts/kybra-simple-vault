@@ -1,28 +1,14 @@
 from kybra import (
-    Async,
     CallResult,
-    match,
-    Opt,
     Principal,
-    Record,
-    Service,
-    service_query,
-    service_update,
-    Variant,
     nat,
-    nat64,
-    update,
-    query,
     blob,
-    null,
-    ic,
-    heartbeat,
-    void,
-    StableBTreeMap
+    ic
 )
 
 from constants import CKBTC_CANISTER
 # from utils import parse_candid
+
 
 def get_transactions(start: nat, length: nat) -> str:
     # Example: '(record { start = 2_324_900 : nat; length = 2 : nat })'
