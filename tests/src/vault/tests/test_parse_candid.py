@@ -10,6 +10,33 @@ from utils import parse_candid
 
 
 class TestCandid:
+    def test_parse_candid_message_archived(self):
+
+        i = '''
+(
+  {
+    1779015299: 2337000 
+    2799807105: 2338698 
+    3331539157:  {}
+    3650848786:  {
+      {
+        2131139013: func "nbsys-saaaa-aaaar-qaaga-cai".gettransactions
+        2215343202: 0 
+        2668074214: 1 
+      }
+    }
+  },
+)
+      '''
+
+        d = {'first_index': 2337000,
+             'log_length': 2338698,
+             'transactions': [], 'archived_transactions': {}}
+
+        if parse_candid(i) == d:
+            return 0
+        return 1
+
     def test_parse_candid(self):
         i = '''
 (
@@ -138,7 +165,7 @@ class TestCandid:
 def run():
     print("Running tests...")
     tester = Tester(TestCandid)
-    return tester.run_tests()
+    return tester.run_tests(['test_parse_candid_message_archived'])
 
 
 if __name__ == "__main__":

@@ -152,11 +152,14 @@ def get_canister_id() -> Async[Principal]:
 
 
 @heartbeat
-def heartbeat_() -> void:
-    ic.print("Heartbeat stats")
-    # log('Heartbeat 2')
-    transactions_tracker_hearbeat()
-    ic.print("Heartbeat stats end")
+def heartbeat_() -> Async[void]:
+    yield transactions_tracker_hearbeat()
+
+
+@update
+def check_transactions() -> Async[str]:
+    ret = yield TransactionTracker().check_transactions()
+    return str(ret)
 
 
 @query
@@ -172,4 +175,4 @@ def reset() -> str:
 
 @query
 def version() -> str:
-    return '0.6.58'
+    return '0.6.61'

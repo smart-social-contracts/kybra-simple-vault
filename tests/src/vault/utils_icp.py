@@ -4,7 +4,7 @@ def get_transactions(start: int, length: int) -> str:
     if start == 0:
         return {'first_index': 2328300,
                 'log_length':  2328395,
-                'transactions': [], 'archived_transactions': {}}
+                'transactions': [], 'archived_transactions': []}
     else:
         return {'first_index': 2328395,
                 'log_length': 2328398,
@@ -47,4 +47,4 @@ def get_transactions(start: int, length: int) -> str:
                             3258775938: None,
                             'amount': 1236274,
                             3868658507: None}}
-                ], 'archived_transactions': {}}
+                ], 'archived_transactions': []}

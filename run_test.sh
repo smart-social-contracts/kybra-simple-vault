@@ -7,7 +7,7 @@ echo "Running tests..."
 exit_code=0
 
 TEST_IDS=('parse_candid' 'basic')
-TEST_PYTHON_PATH="tests/src/vault:src/vault"
+TEST_PYTHON_PATH="tests/src/vault:src/vault:src/vault/vault"
 
 # Check if a specific test ID is provided as an argument
 if [ "$1" ]; then

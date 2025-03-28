@@ -14,6 +14,7 @@ def get_transactions(start: nat, length: nat) -> str:
     # Example: '(record { start = 2_324_900 : nat; length = 2 : nat })'
     candid_args = '(record { start = %s : nat; length = %s : nat })' % (start, length)
 
+    ic.print('get_transactions: %s' % candid_args)
     call_result: CallResult[blob] = yield ic.call_raw(
         Principal.from_str(CKBTC_CANISTER),
         "get_transactions",

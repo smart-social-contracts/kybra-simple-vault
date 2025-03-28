@@ -24,7 +24,7 @@ class TestBasic:
 
         transaction_tracker.check_transactions()
         d = app_data().to_dict()
-        
+        print('111111111111 d', d)
         assert d['first_processed_index'] == 2328395
         assert d['last_processed_index'] == 2328398
 

@@ -7,13 +7,20 @@ class Tester:
         self.test_instance = test_class()
         self.log = print if not logger else logger
 
-    def run_tests(self):
+    def run_tests(self, test_ids=None):
         """Run all test methods in the test class and report results."""
         test_methods = [
             getattr(self.test_instance, func)
             for func in dir(self.test_instance)
             if callable(getattr(self.test_instance, func)) and func.startswith("test_")
         ]
+
+        if test_ids:
+            test_methods = [test for test in test_methods if test.__name__ in test_ids]
+            self.log(f"Running ONLY tests: {', '.join(test.__name__ for test in test_methods)}")
+        else:
+            self.log("Running all tests")
+
         random.shuffle(test_methods)  # catch hidden dependencies among tests
         failed = 0
         for test in test_methods:
