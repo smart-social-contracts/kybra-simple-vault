@@ -2,7 +2,7 @@ from vault.utils_icp import get_transactions
 from vault.entities import app_data, Transaction, Balance
 import traceback
 from vault.constants import TIME_PERIOD_SECONDS
-from kybra import ic, Async, void
+from kybra import ic, Async, void, update, query
 
 
 from kybra_simple_logging import get_logger
@@ -32,18 +32,18 @@ class TransactionTracker:
             cls._instance = super(TransactionTracker, cls).__new__(cls)
         return cls._instance
 
-    def check_transactions(self):
+    def check_transactions(self) -> Async[str]:
         logger.debug('*************** check_transactions')
         ret = []
         if not app_data().last_processed_index:
             get_transactions_response = yield get_transactions(0, 1)
-            logger.debug('*************** get_transactions_response = %s' % get_transactions_response)
+            logger.debug('*************** get_transactions_response (0) = %s' % get_transactions_response)
             log_length = get_transactions_response['log_length']
             app_data().last_processed_index = log_length
-            return ret
+            return str(ret)
 
         get_transactions_response = yield get_transactions(app_data().last_processed_index, 100)
-        logger.debug('*************** get_transactions_response = %s' % get_transactions_response)
+        logger.debug('*************** get_transactions_response (1) = %s' % get_transactions_response)
         transactions = get_transactions_response['transactions']
 
         for i, transaction in enumerate(transactions):
@@ -69,8 +69,12 @@ class TransactionTracker:
             except:
                 print(traceback.format_exc())
 
-            app_data().last_processed_index = app_data().last_processed_index + 1
-            if not app_data().first_processed_index:
-                app_data().first_processed_index = transaction_index
+        app_data().last_processed_index = app_data().last_processed_index + 1
+        if not app_data().first_processed_index:
+            app_data().first_processed_index = transaction_index
 
-            return ret
+        return str(ret)
+
+@update
+def check_transactions_update() -> Async[str]:
+    return TransactionTracker().check_transactions()

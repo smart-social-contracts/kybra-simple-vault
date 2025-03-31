@@ -1,3 +1,4 @@
+import utils_icp
 from kybra_simple_db import *  # TODO
 from vault.services import TransactionTracker, transactions_tracker_hearbeat
 from vault.entities import app_data
@@ -40,8 +41,6 @@ Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
 
 if not app_data().vault_principal:
     app_data().vault_principal = ic.id().to_str()
-
-# import utils_icp
 
 
 class Account(Record):
@@ -149,9 +148,10 @@ def get_canister_id() -> Async[Principal]:
 #     })
 
 
-# @update
-# def get_transactions(start: nat, length: nat) -> str:
-#     return str(utils_icp.get_transactions(start, length))
+@update
+def get_transactions(start: nat, length: nat) -> Async[str]:
+    ret = yield utils_icp.get_transactions(start, length)
+    return str(ret)
 
 
 # @heartbeat # TODO: Disable hearbeat for now
@@ -172,7 +172,7 @@ def stats() -> str:
 
 @update
 def reset() -> str:
-    TransactionTracker().reset(ic.id().to_str())
+    Database.reset()
     return stats()
 
 
