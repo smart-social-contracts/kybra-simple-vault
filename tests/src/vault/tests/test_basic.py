@@ -1,7 +1,6 @@
 # """Tests for entity functionality in Kybra Simple DB."""
 
-import ast
-
+import asyncio
 from tester import Tester
 
 # from utils import parse_candid
@@ -12,17 +11,17 @@ from services import TransactionTracker
 from kybra_simple_db import *
 
 class TestBasic:
-    def test_basic(self):
+    async def test_basic(self):
         app_data().vault_principal = 'aaaa-test'
         transaction_tracker = TransactionTracker()
-        transaction_tracker.check_transactions()
+        yield transaction_tracker.check_transactions()
 
         d = app_data().to_dict()
         print('d', d)
         assert d['first_processed_index'] == 0
         assert d['last_processed_index'] == 2328395
 
-        transaction_tracker.check_transactions()
+        yield transaction_tracker.check_transactions()
         d = app_data().to_dict()
         print('111111111111 d', d)
         assert d['first_processed_index'] == 2328395
@@ -37,11 +36,11 @@ class TestBasic:
         return 0
 
 
-def run():
+async def run():
     print("Running tests...")
     tester = Tester(TestBasic)
-    return tester.run_tests()
+    return await tester.run_tests()
 
 
 if __name__ == "__main__":
-    exit(run())
+    exit(asyncio.run(run()))

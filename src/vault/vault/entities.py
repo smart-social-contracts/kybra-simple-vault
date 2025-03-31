@@ -4,6 +4,7 @@ from kybra_simple_db import *
 class ApplicationData(Entity, TimestampedMixin):
     first_processed_index = Integer(min_value=0, default=0)
     last_processed_index = Integer(min_value=0, default=0)
+    log_length = Integer(min_value=0, default=0)
     admin_principal = String()
     vault_principal = String()
     last_heartbeat_time = Integer(min_value=0, default=0)

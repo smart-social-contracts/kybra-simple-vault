@@ -7,7 +7,7 @@ class Tester:
         self.test_instance = test_class()
         self.log = print if not logger else logger
 
-    def run_tests(self, test_ids=None):
+    async def run_tests(self, test_ids=None):
         """Run all test methods in the test class and report results."""
         test_methods = [
             getattr(self.test_instance, func)
@@ -28,7 +28,7 @@ class Tester:
                 # Call setUp if it exists
                 if hasattr(self.test_instance, "setUp"):
                     self.test_instance.setUp()
-                test()
+                await test()
                 self.log(f"\033[92m{test.__name__} passed\033[0m")  # Green for pass
             except Exception as e:
                 self.log(f"\033[91m{test.__name__} failed: {e}\033[0m")  # Red for fail

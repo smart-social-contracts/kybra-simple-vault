@@ -172,7 +172,7 @@ def stats() -> str:
 
 @update
 def reset() -> str:
-    Database.reset()
+    Database.clear()
     return stats()
 
 
