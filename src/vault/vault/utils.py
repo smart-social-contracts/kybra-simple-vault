@@ -1,26 +1,9 @@
 import ast
 import traceback
 
+from kybra_simple_logging import get_logger
 
-def running_on_ic() -> bool:
-    try:
-        from kybra import ic
-        if hasattr(ic, '_kybra_ic'):
-            return True
-    except ImportError:
-        pass
-    return False
-
-
-def log(text: str):
-    print(text)
-
-
-if running_on_ic():
-    from kybra import ic
-
-    def log(text: str):
-        ic.print(text)
+logger = get_logger(__name__)
 
 
 def parse_candid(input: str) -> str:
@@ -105,9 +88,9 @@ def parse_candid(input: str) -> str:
         d = ast.literal_eval(output)
         return d[0]
     except Exception as e:
-        log('Error parsing candid: %s' % e)
-        log('*** Input message:\n%s' % input)
-        log('*** Output message:\n%s' % output)
-        log('*** Traceback:\n%s' % traceback.format_exc())
+        logger.error('Error parsing candid: %s' % e)
+        logger.error('*** Input message:\n%s' % input)
+        logger.error('*** Output message:\n%s' % output)
+        logger.error('*** Traceback:\n%s' % traceback.format_exc())
         raise e
 

@@ -1,4 +1,4 @@
-from vault.utils import log
+from kybra_simple_db import *  # TODO
 from vault.services import TransactionTracker, transactions_tracker_hearbeat
 from vault.entities import app_data
 from kybra import (
@@ -24,7 +24,10 @@ from kybra import (
     StableBTreeMap
 )
 
-from kybra_simple_db import *  # TODO
+from kybra_simple_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 db_storage = StableBTreeMap[str, str](
     memory_id=0, max_key_size=100_000, max_value_size=1_000_000
@@ -151,9 +154,9 @@ def get_canister_id() -> Async[Principal]:
 #     return str(utils_icp.get_transactions(start, length))
 
 
-@heartbeat
-def heartbeat_() -> Async[void]:
-    yield transactions_tracker_hearbeat()
+# @heartbeat # TODO: Disable hearbeat for now
+# def heartbeat_() -> Async[void]:
+#     yield transactions_tracker_hearbeat()
 
 
 @update

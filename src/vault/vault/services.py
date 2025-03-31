@@ -3,7 +3,12 @@ from vault.entities import app_data, Transaction, Balance
 import traceback
 from vault.constants import TIME_PERIOD_SECONDS
 from kybra import ic, Async, void
-from vault.utils import log
+
+
+from kybra_simple_logging import get_logger
+
+logger = get_logger(__name__)
+logger.set_level(logger.DEBUG)
 
 
 def transactions_tracker_hearbeat() -> Async[void]:
@@ -28,16 +33,17 @@ class TransactionTracker:
         return cls._instance
 
     def check_transactions(self):
-        log('*************** check_transactions')
+        logger.debug('*************** check_transactions')
         ret = []
         if not app_data().last_processed_index:
             get_transactions_response = yield get_transactions(0, 1)
-            log('*************** get_transactions_response', get_transactions_response)
+            logger.debug('*************** get_transactions_response = %s' % get_transactions_response)
             log_length = get_transactions_response['log_length']
             app_data().last_processed_index = log_length
             return ret
 
         get_transactions_response = yield get_transactions(app_data().last_processed_index, 100)
+        logger.debug('*************** get_transactions_response = %s' % get_transactions_response)
         transactions = get_transactions_response['transactions']
 
         for i, transaction in enumerate(transactions):
