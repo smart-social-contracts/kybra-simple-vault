@@ -35,47 +35,43 @@ class TransactionTracker:
     def check_transactions(self) -> Async[str]:
         logger.debug('*************** check_transactions')
         ret = []
-        if not app_data().last_processed_index:
+        if not app_data().log_length:
             get_transactions_response = yield get_transactions(0, 1)
             logger.debug('*************** get_transactions_response (0) = %s' % get_transactions_response)
-            log_length = get_transactions_response['log_length']
-            transaction_index = log_length - 1
-        else:
+            app_data().log_length = get_transactions_response['log_length']
+            return app_data().to_dict()
 
-            get_transactions_response = yield get_transactions(app_data().last_processed_index, TRANSACTION_BATCH_SIZE)
-            logger.debug('*************** get_transactions_response (1) = %s' % get_transactions_response)
-            log_length = get_transactions_response['log_length']
-            transactions = get_transactions_response['transactions']
+        get_transactions_response = yield get_transactions(app_data().log_length, TRANSACTION_BATCH_SIZE)
+        logger.debug('*************** get_transactions_response (1) = %s' % get_transactions_response)
+        
+        transaction_index = app_data().log_length
+        log_length = get_transactions_response['log_length']
+        app_data().log_length = log_length
+        transactions = get_transactions_response['transactions']
 
-            transaction_index = app_data().last_processed_index
-            for i, transaction in enumerate(transactions):
+        for i, transaction in enumerate(transactions):
+            try:
+                principal_from = transaction['transfer']['from']['owner']
+                principal_to = transaction['transfer']['to']['owner']
+                relevant = app_data().vault_principal in (principal_from, principal_to)
+                if relevant:
+                    amount = int(transaction['transfer']['amount'])
+                    t = Transaction(_id=str(transaction_index),
+                                    principal_from=principal_from,
+                                    principal_to=principal_to,
+                                    amount=amount,
+                                    timestamp=transaction['timestamp'],
+                                    kind=transaction['kind'])
+                    balance_from = Balance[principal_from] or Balance(_id=principal_from)
+                    balance_to = Balance[principal_to] or Balance(_id=principal_to)
+                    balance_from.amount = balance_from.amount - amount
+                    balance_to.amount = balance_to.amount + amount
+                    ret.append(t._id)
+            except Exception as e:
+                logger.error("Error processing transaction %s: %s" % (transaction, str(e)))
+                logger.error(traceback.format_exc())
 
-                try:
-                    principal_from = transaction['transfer']['from']['owner']
-                    principal_to = transaction['transfer']['to']['owner']
-                    relevant = app_data().vault_principal in (principal_from, principal_to)
-                    if relevant:
-                        amount = int(transaction['transfer']['amount'])
-                        t = Transaction(_id=str(transaction_index),
-                                        principal_from=principal_from,
-                                        principal_to=principal_to,
-                                        amount=amount,
-                                        timestamp=transaction['timestamp'],
-                                        kind=transaction['kind'])
-                        balance_from = Balance[principal_from] or Balance(_id=principal_from)
-                        balance_to = Balance[principal_to] or Balance(_id=principal_to)
-                        balance_from.amount = balance_from.amount - amount
-                        balance_to.amount = balance_to.amount + amount
-                        ret.append(t._id)
-                except Exception as e:
-                    logger.error("Error processing transaction %s: %s" % (transaction, str(e)))
-                    logger.error(traceback.format_exc())
-
-                transaction_index += 1
-
-            if not app_data().first_processed_index:
-                app_data().first_processed_index = transaction_index
-            app_data().log_length = log_length
+            transaction_index += 1
 
         app_data().last_processed_index = transaction_index
         return str(log_length - transaction_index - 1)
