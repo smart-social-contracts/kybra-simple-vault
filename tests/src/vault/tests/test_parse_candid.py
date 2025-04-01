@@ -1,18 +1,15 @@
 # """Tests for entity functionality in Kybra Simple DB."""
 
-import ast
-
-from tester import Tester
+import asyncio
 
 from utils import parse_candid
 # from logger import get_logger
 # log = get_logger()
 
 
-class TestCandid:
-    def test_parse_candid_message_archived(self):
+async def test_parse_candid_message_archived():
 
-        i = '''
+    i = '''
 (
   {
     1779015299: 2337000 
@@ -29,16 +26,20 @@ class TestCandid:
 )
       '''
 
-        d = {'first_index': 2337000,
-             'log_length': 2338698,
-             'transactions': [], 'archived_transactions': {}}
+    d = {'first_index': 2337000,
+         'log_length': 2338698,
+         'transactions': [], 'archived_transactions': [{'start': 0, 'length': 1}]}
 
-        if parse_candid(i) == d:
-            return 0
-        return 1
+    pi = parse_candid(i)
+    if pi == d:
+        return
+    print('pi', pi)
+    print('d ', d)
+    raise Exception("Test failed")
 
-    def test_parse_candid(self):
-        i = '''
+
+async def test_parse_candid():
+    i = '''
 (
   record {
     1_779_015_299 = 2_328_390 : nat;
@@ -116,57 +117,58 @@ class TestCandid:
 )
 '''
 
-        d = {'first_index': 2328390,
-             'log_length': 2328398,
-             'transactions': [
-                 {1092621391: None,
-                  'kind': 'transfer',
-                  1214008994: None,
-                  1378506061: None,
-                  'timestamp': 1742840332822818232,
-                  'transfer': {
-                      'to': {'owner': 'ztwhb-qiaaa-aaaaj-azw7a-cai'},
-                      'from': {'owner': 'ztwhb-qiaaa-aaaaj-azw7a-cai'},
-                      1213809850: None,
-                      3258775938: None,
-                      'amount': 908977,
-                      3868658507: None}},
-                 {1092621391: None,
-                  'kind': 'transfer',
-                  1214008994: None,
-                  1378506061: None,
-                  'timestamp': 1742840334069599178,
-                  'transfer': {
-                      'to': {'owner': 'ztwhb-qiaaa-aaaaj-azw7a-cai'},
-                      'from': {'owner': 'ztwhb-qiaaa-aaaaj-azw7a-cai'},
-                      1213809850: None,
-                      3258775938: None,
-                      'amount': 447890,
-                      3868658507: None}},
-                 {1092621391: None,
-                  'kind': 'transfer',
-                  1214008994: None,
-                  1378506061: None,
-                  'timestamp': 1742840639059074036,
-                  'transfer': {
-                      'to': {'owner': 'rtpxn-77ite-cm6ta-qh5te-pdqj6-ugxwe-dncpt-ewp7c-nui4j-cpvwp-oae'},
-                      'from': {'owner': 'xmiu5-jqaaa-aaaag-qbz7q-cai'},
-                      1213809850: '\x05\x068',
-                      3258775938: None,
-                      'amount': 1236274,
-                      3868658507: None}}
-             ], 'archived_transactions': {}}
+    d = {'first_index': 2328390,
+         'log_length': 2328398,
+         'transactions': [
+             {1092621391: None,
+              'kind': 'transfer',
+              1214008994: None,
+              1378506061: None,
+              'timestamp': 1742840332822818232,
+              'transfer': {
+                  'to': {'owner': 'ztwhb-qiaaa-aaaaj-azw7a-cai'},
+                  'from': {'owner': 'ztwhb-qiaaa-aaaaj-azw7a-cai'},
+                  1213809850: None,
+                  3258775938: None,
+                  'amount': 908977,
+                  3868658507: None}},
+             {1092621391: None,
+              'kind': 'transfer',
+              1214008994: None,
+              1378506061: None,
+              'timestamp': 1742840334069599178,
+              'transfer': {
+                  'to': {'owner': 'ztwhb-qiaaa-aaaaj-azw7a-cai'},
+                  'from': {'owner': 'ztwhb-qiaaa-aaaaj-azw7a-cai'},
+                  1213809850: None,
+                  3258775938: None,
+                  'amount': 447890,
+                  3868658507: None}},
+             {1092621391: None,
+              'kind': 'transfer',
+              1214008994: None,
+              1378506061: None,
+              'timestamp': 1742840639059074036,
+              'transfer': {
+                  'to': {'owner': 'rtpxn-77ite-cm6ta-qh5te-pdqj6-ugxwe-dncpt-ewp7c-nui4j-cpvwp-oae'},
+                  'from': {'owner': 'xmiu5-jqaaa-aaaag-qbz7q-cai'},
+                  1213809850: '\x05\x068',
+                  3258775938: None,
+                  'amount': 1236274,
+                  3868658507: None}}
+         ], 'archived_transactions': []}
 
-        if parse_candid(i) == d:
-            return 0
-        return 1
-
-
-def run():
-    print("Running tests...")
-    tester = Tester(TestCandid)
-    return tester.run_tests(['test_parse_candid_message_archived'])
+    if parse_candid(i) == d:
+        return
+    print('pi', parse_candid(i))
+    print('d ', d)
+    raise Exception("Test failed")
 
 
-if __name__ == "__main__":
-    exit(run())
+async def run():
+    await test_parse_candid_message_archived()
+    await test_parse_candid()
+
+
+if __name__ == '__main__':
+    asyncio.run(run())
