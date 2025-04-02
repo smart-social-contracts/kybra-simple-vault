@@ -8,7 +8,6 @@ from kybra import ic, Async, void, update, query
 from kybra_simple_logging import get_logger
 
 logger = get_logger(__name__)
-logger.set_level(logger.DEBUG)
 
 
 def transactions_tracker_hearbeat() -> Async[void]:
@@ -33,20 +32,15 @@ class TransactionTracker:
         return cls._instance
 
     def check_transactions(self) -> Async[str]:
-        logger.debug('*************** check_transactions')
         ret = []
         if not app_data().log_length:
             get_transactions_response = yield get_transactions(0, 1)
-            logger.debug('*************** get_transactions_response (0) = %s' % get_transactions_response)
             app_data().log_length = get_transactions_response['log_length']
             return app_data().to_dict()
 
-
         requested_index = app_data().last_processed_index or app_data().log_length
-        logger.debug('*************** get_transactions_request (1) = %s %s' % (requested_index, TRANSACTION_BATCH_SIZE))
         get_transactions_response = yield get_transactions(requested_index, TRANSACTION_BATCH_SIZE)
-        logger.debug('*************** get_transactions_response (1) = %s' % get_transactions_response)
-        
+
         transaction_index = requested_index - 1
         log_length = get_transactions_response['log_length']
         app_data().log_length = log_length
