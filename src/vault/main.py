@@ -1,6 +1,6 @@
 import utils_icp
 from kybra_simple_db import *  # TODO
-from vault.services import TransactionTracker, transactions_tracker_hearbeat
+import vault.services as services
 from vault.entities import app_data
 from kybra import (
     Async,
@@ -156,12 +156,12 @@ def get_transactions(start: nat, length: nat) -> Async[str]:
 
 # @heartbeat # TODO: Disable hearbeat for now
 # def heartbeat_() -> Async[void]:
-#     yield transactions_tracker_hearbeat()
+#     yield services.transactions_tracker_hearbeat()
 
 
 @update
 def check_transactions() -> Async[str]:
-    ret = yield TransactionTracker().check_transactions()
+    ret = yield services.TransactionTracker().check_transactions()
     return str(ret)
 
 
@@ -172,9 +172,8 @@ def stats() -> str:
 
 @update
 def reset() -> str:
-    Database.clear()
+    services.reset()
     return stats()
-
 
 @query
 def version() -> str:

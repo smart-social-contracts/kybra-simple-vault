@@ -1,0 +1,137 @@
+{'input': '(record { start = 2357491 : nat; length = 5 : nat })', 'output': <kybra.CallResult object at 0x1997460>, 'parsed_output': None, 'error': 'invalid syntax. Got unexpected token "amount" at line 42 column 11
+          "amount": 13989 ,
+          ^
+Traceback (most recent call last):
+  File "utils_icp", line 48, in get_transactions
+  File "vault.utils", line 95, in parse_candid
+  File "vault.utils", line 88, in parse_candid
+  File "ast", line 64, in literal_eval
+  File "ast", line 51, in parse
+  File "<unknown>", line 42
+    "amount": 13989 ,
+    ^
+SyntaxError: invalid syntax. Got unexpected token "amount" at line 42 column 11
+          "amount": 13989 ,
+          ^
+', 'encoded_output': '(
+  record {
+    1_779_015_299 = 2_357_491 : nat;
+    2_799_807_105 = 2_357_521 : nat;
+    3_331_539_157 = vec {
+      record {
+        1_092_621_391 = null;
+        1_191_829_844 = "transfer";
+        1_214_008_994 = null;
+        1_378_506_061 = null;
+        2_781_795_542 = 1_743_573_640_610_302_708 : nat64;
+        3_664_621_355 = opt record {
+          25_979 = record {
+            947_296_307 = principal "m4f3b-niaaa-aaaag-qndfq-cai";
+            1_349_681_965 = null;
+          };
+          5_094_982 = opt (10 : nat);
+          1_136_829_802 = record {
+            947_296_307 = principal "wlezg-vyaaa-aaaag-qngna-cai";
+            1_349_681_965 = null;
+          };
+          1_213_809_850 = opt blob "\\\\00\\\\00\\\\00\\\\00\\\\00\\\\00\\\\00\\\\01";
+          3_258_775_938 = null;
+          3_573_748_184 = 1_479 : nat;
+          3_868_658_507 = opt record {
+            947_296_307 = principal "m4f3b-niaaa-aaaag-qndfq-cai";
+            1_349_681_965 = null;
+          };
+        };
+      };
+      record {
+        1_092_621_391 = null;
+        1_191_829_844 = "transfer";
+        1_214_008_994 = null;
+        1_378_506_061 = null;
+        2_781_795_542 = 1_743_573_672_166_388_511 : nat64;
+        3_664_621_355 = opt record {
+          25_979 = record {
+            947_296_307 = principal "rnggs-tiaaa-aaaan-qzv5a-cai";
+            1_349_681_965 = null;
+          };
+          5_094_982 = opt (10 : nat);
+          1_136_829_802 = record {
+            947_296_307 = principal "ikolv-gaaaa-aaaan-qmmtq-cai";
+            1_349_681_965 = null;
+          };
+          1_213_809_850 = opt blob "\\\\00\\\\00\\\\00\\\\00\\\\00\\\\00\\\\00\\\\02";
+          3_258_775_938 = opt (1_743_573_670_377_212_499 : nat64);
+          3_573_748_184 = 13_989 : nat;
+          3_868_658_507 = null;
+        };
+      };
+      record {
+        1_092_621_391 = null;
+        1_191_829_844 = "transfer";
+        1_214_008_994 = null;
+        1_378_506_061 = null;
+        2_781_795_542 = 1_743_573_672_166_388_511 : nat64;
+        3_664_621_355 = opt record {
+          25_979 = record {
+            947_296_307 = principal "rnggs-tiaaa-aaaan-qzv5a-cai";
+            1_349_681_965 = null;
+          };
+          5_094_982 = opt (10 : nat);
+          1_136_829_802 = record {
+            947_296_307 = principal "ikolv-gaaaa-aaaan-qmmtq-cai";
+            1_349_681_965 = null;
+          };
+          1_213_809_850 = opt blob "\\\\00\\\\00\\\\00\\\\00\\\\00\\\\00\\\\00\\\\03";
+          3_258_775_938 = opt (1_743_573_670_377_212_499 : nat64);
+          3_573_748_184 = 13_989 : nat;
+          3_868_658_507 = null;
+        };
+      };
+      record {
+        1_092_621_391 = null;
+        1_191_829_844 = "transfer";
+        1_214_008_994 = null;
+        1_378_506_061 = null;
+        2_781_795_542 = 1_743_573_672_166_388_511 : nat64;
+        3_664_621_355 = opt record {
+          25_979 = record {
+            947_296_307 = principal "rnggs-tiaaa-aaaan-qzv5a-cai";
+            1_349_681_965 = null;
+          };
+          5_094_982 = opt (10 : nat);
+          1_136_829_802 = record {
+            947_296_307 = principal "ikolv-gaaaa-aaaan-qmmtq-cai";
+            1_349_681_965 = null;
+          };
+          1_213_809_850 = opt blob "\\\\00\\\\00\\\\00\\\\00\\\\00\\\\00\\\\00\\\\04";
+          3_258_775_938 = opt (1_743_573_670_377_212_499 : nat64);
+          3_573_748_184 = 13_990 : nat;
+          3_868_658_507 = null;
+        };
+      };
+      record {
+        1_092_621_391 = null;
+        1_191_829_844 = "transfer";
+        1_214_008_994 = null;
+        1_378_506_061 = null;
+        2_781_795_542 = 1_743_573_672_166_388_511 : nat64;
+        3_664_621_355 = opt record {
+          25_979 = record {
+            947_296_307 = principal "rnggs-tiaaa-aaaan-qzv5a-cai";
+            1_349_681_965 = null;
+          };
+          5_094_982 = opt (10 : nat);
+          1_136_829_802 = record {
+            947_296_307 = principal "ikolv-gaaaa-aaaan-qmmtq-cai";
+            1_349_681_965 = null;
+          };
+          1_213_809_850 = opt blob "\\\\00\\\\00\\\\00\\\\00\\\\00\\\\00\\\\00\\\\05";
+          3_258_775_938 = opt (1_743_573_670_377_212_499 : nat64);
+          3_573_748_184 = 27_332 : nat;
+          3_868_658_507 = null;
+        };
+      };
+    };
+    3_650_848_786 = vec {};
+  },
+)'}

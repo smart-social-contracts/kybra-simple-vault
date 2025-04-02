@@ -3,6 +3,7 @@ from vault.entities import app_data, Transaction, Balance
 import traceback
 from vault.constants import TIME_PERIOD_SECONDS, TRANSACTION_BATCH_SIZE
 from kybra import ic, Async, void, update, query
+from kybra_simple_db import * 
 
 
 from kybra_simple_logging import get_logger
@@ -23,6 +24,9 @@ def transactions_tracker_hearbeat() -> Async[void]:
             ic.print(traceback.format_exc())
 
 
+def reset() -> void:
+    Database.get_instance().clear()
+
 class TransactionTracker:
     _instance = None
 
@@ -35,16 +39,20 @@ class TransactionTracker:
         ret = []
         if not app_data().log_length:
             get_transactions_response = yield get_transactions(0, 1)
-            app_data().log_length = get_transactions_response['log_length']
+            if get_transactions_response['error']:
+                return get_transactions_response['error']
+            app_data().log_length = get_transactions_response['parsed_output']['log_length']
             return app_data().to_dict()
 
         requested_index = app_data().last_processed_index or app_data().log_length
         get_transactions_response = yield get_transactions(requested_index, TRANSACTION_BATCH_SIZE)
+        if get_transactions_response['error']:
+            return get_transactions_response['error']
 
         transaction_index = requested_index - 1
-        log_length = get_transactions_response['log_length']
+        log_length = get_transactions_response['parsed_output']['log_length']
         app_data().log_length = log_length
-        transactions = get_transactions_response['transactions']
+        transactions = get_transactions_response['parsed_output']['transactions']
 
         for i, transaction in enumerate(transactions):
             try:

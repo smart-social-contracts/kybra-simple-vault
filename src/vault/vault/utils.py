@@ -6,7 +6,7 @@ from kybra_simple_logging import get_logger
 logger = get_logger(__name__)
 
 
-def parse_candid(input: str) -> str:
+def parse_candid(input: str, ret={}) -> str:
     input = input.strip()
     input = input.replace('record {', '{')
     input = input.replace('opt', '')
@@ -85,6 +85,7 @@ def parse_candid(input: str) -> str:
         output = output.replace(k.replace('_', ''), '"%s"' % v)
 
     try:
+        ret['preparsed_output'] = output
         d = ast.literal_eval(output)
         return d[0]
     except Exception as e:
