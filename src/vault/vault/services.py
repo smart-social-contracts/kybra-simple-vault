@@ -41,10 +41,13 @@ class TransactionTracker:
             app_data().log_length = get_transactions_response['log_length']
             return app_data().to_dict()
 
-        get_transactions_response = yield get_transactions(app_data().log_length, TRANSACTION_BATCH_SIZE)
+
+        requested_index = app_data().last_processed_index or app_data().log_length
+        logger.debug('*************** get_transactions_request (1) = %s %s' % (requested_index, TRANSACTION_BATCH_SIZE))
+        get_transactions_response = yield get_transactions(requested_index, TRANSACTION_BATCH_SIZE)
         logger.debug('*************** get_transactions_response (1) = %s' % get_transactions_response)
         
-        transaction_index = app_data().log_length
+        transaction_index = requested_index - 1
         log_length = get_transactions_response['log_length']
         app_data().log_length = log_length
         transactions = get_transactions_response['transactions']
