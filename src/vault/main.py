@@ -1,3 +1,4 @@
+from vault.constants import CKBTC_CANISTER
 import utils_icp
 from kybra_simple_db import *  # TODO
 import vault.services as services
@@ -114,39 +115,39 @@ def get_canister_id() -> Async[Principal]:
     return ic.id()
 
 
-# @query
-# def get_canister_balance() -> Async[nat]:
-#     # TODO: this one doesn't work but it doesn't matter...
-#     ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
-#     account = Account(owner=ic.id(), subaccount=None)
+@query
+def get_canister_balance() -> Async[str]:
+    # TODO: this one doesn't work but it doesn't matter... try with call_raw
+    ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
+    account = Account(owner=ic.id(), subaccount=None)
 
-#     result: CallResult[nat] = yield ledger.icrc1_balance_of(account)
+    result: CallResult[nat] = yield ledger.icrc1_balance_of(account)
 
-#     return match(result, {
-#         "Ok": lambda ok: ok,
-#         "Err": lambda err: -1  # Return -1 balance on error
-#     })
+    return match(result, {
+        "Ok": lambda ok: str(ok),
+        "Err": lambda err: "-1"  # Return -1 balance on error
+    })
 
 
-# @update
-# def do_transfer(to: Principal, amount: nat) -> Async[nat]:
-#     ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
+@update
+def do_transfer(to: Principal, amount: nat) -> Async[nat]:
+    ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
 
-#     args: TransferArg = TransferArg(
-#         to=Account(owner=to, subaccount=None),
-#         amount=amount,
-#         fee=None,  # Optional fee, will use default
-#         memo=None,  # Optional memo field
-#         from_subaccount=None,  # No subaccount specified
-#         created_at_time=None  # System will use current time
-#     )
+    args: TransferArg = TransferArg(
+        to=Account(owner=to, subaccount=None),
+        amount=amount,
+        fee=None,  # Optional fee, will use default
+        memo=None,  # Optional memo field
+        from_subaccount=None,  # No subaccount specified
+        created_at_time=None  # System will use current time
+    )
 
-#     result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
+    result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
 
-#     return match(result, {
-#         "Ok": lambda ok: 0,
-#         "Err": lambda err: -1
-#     })
+    return match(result, {
+        "Ok": lambda ok: 0,
+        "Err": lambda err: -1
+    })
 
 
 @update
