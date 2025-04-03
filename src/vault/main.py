@@ -115,6 +115,14 @@ def get_canister_id() -> Async[Principal]:
     return ic.id()
 
 
+def _stats():
+    return {
+        'app_data': app_data().to_dict(),
+        'balances': [_.to_dict() for _ in Balance.instances()],
+        'transactions': [_.to_dict() for _ in Transaction.instances()]
+    }
+
+
 @query
 def get_canister_balance() -> Async[str]:
     # TODO: this one doesn't work but it doesn't matter... try with call_raw
@@ -169,17 +177,25 @@ def check_transactions() -> Async[str]:
 
 @query
 def stats() -> str:
-    return str(
-        {
-            'app_data': app_data().to_dict(),
-            'balances': [_.to_dict() for _ in Balance.instances()],
-            'transactions': [_.to_dict() for _ in Transaction.instances()]
-        }
-    )
+    return str(_stats())
+
+def _is_admin(principal: str) -> bool:
+    return app_data().admin_principal == principal
+
+@update
+def set_admin(principal: Principal) -> str:
+    principal_str = principal.to_str()
+    if not app_data().admin_principal or _is_admin():
+        logger.info(f"Setting admin from {app_data().admin_principal} to {principal.to_str()}")
+        app_data().admin_principal = principal.to_str()
+        return str(_stats())
+    raise ValueError(f"Caller {ic.id().to_str()} is not the current admin principal {app_data().admin_principal}")
 
 
 @update
 def reset() -> str:
+    if not _is_admin():
+        raise ValueError(f"Caller {ic.id().to_str()} is not the current admin principal {app_data().admin_principal}")
     services.reset()
     return stats()
 
@@ -188,7 +204,7 @@ def reset() -> str:
 def version() -> str:
     return '0.6.62'
 
-
+# TODO: remove in production
 @update
 def execute_code(code: str) -> str:
     """Executes Python code and returns the output.
