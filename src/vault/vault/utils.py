@@ -1,7 +1,7 @@
 import ast
 import traceback
 
-from kybra_simple_logging import get_logger
+from kybra_simple_logging import get_logger, save_var
 
 logger = get_logger(__name__)
 
@@ -27,6 +27,8 @@ def parse_candid(input: str, ret={}) -> str:
     lines = input.split('\n')
     for i, l in enumerate(lines):
         if '2131139013' in l:
+            continue
+        if "3258775938" in l:  # created_at_time inside the transaction
             continue
         if is_inside_transactions:
             if '{' in l:
@@ -86,6 +88,7 @@ def parse_candid(input: str, ret={}) -> str:
 
     try:
         ret['preparsed_output'] = output
+        save_var('preparsed_output', output)
         d = ast.literal_eval(output)
         return d[0]
     except Exception as e:

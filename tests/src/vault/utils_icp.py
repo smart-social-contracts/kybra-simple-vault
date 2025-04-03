@@ -22,7 +22,6 @@ def get_transactions(start: int, length: int) -> str:
                                                           'to': {'owner': 'aaaa-test'},  # vault canister
                                                           'from': {'owner': 'ztwhb-qiaaa-aaaaj-azw7a-cai'},
                                                           1213809850: None,
-                                                          3258775938: None,
                                                           'amount': 908977,
                                                           3868658507: None}},
                                                      {1092621391: None,
@@ -34,7 +33,6 @@ def get_transactions(start: int, length: int) -> str:
                                                              'to': {'owner': 'ztwhb-qiaaa-aaaaj-azw7a-cai'},
                                                              'from': {'owner': 'aaaa-test'},  # vault canister
                                                              1213809850: None,
-                                                             3258775938: None,
                                                              'amount': 447890,
                                                              3868658507: None}},
 
@@ -48,7 +46,6 @@ def get_transactions(start: int, length: int) -> str:
                                                              'to': {'owner': 'rtpxn-77ite-cm6ta-qh5te-pdqj6-ugxwe-dncpt-ewp7c-nui4j-cpvwp-oae'},
                                                              'from': {'owner': 'xmiu5-jqaaa-aaaag-qbz7q-cai'},
                                                              1213809850: '\x05\x068',
-                                                             3258775938: None,
                                                              'amount': 1236274,
                                                              3868658507: None}}
                                                  ], 'archived_transactions': []}

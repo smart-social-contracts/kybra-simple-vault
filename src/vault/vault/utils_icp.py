@@ -12,7 +12,7 @@ from kybra import (
 from vault.constants import CKBTC_CANISTER
 from vault.utils import parse_candid
 
-from kybra_simple_logging import get_logger
+from kybra_simple_logging import get_logger, save_var
 
 logger = get_logger(__name__)
 logger.set_level(logger.DEBUG)
@@ -44,8 +44,10 @@ def get_transactions(start: nat, length: nat) -> Async[str]:
         if hasattr(call_result, 'Ok'):
             logger.debug('get_transactions(%s, %s) (3): %s' % (start, length, ic.candid_decode(call_result.Ok)))
             encoded_output = ic.candid_decode(call_result.Ok)
+            save_var('encoded_output', encoded_output)
             ret['encoded_output'] = encoded_output
             parsed_output = parse_candid(encoded_output)
+            save_var('parsed_output', parsed_output)
             ret['parsed_output'] = parsed_output
         else:
             logger.error('get_transactions(%s, %s) error: %s' % (start, length, call_result))
