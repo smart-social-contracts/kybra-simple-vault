@@ -3,6 +3,12 @@
     "vault": {
       "type": "kybra",
       "main": "src/vault/main.py"
+    },
+    "ckbtc_ledger": {
+      "type": "custom",
+      "wasm": "ledger-suite-icrc/2025-02-27/icrc1_ledger.wasm.gz",
+      "candid": "ledger-suite-icrc/2025-02-27/icrc1_ledger.did",
+      "args": "(variant { Init = record { minting_account = record { owner = principal \"$(dfx identity get-principal)\"; subaccount = null }; transfer_fee = 10; token_symbol = \"ckBTC\"; token_name = \"ckBTC Test\"; decimals = opt 8; metadata = vec {}; initial_balances = vec { record { record { owner = principal \"$(dfx identity get-principal)\"; subaccount = null }; 1_000_000_000 } }; feature_flags = opt record { icrc2 = true }; archive_options = record { num_blocks_to_archive = 1000; trigger_threshold = 2000; controller_id = principal \"$(dfx identity get-principal)\" } } })"
     }
   },
   "defaults": {
@@ -11,6 +17,5 @@
       "packtool": ""
     }
   },
-  "output_env_file": ".env",
   "version": 1
 }
