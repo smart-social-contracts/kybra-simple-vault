@@ -1,7 +1,7 @@
 import utils_icp
 from kybra_simple_db import *  # TODO
 import vault.services as services
-from vault.entities import app_data
+from vault.entities import app_data, Transaction, Balance
 from kybra import (
     Async,
     CallResult,
@@ -25,9 +25,10 @@ from kybra import (
     StableBTreeMap
 )
 
-from kybra_simple_logging import get_logger
+from kybra_simple_logging import get_logger, set_log_level
 
 logger = get_logger(__name__)
+set_log_level(logger.DEBUG)
 
 
 db_storage = StableBTreeMap[str, str](
@@ -167,7 +168,13 @@ def check_transactions() -> Async[str]:
 
 @query
 def stats() -> str:
-    return str(app_data().to_dict())
+    return str(
+        {
+            'app_data': app_data().to_dict(),
+            'balances': [_.to_dict() for _ in Balance.instances()],
+            'transactions': [_.to_dict() for _ in Transaction.instances()]
+        }
+    )
 
 
 @update
@@ -175,18 +182,22 @@ def reset() -> str:
     services.reset()
     return stats()
 
+
 @query
 def version() -> str:
     return '0.6.62'
 
+
 @update
 def execute_code(code: str) -> str:
     """Executes Python code and returns the output.
-    
+
     This is the core function needed for the Kybra Simple Shell to work.
     It captures stdout, stderr, and return values from the executed code.
     """
-    import sys, io, traceback
+    import sys
+    import io
+    import traceback
     stdout = io.StringIO()
     stderr = io.StringIO()
     sys.stdout = stdout

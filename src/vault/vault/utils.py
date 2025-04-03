@@ -30,6 +30,9 @@ def parse_candid(input: str, ret={}) -> str:
             continue
         if "3258775938" in l:  # created_at_time inside the transaction
             continue
+        if "3680359390" in l: 
+            continue
+        
         if is_inside_transactions:
             if '{' in l:
                 level += 1
