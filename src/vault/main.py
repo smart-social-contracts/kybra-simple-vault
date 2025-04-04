@@ -154,8 +154,8 @@ class Transaction(Record):
 class GetTransactionsResponse(Record):
     first_index: nat
     log_length: nat
-    transactions: Vec[Transaction]
-    archived_transactions: Vec[Transaction]
+    transactions: Vec[Opt[Transaction]]
+    archived_transactions: Vec[Opt[Transaction]]
 
 
 class GetTransactionsRequest(Record):
