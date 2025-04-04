@@ -2,7 +2,7 @@ from vault.constants import CKBTC_CANISTER
 import utils_icp
 from kybra_simple_db import *  # TODO
 import vault.services as services
-from vault.entities import app_data, Transaction, Balance
+from vault.entities import app_data, Balance
 from kybra import (
     Async,
     CallResult,
@@ -23,7 +23,8 @@ from kybra import (
     ic,
     heartbeat,
     void,
-    StableBTreeMap
+    StableBTreeMap,
+    Vec
 )
 
 from kybra_simple_logging import get_logger, set_log_level
@@ -47,7 +48,7 @@ if not app_data().vault_principal:
 
 class Account(Record):
     owner: Principal
-    subaccount: Opt[blob]
+    subaccount: Opt[Vec[nat]]
 
 
 class TransferArg(Record):
@@ -96,6 +97,72 @@ class TransferResult(Variant, total=False):
     Err: TransferError
 
 
+# Define the request and response types for get_transactions
+
+
+
+class Spender(Record):
+    owner: Principal
+    subaccount: Opt[Vec[nat]]
+
+
+class Burn(Record):
+    from_: Account
+    memo: Opt[Vec[nat]]
+    created_at_time: Opt[nat64]
+    amount: nat
+    spender: Opt[Spender]
+
+
+class Mint(Record):
+    to: Account
+    memo: Opt[Vec[nat]]
+    created_at_time: Opt[nat64]
+    amount: nat
+
+
+class Approve(Record):
+    fee: Opt[nat]
+    from_: Account
+    memo: Opt[Vec[nat]]
+    created_at_time: Opt[nat64]
+    amount: nat
+    expected_allowance: Opt[nat]
+    expires_at: Opt[nat64]
+    spender: Spender
+
+
+class Transfer(Record):
+    to: Account
+    fee: Opt[nat]
+    from_: Account
+    memo: Opt[Vec[nat]]
+    created_at_time: Opt[nat64]
+    amount: nat
+    spender: Opt[Spender]
+
+
+class Transaction(Record):
+    burn: Opt[Burn]
+    kind: str
+    mint: Opt[Mint]
+    approve: Opt[Approve]
+    timestamp: nat64
+    transfer: Opt[Transfer]
+
+
+class GetTransactionsResponse(Record):
+    first_index: nat
+    log_length: nat
+    transactions: Vec[Transaction]
+    archived_transactions: Vec[Transaction]
+
+
+class GetTransactionsRequest(Record):
+    start: nat
+    length: nat
+
+
 class ICRCLedger(Service):
     @service_query
     def icrc1_balance_of(self, account: Account) -> nat:
@@ -109,6 +176,32 @@ class ICRCLedger(Service):
     def icrc1_transfer(self, args: TransferArg) -> TransferResult:
         ...
 
+    @service_query
+    def get_transactions(self, request: GetTransactionsRequest) -> Async[GetTransactionsResponse]:
+        ...
+
+
+class GetTransactionsResult(Variant, total=False):
+    Ok: GetTransactionsResponse
+    Err: str
+
+
+@update
+def get_transactions_kybra(start: nat, length: nat) -> Async[GetTransactionsResult]:
+    logger.debug('get_transactions_kybra [1] (%s, %s)' % (start, length))
+    ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
+    request = GetTransactionsRequest(start=start, length=length)
+    logger.debug('get_transactions_kybra [2]: %s' % str(request))
+    ret: CallResult[GetTransactionsResponse] = yield ledger.get_transactions(request)
+    logger.debug('get_transactions_kybra [3]: %s' % str(ret))
+    return match(
+        ret,
+        {
+            "Ok": lambda ok: {"Ok": ok},
+            "Err": lambda err: {"Err": str(err)},
+        },
+    )
+
 
 @query
 def get_canister_id() -> Async[Principal]:
@@ -119,7 +212,7 @@ def _stats():
     return {
         'app_data': app_data().to_dict(),
         'balances': [_.to_dict() for _ in Balance.instances()],
-        'transactions': [_.to_dict() for _ in Transaction.instances()]
+        # 'transactions': [_.to_dict() for _ in Transaction.instances()]
     }
 
 
@@ -179,8 +272,10 @@ def check_transactions() -> Async[str]:
 def stats() -> str:
     return str(_stats())
 
+
 def _is_admin(principal: str) -> bool:
     return app_data().admin_principal == principal
+
 
 @update
 def set_admin(principal: Principal) -> str:
@@ -205,6 +300,8 @@ def version() -> str:
     return '0.6.62'
 
 # TODO: remove in production
+
+
 @update
 def execute_code(code: str) -> str:
     """Executes Python code and returns the output.

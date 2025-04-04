@@ -1,0 +1,15 @@
+{
+  "canisters": {
+    "vault": {
+      "type": "kybra",
+      "main": "src/vault/main.py"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "version": 1
+}
