@@ -17,7 +17,7 @@ class Category(Entity, TimestampedMixin):
     name = String()
 
 
-class Transaction(Entity, TimestampedMixin):
+class VaultTransaction(Entity, TimestampedMixin):
     principal_from = String()
     principal_to = String()
     amount = Integer(min_value=0)

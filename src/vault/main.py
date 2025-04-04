@@ -7,24 +7,20 @@ from kybra import (
     Async,
     CallResult,
     match,
-    Opt,
     Principal,
-    Record,
-    Service,
-    service_query,
-    service_update,
-    Variant,
     nat,
-    nat64,
-    update,
-    query,
-    blob,
-    null,
     ic,
-    heartbeat,
-    void,
     StableBTreeMap,
-    Vec
+    update,
+    query
+)
+from vault.candid_types import (
+    Account,
+    TransferArg,
+    GetTransactionsRequest,
+    ICRCLedger,
+    GetTransactionsResult,
+    GetTransactionsResponse
 )
 
 from kybra_simple_logging import get_logger, set_log_level
@@ -46,154 +42,9 @@ if not app_data().vault_principal:
     app_data().vault_principal = ic.id().to_str()
 
 
-class Account(Record):
-    owner: Principal
-    subaccount: Opt[Vec[nat]]
-
-
-class TransferArg(Record):
-    to: Account
-    fee: Opt[nat]
-    memo: Opt[nat64]
-    from_subaccount: Opt[blob]
-    created_at_time: Opt[nat64]
-    amount: nat
-
-
-class BadFeeRecord(Record):
-    expected_fee: nat
-
-
-class BadBurnRecord(Record):
-    min_burn_amount: nat
-
-
-class InsufficientFundsRecord(Record):
-    balance: nat
-
-
-class DuplicateRecord(Record):
-    duplicate_of: nat
-
-
-class GenericErrorRecord(Record):
-    error_code: nat
-    message: str
-
-
-class TransferError(Variant, total=False):
-    BadFee: BadFeeRecord
-    BadBurn: BadBurnRecord
-    InsufficientFunds: InsufficientFundsRecord
-    TooOld: null
-    CreatedInFuture: null
-    Duplicate: DuplicateRecord
-    TemporarilyUnavailable: null
-    GenericError: GenericErrorRecord
-
-
-class TransferResult(Variant, total=False):
-    Ok: nat
-    Err: TransferError
-
-
-# Define the request and response types for get_transactions
-
-
-
-class Spender(Record):
-    owner: Principal
-    subaccount: Opt[Vec[nat]]
-
-
-class Burn(Record):
-    from_: Account
-    memo: Opt[Vec[nat]]
-    created_at_time: Opt[nat64]
-    amount: nat
-    spender: Opt[Spender]
-
-
-class Mint(Record):
-    to: Account
-    memo: Opt[Vec[nat]]
-    created_at_time: Opt[nat64]
-    amount: nat
-
-
-class Approve(Record):
-    fee: Opt[nat]
-    from_: Account
-    memo: Opt[Vec[nat]]
-    created_at_time: Opt[nat64]
-    amount: nat
-    expected_allowance: Opt[nat]
-    expires_at: Opt[nat64]
-    spender: Spender
-
-
-class Transfer(Record):
-    to: Account
-    fee: Opt[nat]
-    from_: Account
-    memo: Opt[Vec[nat]]
-    created_at_time: Opt[nat64]
-    amount: nat
-    spender: Opt[Spender]
-
-
-class Transaction(Record):
-    burn: Opt[Burn]
-    kind: str
-    mint: Opt[Mint]
-    approve: Opt[Approve]
-    timestamp: nat64
-    transfer: Opt[Transfer]
-
-
-class GetTransactionsResponse(Record):
-    first_index: nat
-    log_length: nat
-    transactions: Vec[Opt[Transaction]]
-    archived_transactions: Vec[Opt[Transaction]]
-
-
-class GetTransactionsRequest(Record):
-    start: nat
-    length: nat
-
-
-class ICRCLedger(Service):
-    @service_query
-    def icrc1_balance_of(self, account: Account) -> nat:
-        ...
-
-    @service_query
-    def icrc1_fee(self) -> nat:
-        ...
-
-    @service_update
-    def icrc1_transfer(self, args: TransferArg) -> TransferResult:
-        ...
-
-    @service_query
-    def get_transactions(self, request: GetTransactionsRequest) -> Async[GetTransactionsResponse]:
-        ...
-
-
-class GetTransactionsResult(Variant, total=False):
-    Ok: GetTransactionsResponse
-    Err: str
-
-
 @update
 def get_transactions_kybra(start: nat, length: nat) -> Async[GetTransactionsResult]:
-    logger.debug('get_transactions_kybra [1] (%s, %s)' % (start, length))
-    ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
-    request = GetTransactionsRequest(start=start, length=length)
-    logger.debug('get_transactions_kybra [2]: %s' % str(request))
-    ret: CallResult[GetTransactionsResponse] = yield ledger.get_transactions(request)
-    logger.debug('get_transactions_kybra [3]: %s' % str(ret))
+    ret: CallResult[GetTransactionsResponse] = yield utils_icp.get_transactions(start, length)
     return match(
         ret,
         {
@@ -251,10 +102,10 @@ def do_transfer(to: Principal, amount: nat) -> Async[nat]:
     })
 
 
-@update
-def get_transactions(start: nat, length: nat) -> Async[str]:
-    ret = yield utils_icp.get_transactions(start, length)
-    return str(ret)
+# @update
+# def get_transactions(start: nat, length: nat) -> Async[str]:
+#     ret = yield utils_icp.get_transactions(start, length)
+#     return str(ret)
 
 
 # @heartbeat # TODO: Disable hearbeat for now
@@ -273,26 +124,25 @@ def stats() -> str:
     return str(_stats())
 
 
-def _is_admin(principal: str) -> bool:
-    return app_data().admin_principal == principal
+def _only_if_admin() -> bool:
+    admin = app_data().admin_principal
+    if admin and admin != ic.caller().to_str():
+        raise ValueError(f"Caller {ic.caller().to_str()} is not the current admin principal {admin}")
 
 
 @update
 def set_admin(principal: Principal) -> str:
-    principal_str = principal.to_str()
-    if not app_data().admin_principal or _is_admin():
-        logger.info(f"Setting admin from {app_data().admin_principal} to {principal.to_str()}")
-        app_data().admin_principal = principal.to_str()
-        return str(_stats())
-    raise ValueError(f"Caller {ic.id().to_str()} is not the current admin principal {app_data().admin_principal}")
+    _only_if_admin()
+    logger.info(f"Setting admin from {app_data().admin_principal} to {principal.to_str()}")
+    app_data().admin_principal = principal.to_str()
+    return str(_stats())
 
 
 @update
 def reset() -> str:
-    if not _is_admin():
-        raise ValueError(f"Caller {ic.id().to_str()} is not the current admin principal {app_data().admin_principal}")
+    _only_if_admin()
     services.reset()
-    return stats()
+    return str(_stats())
 
 
 @query
