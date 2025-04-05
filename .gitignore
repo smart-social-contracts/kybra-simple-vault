@@ -1,6 +1,43 @@
-.kybra
-.dfx
-venv
-kybra_simple_db
-kybra_simple_logging
-__pycache__
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Testing and Coverage
+.coverage
+.coverage.*
+coverage.xml
+.pytest_cache/
+htmlcov/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Internet Computer / Kybra
+.dfx/
+.kybra/
+
+# Dependencies
+kybra_simple_db/
+kybra_simple_logging/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

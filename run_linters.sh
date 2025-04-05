@@ -33,10 +33,14 @@ fi
 
 # Lint with flake8 (no auto-fix available)
 echo "Running flake8..."
-flake8 src tests --ignore=E501,W391,W503,F405,F403,F401,E722,F811,E704
+# Using configuration from setup.cfg
+flake8 src tests
 
 # Type check with mypy (no auto-fix available)
 echo "Running mypy..."
-mypy src tests
+# Using configuration from setup.cfg
+# Run src and tests separately to avoid duplicate module name issues
+mypy src
+mypy --namespace-packages tests
 
 echo "All linters completed successfully!"
