@@ -1,15 +1,12 @@
 from vault.utils_icp import get_transactions
 from vault.entities import app_data, VaultTransaction, Balance
 import traceback
-from vault.constants import TIME_PERIOD_SECONDS, TRANSACTION_BATCH_SIZE
+from vault.constants import TRANSACTION_BATCH_SIZE
 from kybra import ic, Async, void, update, query, CallResult
 from kybra_simple_db import *
 from vault.candid_types import (
-    Account,
-    TransferArg,
     GetTransactionsRequest,
     ICRCLedger,
-    GetTransactionsResult,
     GetTransactionsResponse,
     Transaction
 )
@@ -17,19 +14,7 @@ from vault.candid_types import (
 from kybra_simple_logging import get_logger
 
 logger = get_logger(__name__)
-
-
-def transactions_tracker_hearbeat() -> Async[void]:
-    if TIME_PERIOD_SECONDS <= 0:
-        return
-
-    now = ic.time()
-    if not app_data().last_heartbeat_time or (now - app_data().last_heartbeat_time) / 1e9 > TIME_PERIOD_SECONDS:
-        try:
-            app_data().last_heartbeat_time = now
-            yield TransactionTracker().check_transactions()
-        except:
-            ic.print(traceback.format_exc())
+logger.set_level(logger.DEBUG)
 
 
 def reset() -> void:

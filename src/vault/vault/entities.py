@@ -7,6 +7,7 @@ class ApplicationData(Entity, TimestampedMixin):
     admin_principal = String()
     vault_principal = String()
     last_heartbeat_time = Integer(min_value=0, default=0)
+    heartbeat_interval_seconds = Integer(min_value=0, default=0)
 
 
 def app_data():
