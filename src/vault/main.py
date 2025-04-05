@@ -163,7 +163,7 @@ def reset() -> str:
 
 @query
 def version() -> str:
-    return '0.7.1'
+    return '0.7.4'
 
 
 @update
