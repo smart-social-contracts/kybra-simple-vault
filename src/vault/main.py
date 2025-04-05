@@ -12,7 +12,7 @@ from kybra import (
     update,
     void,
 )
-from kybra_simple_db import *  # TODO
+from kybra_simple_db import *
 from kybra_simple_logging import get_logger, set_log_level
 
 import vault.services as services
@@ -98,7 +98,6 @@ def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResult]:
 
 @query
 def get_canister_balance() -> Async[str]:
-    # TODO: this one doesn't work but it doesn't matter... try with call_raw
     ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
     account = Account(owner=ic.id(), subaccount=None)
 
@@ -171,7 +170,6 @@ def reset() -> str:
 
 
 #################
-# TODO: remove in production
 
 
 @query
