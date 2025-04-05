@@ -2,6 +2,11 @@
 
 A canister written in Python using Kybra that manages cryptocurrency transactions on the Internet Computer.
 
+[![Test](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test.yml/badge.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/actions)
+[![PyPI version](https://badge.fury.io/py/kybra-simple-vault.svg)](https://badge.fury.io/py/kybra-simple-vault)
+[![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3107/)
+[![License](https://img.shields.io/github/license/smart-social-contracts/kybra-simple-vault.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/blob/main/LICENSE)
+
 ## Features
 
 - Receive ckBTC/ckETH/ckUSDC from any principal and track balances
