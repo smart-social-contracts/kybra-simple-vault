@@ -1,17 +1,19 @@
-from vault.utils_icp import get_transactions
-from vault.entities import app_data, VaultTransaction, Balance
 import traceback
-from vault.constants import CKBTC_CANISTER, TRANSACTION_BATCH_SIZE
-from kybra import ic, Async, void, update, query, CallResult
+
+from kybra import Async, CallResult, ic, query, update, void
 from kybra_simple_db import *
+from kybra_simple_logging import get_logger
+
 from vault.candid_types import (
     GetTransactionsRequest,
-    ICRCLedger,
     GetTransactionsResponse,
-    Transaction
+    ICRCLedger,
+    Transaction,
 )
+from vault.constants import CKBTC_CANISTER, TRANSACTION_BATCH_SIZE
+from vault.entities import Balance, VaultTransaction, app_data
 from vault.utils import get_nested
-from kybra_simple_logging import get_logger
+from vault.utils_icp import get_transactions
 
 logger = get_logger(__name__)
 logger.set_level(logger.DEBUG)
@@ -42,51 +44,75 @@ class TransactionTracker:
                 logger.error("Error getting transactions: %s" % response.Err)
                 raise Exception(response.Err)
 
-            app_data().log_length = response.Ok['log_length']
-            logger.debug("log_length initialized to %s" % response.Ok['log_length'])
+            app_data().log_length = response.Ok["log_length"]
+            logger.debug("log_length initialized to %s" % response.Ok["log_length"])
             return 0
 
         # Log after we know we're going to do the actual transaction check
-        logger.debug("Checking transactions - processing from index %s" % (app_data().last_processed_index or app_data().log_length))
+        logger.debug(
+            "Checking transactions - processing from index %s"
+            % (app_data().last_processed_index or app_data().log_length)
+        )
         requested_index = app_data().last_processed_index or app_data().log_length
-        response: CallResult[GetTransactionsResponse] = yield get_transactions(requested_index, TRANSACTION_BATCH_SIZE)
+        response: CallResult[GetTransactionsResponse] = yield get_transactions(
+            requested_index, TRANSACTION_BATCH_SIZE
+        )
         if response.Err:
             logger.error("Error getting transactions: %s" % response.Err)
             raise Exception(response.Err)
 
         transaction_index = requested_index - 1
-        log_length = response.Ok['log_length']
+        log_length = response.Ok["log_length"]
         app_data().log_length = log_length
-        transactions = response.Ok['transactions']
+        transactions = response.Ok["transactions"]
 
-        if response.Ok['first_index'] > requested_index and not transactions:
-            logger.warning("ckBTC ledger canister %s's history is ahead of our last processed index. Some transactions may have been missed. Setting transaction_index to %s" % (CKBTC_CANISTER, response.Ok['first_index']))
-            transaction_index = response.Ok['first_index']
+        if response.Ok["first_index"] > requested_index and not transactions:
+            logger.warning(
+                "ckBTC ledger canister %s's history is ahead of our last processed index. Some transactions may have been missed. Setting transaction_index to %s"
+                % (CKBTC_CANISTER, response.Ok["first_index"])
+            )
+            transaction_index = response.Ok["first_index"]
         else:
             logger.debug("Fetched %s transactions" % len(transactions))
 
             for transaction in transactions:
-                logger.debug("Processing transaction %s:\n%s" % (transaction_index, transaction))
+                logger.debug(
+                    "Processing transaction %s:\n%s" % (transaction_index, transaction)
+                )
                 try:
-                    principal_from = get_nested(transaction, 'transfer', 'from_', 'owner')
-                    principal_to = get_nested(transaction, 'transfer', 'to', 'owner')
-                    relevant = app_data().vault_principal in (principal_from, principal_to)
+                    principal_from = get_nested(
+                        transaction, "transfer", "from_", "owner"
+                    )
+                    principal_to = get_nested(transaction, "transfer", "to", "owner")
+                    relevant = app_data().vault_principal in (
+                        principal_from,
+                        principal_to,
+                    )
                     if relevant:
-                        amount = int(get_nested(transaction, 'transfer', 'amount'))
-                        t = VaultTransaction(_id=str(transaction_index),
-                                             principal_from=principal_from,
-                                             principal_to=principal_to,
-                                             amount=amount,
-                                             timestamp=get_nested(transaction, 'transfer', 'timestamp'),
-                                             kind=get_nested(transaction, 'transfer', 'kind'))
-                        balance_from = Balance[principal_from] or Balance(_id=principal_from)
+                        amount = int(get_nested(transaction, "transfer", "amount"))
+                        t = VaultTransaction(
+                            _id=str(transaction_index),
+                            principal_from=principal_from,
+                            principal_to=principal_to,
+                            amount=amount,
+                            timestamp=get_nested(transaction, "transfer", "timestamp"),
+                            kind=get_nested(transaction, "transfer", "kind"),
+                        )
+                        balance_from = Balance[principal_from] or Balance(
+                            _id=principal_from
+                        )
                         balance_to = Balance[principal_to] or Balance(_id=principal_to)
                         balance_from.amount = balance_from.amount - amount
                         balance_to.amount = balance_to.amount + amount
                         ret.append(t._id)
-                        logger.debug("Stored transaction %s (amount=%s, from=%s, to=%s)" % (t._id, amount, principal_from, principal_to))
+                        logger.debug(
+                            "Stored transaction %s (amount=%s, from=%s, to=%s)"
+                            % (t._id, amount, principal_from, principal_to)
+                        )
                 except Exception as e:
-                    logger.error("Error processing transaction %s: %s" % (transaction, str(e)))
+                    logger.error(
+                        "Error processing transaction %s: %s" % (transaction, str(e))
+                    )
                     logger.error(traceback.format_exc())
 
                 transaction_index += 1

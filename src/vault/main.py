@@ -1,31 +1,31 @@
-from vault.constants import CKBTC_CANISTER, DO_NOT_IMPLEMENT_HEARTBEAT
 import utils_icp
-from kybra_simple_db import *  # TODO
-import vault.services as services
-from vault.entities import VaultTransaction, app_data, Balance
 from kybra import (
     Async,
     CallResult,
-    match,
     Principal,
-    nat,
-    ic,
     StableBTreeMap,
-    update,
+    heartbeat,
+    ic,
+    match,
+    nat,
     query,
+    update,
     void,
-    heartbeat
 )
+from kybra_simple_db import *  # TODO
+from kybra_simple_logging import get_logger, set_log_level
+
+import vault.services as services
 from vault.candid_types import (
     Account,
-    TransferArg,
     GetTransactionsRequest,
-    ICRCLedger,
+    GetTransactionsResponse,
     GetTransactionsResult,
-    GetTransactionsResponse
+    ICRCLedger,
+    TransferArg,
 )
-
-from kybra_simple_logging import get_logger, set_log_level
+from vault.constants import CKBTC_CANISTER, DO_NOT_IMPLEMENT_HEARTBEAT
+from vault.entities import Balance, VaultTransaction, app_data
 
 logger = get_logger(__name__)
 set_log_level(logger.DEBUG)
@@ -47,9 +47,14 @@ if not app_data().vault_principal:
 heartbeat_interval_seconds = app_data().heartbeat_interval_seconds
 
 if not DO_NOT_IMPLEMENT_HEARTBEAT:
+
     @heartbeat
     def heartbeat_() -> Async[void]:
-        if heartbeat_interval_seconds and ic.time() - app_data().last_heartbeat_time > heartbeat_interval_seconds * 1e9:
+        if (
+            heartbeat_interval_seconds
+            and ic.time() - app_data().last_heartbeat_time
+            > heartbeat_interval_seconds * 1e9
+        ):
             logger.debug("Heartbeat started")
             app_data().last_heartbeat_time = ic.time()
             yield services.TransactionTracker().check_transactions()
@@ -59,14 +64,16 @@ if not DO_NOT_IMPLEMENT_HEARTBEAT:
 def _only_if_admin() -> bool:
     admin = app_data().admin_principal
     if admin and admin != ic.caller().to_str():
-        raise ValueError(f"Caller {ic.caller().to_str()} is not the current admin principal {admin}")
+        raise ValueError(
+            f"Caller {ic.caller().to_str()} is not the current admin principal {admin}"
+        )
 
 
 def _stats():
     return {
-        'app_data': app_data().to_dict(),
-        'balances': [_.to_dict() for _ in Balance.instances()],
-        'vault_transactions': [_.to_dict() for _ in VaultTransaction.instances()]
+        "app_data": app_data().to_dict(),
+        "balances": [_.to_dict() for _ in Balance.instances()],
+        "vault_transactions": [_.to_dict() for _ in VaultTransaction.instances()],
     }
 
 
@@ -77,7 +84,9 @@ def get_canister_id() -> Async[Principal]:
 
 @update
 def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResult]:
-    ret: CallResult[GetTransactionsResponse] = yield utils_icp.get_transactions(start, length)
+    ret: CallResult[GetTransactionsResponse] = yield utils_icp.get_transactions(
+        start, length
+    )
     return match(
         ret,
         {
@@ -95,10 +104,13 @@ def get_canister_balance() -> Async[str]:
 
     result: CallResult[nat] = yield ledger.icrc1_balance_of(account)
 
-    return match(result, {
-        "Ok": lambda ok: str(ok),
-        "Err": lambda err: "-1"  # Return -1 balance on error
-    })
+    return match(
+        result,
+        {
+            "Ok": lambda ok: str(ok),
+            "Err": lambda err: "-1",  # Return -1 balance on error
+        },
+    )
 
 
 @update
@@ -111,15 +123,12 @@ def do_transfer(to: Principal, amount: nat) -> Async[nat]:
         fee=None,  # Optional fee, will use default
         memo=None,  # Optional memo field
         from_subaccount=None,  # No subaccount specified
-        created_at_time=None  # System will use current time
+        created_at_time=None,  # System will use current time
     )
 
     result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
 
-    return match(result, {
-        "Ok": lambda ok: 0,
-        "Err": lambda err: -1
-    })
+    return match(result, {"Ok": lambda ok: 0, "Err": lambda err: -1})
 
 
 @update
@@ -136,12 +145,15 @@ def stats() -> str:
 @update
 def set_admin(principal: Principal) -> str:
     _only_if_admin()
-    logger.info(f"Setting admin from {app_data().admin_principal} to {principal.to_str()}")
+    logger.info(
+        f"Setting admin from {app_data().admin_principal} to {principal.to_str()}"
+    )
     app_data().admin_principal = principal.to_str()
     return str(_stats())
 
 
 if not DO_NOT_IMPLEMENT_HEARTBEAT:
+
     @update
     def set_heartbeat_interval_seconds(seconds: nat) -> str:
         _only_if_admin()
@@ -161,9 +173,10 @@ def reset() -> str:
 #################
 # TODO: remove in production
 
+
 @query
 def version() -> str:
-    return '0.7.4'
+    return "0.7.4"
 
 
 @update
@@ -173,9 +186,10 @@ def execute_code(code: str) -> str:
     This is the core function needed for the Kybra Simple Shell to work.
     It captures stdout, stderr, and return values from the executed code.
     """
-    import sys
     import io
+    import sys
     import traceback
+
     stdout = io.StringIO()
     stderr = io.StringIO()
     sys.stdout = stdout

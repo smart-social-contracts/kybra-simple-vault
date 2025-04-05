@@ -11,7 +11,7 @@ class ApplicationData(Entity, TimestampedMixin):
 
 
 def app_data():
-    return ApplicationData['main'] or ApplicationData(_id='main')
+    return ApplicationData["main"] or ApplicationData(_id="main")
 
 
 class Category(Entity, TimestampedMixin):

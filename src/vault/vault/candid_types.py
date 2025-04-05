@@ -1,18 +1,19 @@
 from kybra import (
     Async,
+    Opt,
     Principal,
     Record,
     Service,
-    service_query,
-    service_update,
     Variant,
+    Vec,
+    blob,
     nat,
     nat64,
-    blob,
-    Vec,
-    Opt,
-    null
+    null,
+    service_query,
+    service_update,
 )
+
 
 class Account(Record):
     owner: Principal
@@ -66,7 +67,6 @@ class TransferResult(Variant, total=False):
 
 
 # Define the request and response types for get_transactions
-
 
 
 class Spender(Record):
@@ -133,23 +133,20 @@ class GetTransactionsRequest(Record):
 
 class ICRCLedger(Service):
     @service_query
-    def icrc1_balance_of(self, account: Account) -> nat:
-        ...
+    def icrc1_balance_of(self, account: Account) -> nat: ...
 
     @service_query
-    def icrc1_fee(self) -> nat:
-        ...
+    def icrc1_fee(self) -> nat: ...
 
     @service_update
-    def icrc1_transfer(self, args: TransferArg) -> TransferResult:
-        ...
+    def icrc1_transfer(self, args: TransferArg) -> TransferResult: ...
 
     @service_query
-    def get_transactions(self, request: GetTransactionsRequest) -> Async[GetTransactionsResponse]:
-        ...
+    def get_transactions(
+        self, request: GetTransactionsRequest
+    ) -> Async[GetTransactionsResponse]: ...
 
 
 class GetTransactionsResult(Variant, total=False):
     Ok: GetTransactionsResponse
     Err: str
-

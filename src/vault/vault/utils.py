@@ -1,5 +1,5 @@
 def get_nested(d, *keys):
-    '''
+    """
     Get a nested value from a dictionary by following a sequence of keys.
 
     Args:
@@ -14,7 +14,7 @@ def get_nested(d, *keys):
         1
         >>> get_nested({"a": {"b": {"c": 1}}}, "a", "b", "d")
         None
-    '''
+    """
     for key in keys:
         if isinstance(d, dict) and key in d:
             d = d[key]
