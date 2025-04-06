@@ -18,10 +18,11 @@ logger.set_level(logger.DEBUG)
 
 
 def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResponse]:
-    principal = LedgerCanister['ckBTC'].principal
+    principal = LedgerCanister["ckBTC"].principal
 
     logger.debug(
-        "Querying for transactions on ckBTC ledger with principal %s: from %s, give me %s transactions" % (principal, start, length)
+        "Querying for transactions on ckBTC ledger with principal %s: from %s, give me %s transactions"
+        % (principal, start, length)
     )
 
     ledger = ICRCLedger(Principal.from_str(principal))

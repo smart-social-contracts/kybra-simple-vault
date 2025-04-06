@@ -1,4 +1,3 @@
-import vault.utils_icp as utils_icp
 from kybra import (
     Async,
     CallResult,
@@ -15,7 +14,9 @@ from kybra import (
 from kybra_simple_db import *
 from kybra_simple_logging import get_logger, set_log_level
 
+import vault.admin as admin
 import vault.services as services
+import vault.utils_icp as utils_icp
 from vault.candid_types import (
     Account,
     GetTransactionsRequest,
@@ -26,7 +27,6 @@ from vault.candid_types import (
 )
 from vault.constants import CKBTC_CANISTER, DO_NOT_IMPLEMENT_HEARTBEAT
 from vault.entities import app_data, stats
-import vault.admin as admin
 
 logger = get_logger(__name__)
 set_log_level(logger.DEBUG)
@@ -48,6 +48,7 @@ if not app_data().vault_principal:
 heartbeat_interval_seconds = app_data().heartbeat_interval_seconds
 
 if not DO_NOT_IMPLEMENT_HEARTBEAT:
+
     @heartbeat
     def heartbeat_() -> Async[void]:
         if (
@@ -68,11 +69,16 @@ def get_canister_id() -> Async[Principal]:
 
 @update
 def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResult]:
-    ret: CallResult[GetTransactionsResponse] = yield utils_icp.get_transactions(start, length)
-    return match(ret, {
-        "Ok": lambda ok: {"Ok": ok},
-        "Err": lambda err: {"Err": str(err)},
-    })
+    ret: CallResult[GetTransactionsResponse] = yield utils_icp.get_transactions(
+        start, length
+    )
+    return match(
+        ret,
+        {
+            "Ok": lambda ok: {"Ok": ok},
+            "Err": lambda err: {"Err": str(err)},
+        },
+    )
 
 
 @query
@@ -94,6 +100,7 @@ def get_canister_balance() -> Async[str]:
 @update
 def do_transfer(to: Principal, amount: nat) -> Async[nat]:
     from vault.entities import ledger_canister
+
     principal = ledger_canister().principal
     ledger = ICRCLedger(Principal.from_str(principal))
 
@@ -110,13 +117,19 @@ def do_transfer(to: Principal, amount: nat) -> Async[nat]:
     result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
 
     # Return the transaction id on success or -1 on error
-    return match(result, {
-        "Ok": lambda result_variant: match(result_variant, {
-            "Ok": lambda tx_id: tx_id,  # Return the transaction ID directly
-            "Err": lambda _: -1  # Return -1 on transfer error
-        }),
-        "Err": lambda _: -1  # Return -1 on call error
-    })
+    return match(
+        result,
+        {
+            "Ok": lambda result_variant: match(
+                result_variant,
+                {
+                    "Ok": lambda tx_id: tx_id,  # Return the transaction ID directly
+                    "Err": lambda _: -1,  # Return -1 on transfer error
+                },
+            ),
+            "Err": lambda _: -1,  # Return -1 on call error
+        },
+    )
 
 
 @update
@@ -136,10 +149,13 @@ def set_admin(principal: Principal) -> str:
 
 
 if not DO_NOT_IMPLEMENT_HEARTBEAT:
+
     @update
     def set_heartbeat_interval_seconds(seconds: nat) -> nat:
         global heartbeat_interval_seconds
-        heartbeat_interval_seconds = admin.set_heartbeat_interval_seconds(ic.caller().to_str(), seconds)
+        heartbeat_interval_seconds = admin.set_heartbeat_interval_seconds(
+            ic.caller().to_str(), seconds
+        )
         return heartbeat_interval_seconds
 
 
@@ -150,7 +166,10 @@ def reset() -> str:
 
 @update
 def set_ledger_canister(canister_id: str, principal: Principal) -> str:
-    return admin.set_ledger_canister(ic.caller().to_str(), canister_id, principal.to_str())
+    return admin.set_ledger_canister(
+        ic.caller().to_str(), canister_id, principal.to_str()
+    )
+
 
 #################
 

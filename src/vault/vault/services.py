@@ -69,7 +69,8 @@ class TransactionTracker:
         if response.Ok["first_index"] > requested_index and not transactions:
             logger.warning(
                 "ckBTC ledger canister's history is ahead of our last processed index. Some transactions may have been missed. Setting transaction_index to %s"
-                % response.Ok["first_index"])
+                % response.Ok["first_index"]
+            )
 
             transaction_index = response.Ok["first_index"]
         else:

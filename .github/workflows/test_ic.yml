@@ -25,4 +25,4 @@ jobs:
     
     - name: Run IC tests on Docker
       run: |
-        cd tests && ./run_test_ic.sh
+        ./run_test_ic.sh
