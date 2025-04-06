@@ -29,5 +29,5 @@ jobs:
         
     - name: Run tests with pytest
       run: |
-        cd tests && ./run_test.sh
+        ./run_test.sh
 
