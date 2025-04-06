@@ -30,3 +30,11 @@ class VaultTransaction(Entity, TimestampedMixin):
 class Balance(Entity, TimestampedMixin):
     amount = Integer(default=0)
     currency = String()
+
+
+def stats():
+    return {
+        "app_data": app_data().to_dict(),
+        "balances": [_.to_dict() for _ in Balance.instances()],
+        "vault_transactions": [_.to_dict() for _ in VaultTransaction.instances()],
+    }

@@ -25,7 +25,8 @@ from vault.candid_types import (
     TransferArg,
 )
 from vault.constants import CKBTC_CANISTER, DO_NOT_IMPLEMENT_HEARTBEAT
-from vault.entities import Balance, VaultTransaction, app_data
+from vault.entities import app_data, stats
+import vault.admin as admin
 
 logger = get_logger(__name__)
 set_log_level(logger.DEBUG)
@@ -47,7 +48,6 @@ if not app_data().vault_principal:
 heartbeat_interval_seconds = app_data().heartbeat_interval_seconds
 
 if not DO_NOT_IMPLEMENT_HEARTBEAT:
-
     @heartbeat
     def heartbeat_() -> Async[void]:
         if (
@@ -59,22 +59,6 @@ if not DO_NOT_IMPLEMENT_HEARTBEAT:
             app_data().last_heartbeat_time = ic.time()
             yield services.TransactionTracker().check_transactions()
             logger.debug("Heartbeat finished")
-
-
-def _only_if_admin() -> bool:
-    admin = app_data().admin_principal
-    if admin and admin != ic.caller().to_str():
-        raise ValueError(
-            f"Caller {ic.caller().to_str()} is not the current admin principal {admin}"
-        )
-
-
-def _stats():
-    return {
-        "app_data": app_data().to_dict(),
-        "balances": [_.to_dict() for _ in Balance.instances()],
-        "vault_transactions": [_.to_dict() for _ in VaultTransaction.instances()],
-    }
 
 
 @query
@@ -138,35 +122,25 @@ def check_transactions() -> Async[str]:
 
 @query
 def stats() -> str:
-    return str(_stats())
+    return str(stats())
 
 
 @update
 def set_admin(principal: Principal) -> str:
-    _only_if_admin()
-    logger.info(
-        f"Setting admin from {app_data().admin_principal} to {principal.to_str()}"
-    )
-    app_data().admin_principal = principal.to_str()
-    return str(_stats())
+    return admin.set_admin(ic.caller().to_str(), principal.to_str())
 
 
 if not DO_NOT_IMPLEMENT_HEARTBEAT:
-
     @update
-    def set_heartbeat_interval_seconds(seconds: nat) -> str:
-        _only_if_admin()
+    def set_heartbeat_interval_seconds(seconds: nat) -> nat:
         global heartbeat_interval_seconds
-        heartbeat_interval_seconds = seconds
-        app_data().heartbeat_interval_seconds = seconds
-        return str(_stats())
+        heartbeat_interval_seconds = admin.set_heartbeat_interval_seconds(ic.caller().to_str(), seconds)
+        return heartbeat_interval_seconds
 
 
 @update
 def reset() -> str:
-    _only_if_admin()
-    services.reset()
-    return str(_stats())
+    return admin.reset(ic.caller().to_str())
 
 
 #################

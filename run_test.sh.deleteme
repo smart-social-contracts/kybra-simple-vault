@@ -6,7 +6,7 @@ echo "Running tests..."
 
 exit_code=0
 
-TEST_IDS=('initialization' 'transaction_processing' 'balance_tracking' 'sync_recovery' 'reset' 'admin')
+TEST_IDS=('parse_candid' 'basic')
 TEST_PYTHON_PATH="tests/src/vault:src/vault:src/vault/vault"
 
 # Check if a specific test ID is provided as an argument

@@ -1,10 +1,11 @@
 from kybra import StableBTreeMap, ic, query, update
 from kybra_simple_db import *
 
-# from tests import (
-#     # test_parse_candid
-#     test_basic
-# )
+# Only import the IC-specific tests
+from tests.src.vault.tests import (
+    test_ic_balance,
+    test_ic_transfer
+)
 
 db_storage = StableBTreeMap[str, str](
     memory_id=0, max_key_size=100_000, max_value_size=1_000_000
@@ -25,4 +26,5 @@ def greet() -> str:
 @update
 def run_test(module_name: str) -> int:
     ic.print(f"Running test_{module_name}...")
-    return globals()[f"test_{module_name}"].run()
+    module = globals()[f"test_{module_name}"]
+    return module.run()
