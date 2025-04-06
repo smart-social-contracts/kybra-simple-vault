@@ -15,12 +15,11 @@ class LedgerCanister(Entity, TimestampedMixin):
     principal = String()
 
 
-if not LedgerCanister["ckBTC"]:
-    LedgerCanister(_id="ckBTC", principal=CKBTC_CANISTER)
-
-
 def app_data():
     return ApplicationData["main"] or ApplicationData(_id="main")
+
+def ledger_canister():
+    return LedgerCanister["ckBTC"] or LedgerCanister(_id="ckBTC", principal=CKBTC_CANISTER)
 
 
 class Category(Entity, TimestampedMixin):

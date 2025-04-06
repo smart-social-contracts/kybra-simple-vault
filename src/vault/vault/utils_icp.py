@@ -11,17 +11,20 @@ from vault.candid_types import (
     GetTransactionsResponse,
     ICRCLedger,
 )
-from vault.constants import CKBTC_CANISTER
+from vault.entities import LedgerCanister
 
 logger = get_logger(__name__)
 logger.set_level(logger.DEBUG)
 
 
 def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResponse]:
+    principal = LedgerCanister['ckBTC'].principal
+
     logger.debug(
-        "Querying for transactions: from %s, give me %s transactions" % (start, length)
+        "Querying for transactions on ckBTC ledger with principal %s: from %s, give me %s transactions" % (principal, start, length)
     )
-    ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
+
+    ledger = ICRCLedger(Principal.from_str(principal))
     request = GetTransactionsRequest(start=start, length=length)
     ret: CallResult[GetTransactionsResponse] = yield ledger.get_transactions(request)
     if ret.Ok:

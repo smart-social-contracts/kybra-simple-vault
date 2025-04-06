@@ -9,8 +9,6 @@ COPY src /app/src
 COPY tests/dfx.json /app/dfx.json 
 COPY tests/entrypoint.sh /app/entrypoint.sh
 COPY tests/test_ic_vault_canister.py /app/test_ic_vault_canister.py
-COPY tests/src/vault/main.py /app/src/vault/main.py
-COPY tests/src/vault/tests /app/src/vault/tests
 COPY tests/ledger_suite_icrc/* /app/ledger_suite_icrc/
 COPY requirements.txt /app/requirements.txt
 

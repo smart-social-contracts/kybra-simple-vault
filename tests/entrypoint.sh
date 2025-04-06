@@ -23,6 +23,12 @@ dfx deploy --no-wallet ckbtc_ledger --argument="(variant { Init = record { minti
 echo "Deploying vault canister..."
 dfx deploy vault
 
+# Set the ckBTC ledger canister principal in the vault canister
+echo "Setting ckBTC ledger canister principal in vault..."
+LEDGER_ID=$(dfx canister id ckbtc_ledger)
+dfx canister call vault set_ledger_canister '("ckBTC", principal "'"$LEDGER_ID"'")'
+sleep 1  # Give the canister a moment to process the update
+
 # Run tests against the vault canister
 echo "Running IC integration tests..."
 python /app/test_ic_vault_canister.py

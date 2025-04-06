@@ -1,7 +1,7 @@
 
 
 import vault.services as services
-from vault.entities import app_data, stats, LedgerCanister
+from vault.entities import app_data, stats, ledger_canister
 
 from kybra_simple_logging import get_logger
 logger = get_logger(__name__)
@@ -39,7 +39,7 @@ def set_heartbeat_interval_seconds(caller: str, seconds: int) -> int:
 def set_ledger_canister(caller: str, canister_id: str, principal: str) -> str:
     _only_if_admin(caller)
 
-    canister = LedgerCanister[canister_id] or LedgerCanister(_id=canister_id)
+    canister = ledger_canister()
     canister.principal = principal
     logger.info(f"Setting ledger canister {canister_id}'s principal to {principal}")
     return str(stats())

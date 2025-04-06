@@ -1,4 +1,4 @@
-import utils_icp
+import vault.utils_icp as utils_icp
 from kybra import (
     Async,
     CallResult,
@@ -68,16 +68,11 @@ def get_canister_id() -> Async[Principal]:
 
 @update
 def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResult]:
-    ret: CallResult[GetTransactionsResponse] = yield utils_icp.get_transactions(
-        start, length
-    )
-    return match(
-        ret,
-        {
-            "Ok": lambda ok: {"Ok": ok},
-            "Err": lambda err: {"Err": str(err)},
-        },
-    )
+    ret: CallResult[GetTransactionsResponse] = yield utils_icp.get_transactions(start, length)
+    return match(ret, {
+        "Ok": lambda ok: {"Ok": ok},
+        "Err": lambda err: {"Err": str(err)},
+    })
 
 
 @query
@@ -98,7 +93,9 @@ def get_canister_balance() -> Async[str]:
 
 @update
 def do_transfer(to: Principal, amount: nat) -> Async[nat]:
-    ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
+    from vault.entities import ledger_canister
+    principal = ledger_canister().principal
+    ledger = ICRCLedger(Principal.from_str(principal))
 
     args: TransferArg = TransferArg(
         to=Account(owner=to, subaccount=None),
@@ -109,9 +106,17 @@ def do_transfer(to: Principal, amount: nat) -> Async[nat]:
         created_at_time=None,  # System will use current time
     )
 
+    logger.debug(f"Transferring {amount} tokens to {to.to_str()}")
     result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
 
-    return match(result, {"Ok": lambda ok: 0, "Err": lambda err: -1})
+    # Return the transaction id on success or -1 on error
+    return match(result, {
+        "Ok": lambda result_variant: match(result_variant, {
+            "Ok": lambda tx_id: tx_id,  # Return the transaction ID directly
+            "Err": lambda _: -1  # Return -1 on transfer error
+        }),
+        "Err": lambda _: -1  # Return -1 on call error
+    })
 
 
 @update
@@ -142,6 +147,10 @@ if not DO_NOT_IMPLEMENT_HEARTBEAT:
 def reset() -> str:
     return admin.reset(ic.caller().to_str())
 
+
+@update
+def set_ledger_canister(canister_id: str, principal: Principal) -> str:
+    return admin.set_ledger_canister(ic.caller().to_str(), canister_id, principal.to_str())
 
 #################
 
