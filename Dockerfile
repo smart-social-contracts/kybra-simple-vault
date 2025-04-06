@@ -11,5 +11,10 @@ COPY tests/entrypoint.sh /app/entrypoint.sh
 COPY tests/src/vault/main.py /app/src/vault/main.py
 COPY tests/src/vault/tests /app/src/vault/tests
 COPY tests/ledger_suite_icrc/* /app/ledger_suite_icrc/
+COPY requirements.txt /app/requirements.txt
+
+# Install dependencies
+RUN pip install -r requirements.txt
+RUN pip install kybra_simple_db kybra_simple_logging
 
 ENTRYPOINT ["/app/entrypoint.sh"]
