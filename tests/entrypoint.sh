@@ -25,7 +25,14 @@ dfx deploy vault
 
 # Run tests against the vault canister
 echo "Running IC integration tests..."
-# TODO: call test_vault_canister.py
+python /app/test_ic_vault_canister.py
+
+# Check the exit code of the tests
+if [ $? -ne 0 ]; then
+    echo "❌ IC integration tests failed"
+    dfx stop
+    exit 1
+fi
 
 
 # Successfully complete the test

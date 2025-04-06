@@ -1,4 +1,5 @@
 from kybra_simple_db import *
+from vault.constants import CKBTC_CANISTER
 
 
 class ApplicationData(Entity, TimestampedMixin):
@@ -8,6 +9,14 @@ class ApplicationData(Entity, TimestampedMixin):
     vault_principal = String()
     last_heartbeat_time = Integer(min_value=0, default=0)
     heartbeat_interval_seconds = Integer(min_value=0, default=0)
+
+
+class LedgerCanister(Entity, TimestampedMixin):
+    principal = String()
+
+
+if not LedgerCanister["ckBTC"]:
+    LedgerCanister(_id="ckBTC", principal=CKBTC_CANISTER)
 
 
 def app_data():
@@ -37,4 +46,5 @@ def stats():
         "app_data": app_data().to_dict(),
         "balances": [_.to_dict() for _ in Balance.instances()],
         "vault_transactions": [_.to_dict() for _ in VaultTransaction.instances()],
+        "ledger_canisters": [_.to_dict() for _ in LedgerCanister.instances()],
     }

@@ -7,13 +7,16 @@ echo "Running tests..."
 exit_code=0
 
 TEST_IDS=('initialization' 'transaction_processing' 'balance_tracking' 'sync_recovery' 'reset' 'admin')
-TEST_PYTHON_PATH="tests/src/vault:src/vault:src/vault/vault"
+
+# Use absolute paths to ensure imports work properly
+PROJECT_ROOT="$(pwd)"
+TEST_PYTHON_PATH="$PROJECT_ROOT:$PROJECT_ROOT/src:$PROJECT_ROOT/src/vault"
 
 # Check if a specific test ID is provided as an argument
 if [ "$1" ]; then
   if [[ " ${TEST_IDS[@]} " =~ " $1 " ]]; then
     echo "Running test $1..."
-    PYTHONPATH=$TEST_PYTHON_PATH python tests/src/vault/tests/test_$1.py || exit_code=1
+    PYTHONPATH=$TEST_PYTHON_PATH python tests/test_$1.py || exit_code=1
     exit $exit_code
   else
     echo "Invalid test ID: $1"
@@ -23,7 +26,8 @@ if [ "$1" ]; then
 fi
 
 for TEST_ID in "${TEST_IDS[@]}"; do
-  PYTHONPATH=$TEST_PYTHON_PATH python tests/src/vault/tests/test_${TEST_ID}.py || exit_code=1
+  echo "Running test $TEST_ID..."
+  PYTHONPATH=$TEST_PYTHON_PATH python tests/test_${TEST_ID}.py || exit_code=1
 done
 
 if [ $exit_code -eq 0 ]; then
