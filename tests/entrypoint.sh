@@ -6,48 +6,63 @@ set -x
 echo "Starting dfx..."
 dfx start --background --clean
 
-# sleep 999999
+# Copy the ledger wasm and did files to the right location
+echo "Setting up ledger suite..."
+mkdir -p .dfx/local/canisters
+cp /app/ledger_suite_icrc/ic-icrc1-ledger.wasm ledger_suite_icrc.wasm
+cp /app/ledger_suite_icrc/ledger.did ledger_suite_icrc.did
 
-# Deploy the test canister
-echo "Deploying test canister..."
-dfx deploy
+# Deploy the ledger canister
+echo "Deploying ckbtc_ledger canister..."
+dfx deploy --no-wallet ckbtc_ledger
+dfx canister call ckbtc_ledger setup '()'
 
-# # # Call greet and check output
-# # echo "Testing greet function..."
-# # GREET_RESULT=$(dfx canister call test greet)
-# # if [ "$GREET_RESULT" != '("Hello!")' ]; then
-# #   echo "Error: greet function returned unexpected result: $GREET_RESULT"
-# #   dfx stop
-# #   exit 1
-# # else
-# #   echo "greet function test passed!"
-# # fi
+# Deploy the vault canister
+echo "Deploying vault canister..."
+dfx deploy vault
 
-# # Define a list of test identifiers
-# # TEST_IDS=('parse_candid')
-# TEST_IDS=('basic')
+# Run tests against the vault canister
+echo "Running IC integration tests..."
 
+# Test 1: Check canister balance
+echo "Testing balance functionality..."
+BALANCE=$(dfx canister call vault get_canister_balance)
+echo "Vault balance: $BALANCE"
 
-# # Loop through each test identifier
-# for TEST_ID in "${TEST_IDS[@]}"; do
-#   echo "Testing test_${TEST_ID} module..."
-#   TEST_RESULT=$(dfx canister call vault run_test ${TEST_ID})
-#   if [ "$TEST_RESULT" != '(0 : int)' ]; then
-#     echo "Error: test_${TEST_ID}.run() function returned unexpected result: $TEST_RESULT"
-#     dfx stop
-#     exit 1 
-#   else
-#     echo "test_${TEST_ID}.run() function test passed!"
-#   fi
-# done
+# Test 2: Test transfers (first need to mint some tokens to the canister)
+echo "Testing transfer functionality..."
+# Create a test account
+TEST_ACCOUNT="rwlgt-iiaaa-aaaaa-aaaaa-cai"
 
-# Deploy the test canister
-echo "Re-Deploying test canister..."
-dfx deploy
+# Get the vault canister ID
+VAULT_ID=$(dfx canister id vault)
 
+# Mint some tokens to the vault (using the ledger canister)
+echo "Minting tokens to the vault..."
+dfx canister call ckbtc_ledger test_mint "($VAULT_ID, 1000000)" # 1 token with 6 decimals
 
+# Get initial balance
+INITIAL_BALANCE=$(dfx canister call vault get_canister_balance)
+echo "Initial balance: $INITIAL_BALANCE"
+
+# Send tokens from the vault
+echo "Sending tokens from vault..."
+dfx canister call vault do_transfer "($TEST_ACCOUNT, 500000)"
+
+# Get final balance
+FINAL_BALANCE=$(dfx canister call vault get_canister_balance)
+echo "Final balance: $FINAL_BALANCE"
+
+# Verify the balance decreased
+if [[ "$INITIAL_BALANCE" == *"1000000"* && "$FINAL_BALANCE" == *"500000"* ]]; then
+    echo "Transfer test passed!"
+else
+    echo "Transfer test failed!"
+    dfx stop
+    exit 1
+fi
 
 echo "Stopping dfx..."
 dfx stop
 
-echo "All done!"
+echo "All tests passed successfully!"
