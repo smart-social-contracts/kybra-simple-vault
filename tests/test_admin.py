@@ -7,7 +7,7 @@ from src.vault.vault.admin import (
     set_heartbeat_interval_seconds,
     set_ledger_canister,
 )
-from src.vault.vault.entities import ledger_canister, app_data
+from src.vault.vault.entities import app_data, ledger_canister
 
 
 class TestAdmin(unittest.TestCase):
@@ -106,7 +106,9 @@ class TestAdmin(unittest.TestCase):
         # Create a mock ledger canister
         ledger_canister_mock = MagicMock()
         ledger_canister_mock.principal = "old-principal"
-        patch("src.vault.vault.admin.ledger_canister", return_value=ledger_canister_mock).start()
+        patch(
+            "src.vault.vault.admin.ledger_canister", return_value=ledger_canister_mock
+        ).start()
 
         # Create a new principal
         new_principal = "new-ledger-canister-principal"
@@ -134,7 +136,9 @@ class TestAdmin(unittest.TestCase):
         # Create a mock ledger canister with initial value
         ledger_canister_mock = MagicMock()
         ledger_canister_mock.principal = "admin-principal"
-        patch("src.vault.vault.admin.ledger_canister", return_value=ledger_canister_mock).start()
+        patch(
+            "src.vault.vault.admin.ledger_canister", return_value=ledger_canister_mock
+        ).start()
 
         # Call set_ledger_canister with non-admin caller and expect exception
         with self.assertRaises(ValueError):
