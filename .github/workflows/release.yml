@@ -44,7 +44,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build setuptools wheel bump2version
+        pip install build setuptools wheel bumpversion
     
     # Only perform version bump if release_type is provided
     - name: Bump version
@@ -53,8 +53,8 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        bump2version ${{ github.event.inputs.release_type }}
-        echo "NEW_VERSION=$(grep -Po '(?<=version=")[^"]*' setup.py)" >> $GITHUB_OUTPUT
+        bumpversion ${{ github.event.inputs.release_type }}
+        echo "NEW_VERSION=$(grep -Po '(?<=return ")[^"]*' src/vault/main.py)" >> $GITHUB_OUTPUT
     
     # Only push changes if we did a version bump
     - name: Push changes
