@@ -1,8 +1,6 @@
 name: Create new release
 
 on:
-  release:
-    types: [created]
   workflow_run:
     workflows: ["Test", "Test IC"]
     types:
@@ -27,8 +25,8 @@ on:
 
 jobs:
   deploy:
-    # Only run if the workflow_run event was successful or if it's a release or manual dispatch
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
+    # Only run if the workflow_run event was successful or if it's a manual dispatch
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     
     steps:
@@ -54,7 +52,7 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         bumpversion ${{ github.event.inputs.release_type }}
-        echo "NEW_VERSION=$(grep -Po '(?<=return ")[^"]*' src/vault/main.py)" >> $GITHUB_OUTPUT
+        echo "NEW_VERSION=$(grep -Po '(?<=version = )[^\s]*' setup.cfg)" >> $GITHUB_OUTPUT
     
     # Only push changes if we did a version bump
     - name: Push changes
