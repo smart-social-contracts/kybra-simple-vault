@@ -19,7 +19,6 @@ import vault.services as services
 import vault.utils_icp as utils_icp
 from vault.candid_types import (
     Account,
-    GetTransactionsRequest,
     GetTransactionsResponse,
     GetTransactionsResult,
     ICRCLedger,
@@ -169,48 +168,3 @@ def set_ledger_canister(canister_id: str, principal: Principal) -> str:
     return admin.set_ledger_canister(
         ic.caller().to_str(), canister_id, principal.to_str()
     )
-
-
-#################
-
-
-@query
-def version() -> str:
-    return "0.7.4"
-
-
-@update
-def execute_code(code: str) -> str:
-    """Executes Python code and returns the output.
-
-    This is the core function needed for the Kybra Simple Shell to work.
-    It captures stdout, stderr, and return values from the executed code.
-    """
-    import io
-    import sys
-    import traceback
-
-    stdout = io.StringIO()
-    stderr = io.StringIO()
-    sys.stdout = stdout
-    sys.stderr = stderr
-
-    try:
-        # Try to evaluate as an expression
-        result = eval(code, globals())
-        if result is not None:
-            print(repr(result))
-    except SyntaxError:
-        try:
-            # If it's not an expression, execute it as a statement
-            # Use the built-in exec function but with a different name to avoid conflict
-            exec_builtin = exec
-            exec_builtin(code, globals())
-        except Exception:
-            traceback.print_exc()
-    except Exception:
-        traceback.print_exc()
-
-    sys.stdout = sys.__stdout__
-    sys.stderr = sys.__stderr__
-    return stdout.getvalue() + stderr.getvalue()
