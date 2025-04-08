@@ -52,7 +52,7 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         bumpversion ${{ github.event.inputs.release_type }}
-        echo "NEW_VERSION=$(grep -Po '(?<=version = )[^\s]*' setup.cfg)" >> $GITHUB_OUTPUT
+        echo "NEW_VERSION=$(grep -Po '(?<=\[metadata\][\s\S]*?version = )\K[0-9\.]+' setup.cfg)" >> $GITHUB_OUTPUT
     
     # Only push changes if we did a version bump
     - name: Push changes
