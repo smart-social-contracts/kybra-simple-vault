@@ -6,8 +6,8 @@ from kybra import (
     StableBTreeMap,
     heartbeat,
     ic,
-    match,
     init,
+    match,
     nat,
     query,
     update,
@@ -27,7 +27,7 @@ from vault.candid_types import (
     TransferArg,
 )
 from vault.constants import CKBTC_CANISTER, DO_NOT_IMPLEMENT_HEARTBEAT
-from vault.entities import app_data, stats, LedgerCanister
+from vault.entities import LedgerCanister, app_data, stats
 
 logger = get_logger(__name__)
 set_log_level(logger.DEBUG)
@@ -67,14 +67,15 @@ if not DO_NOT_IMPLEMENT_HEARTBEAT:
 def init_(
     ck_canister_principal: Opt[Principal] = None,
     admin_principal: Opt[Principal] = None,
-    heartbeat_interval_seconds: nat = 0) -> void:
+    heartbeat_interval_seconds: nat = 0,
+) -> void:
 
     # Properly handle Opt types in Kybra
     if ck_canister_principal is None:
         actual_ck_principal = Principal.from_str(CKBTC_CANISTER)
     else:
         actual_ck_principal = ck_canister_principal
-        
+
     if admin_principal is None:
         actual_admin = ic.caller()
     else:
@@ -87,9 +88,7 @@ def init_(
         f"  heartbeat_interval_seconds: {heartbeat_interval_seconds}"
     )
 
-    LedgerCanister(
-        _id="ckBTC", principal=actual_ck_principal.to_str()
-    )
+    LedgerCanister(_id="ckBTC", principal=actual_ck_principal.to_str())
     app_data().admin_principal = actual_admin.to_str()
     app_data().heartbeat_interval_seconds = heartbeat_interval_seconds
 
