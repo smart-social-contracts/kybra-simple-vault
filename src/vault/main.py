@@ -1,11 +1,13 @@
 from kybra import (
     Async,
     CallResult,
+    Opt,
     Principal,
     StableBTreeMap,
     heartbeat,
     ic,
     match,
+    init,
     nat,
     query,
     update,
@@ -25,7 +27,7 @@ from vault.candid_types import (
     TransferArg,
 )
 from vault.constants import CKBTC_CANISTER, DO_NOT_IMPLEMENT_HEARTBEAT
-from vault.entities import app_data, stats
+from vault.entities import app_data, stats, LedgerCanister
 
 logger = get_logger(__name__)
 set_log_level(logger.DEBUG)
@@ -59,6 +61,37 @@ if not DO_NOT_IMPLEMENT_HEARTBEAT:
             app_data().last_heartbeat_time = ic.time()
             yield services.TransactionTracker().check_transactions()
             logger.debug("Heartbeat finished")
+
+
+@init
+def init_(
+    ck_canister_principal: Opt[Principal] = None,
+    admin_principal: Opt[Principal] = None,
+    heartbeat_interval_seconds: nat = 0) -> void:
+
+    # Properly handle Opt types in Kybra
+    if ck_canister_principal is None:
+        actual_ck_principal = Principal.from_str(CKBTC_CANISTER)
+    else:
+        actual_ck_principal = ck_canister_principal
+        
+    if admin_principal is None:
+        actual_admin = ic.caller()
+    else:
+        actual_admin = admin_principal
+
+    logger.info(
+        f"Initializing with:\n"
+        f"  ck_canister_principal: {actual_ck_principal.to_str()}\n"
+        f"  admin_principal: {actual_admin.to_str()}\n"
+        f"  heartbeat_interval_seconds: {heartbeat_interval_seconds}"
+    )
+
+    LedgerCanister(
+        _id="ckBTC", principal=actual_ck_principal.to_str()
+    )
+    app_data().admin_principal = actual_admin.to_str()
+    app_data().heartbeat_interval_seconds = heartbeat_interval_seconds
 
 
 @query
@@ -138,7 +171,7 @@ def check_transactions() -> Async[str]:
 
 
 @query
-def stats() -> str:
+def get_stats() -> str:
     return str(stats())
 
 
