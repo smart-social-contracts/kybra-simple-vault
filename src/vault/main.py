@@ -26,8 +26,12 @@ from vault.candid_types import (
     ICRCLedger,
     TransferArg,
 )
-from vault.constants import CKBTC_CANISTER, DO_NOT_IMPLEMENT_HEARTBEAT
-from vault.entities import LedgerCanister, app_data, stats
+from vault.constants import (
+    DO_NOT_IMPLEMENT_HEARTBEAT,
+    MAINNET_CKBTC_LEDGER_ID,
+    MAINNET_CKBTC_LEDGER_PRINCIPAL,
+)
+from vault.entities import LedgerCanister, app_data, ledger_canister, stats
 
 logger = get_logger(__name__)
 set_log_level(logger.DEBUG)
@@ -65,30 +69,51 @@ if not DO_NOT_IMPLEMENT_HEARTBEAT:
 
 @init
 def init_(
-    ck_canister_principal: Opt[Principal] = None,
+    ledger_canister_id: Opt[str] = None,
+    ledger_canister_principal: Opt[Principal] = None,
     admin_principal: Opt[Principal] = None,
     heartbeat_interval_seconds: nat = 0,
 ) -> void:
+    """
+    Initializes the vault canister.
+    Args:
+        ledger_canister_id: The canister ID of the ledger as a string (optional, defaults to mainnet)
+        ledger_canister_principal: Principal of the ledger canister (optional, defaults to mainnet principal)
+        admin_principal: Principal of the admin (optional)
+        heartbeat_interval_seconds: Heartbeat interval (nat)
+    """
 
-    # Properly handle Opt types in Kybra
-    if ck_canister_principal is None:
-        actual_ck_principal = Principal.from_str(CKBTC_CANISTER)
-    else:
-        actual_ck_principal = ck_canister_principal
+    if (ledger_canister_id is None and ledger_canister_principal is not None) or (
+        ledger_canister_id is not None and ledger_canister_principal is None
+    ):
+        raise ValueError(
+            "Both ledger_canister_id and ledger_canister_principal must be provided or both must be None"
+        )
 
-    if admin_principal is None:
-        actual_admin = ic.caller()
-    else:
-        actual_admin = admin_principal
+    # Use mainnet ledger's principal and ID if not provided
+    actual_ledger_principal: Principal = (
+        Principal.from_str(MAINNET_CKBTC_LEDGER_PRINCIPAL)
+        if ledger_canister_principal is None
+        else ledger_canister_principal
+    )
+    actual_ledger_id: str = (
+        MAINNET_CKBTC_LEDGER_ID if ledger_canister_id is None else ledger_canister_id
+    )
+
+    # Use caller as admin if not provided
+    actual_admin: Principal = (
+        ic.caller() if admin_principal is None else admin_principal
+    )
 
     logger.info(
         f"Initializing with:\n"
-        f"  ck_canister_principal: {actual_ck_principal.to_str()}\n"
+        f"  ledger_canister_id: {actual_ledger_id}\n"
+        f"  ledger_canister_principal: {actual_ledger_principal.to_str()}\n"
         f"  admin_principal: {actual_admin.to_str()}\n"
         f"  heartbeat_interval_seconds: {heartbeat_interval_seconds}"
     )
 
-    LedgerCanister(_id="ckBTC", principal=actual_ck_principal.to_str())
+    LedgerCanister(_id=actual_ledger_id, principal=actual_ledger_principal.to_str())
     app_data().admin_principal = actual_admin.to_str()
     app_data().heartbeat_interval_seconds = heartbeat_interval_seconds
 
@@ -114,7 +139,7 @@ def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResult]:
 
 @query
 def get_canister_balance() -> Async[str]:
-    ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
+    ledger = ICRCLedger(Principal.from_str(ledger_canister().principal))
     account = Account(owner=ic.id(), subaccount=None)
 
     result: CallResult[nat] = yield ledger.icrc1_balance_of(account)
@@ -130,10 +155,7 @@ def get_canister_balance() -> Async[str]:
 
 @update
 def do_transfer(to: Principal, amount: nat) -> Async[nat]:
-    from vault.entities import ledger_canister
-
-    principal = ledger_canister().principal
-    ledger = ICRCLedger(Principal.from_str(principal))
+    ledger = ICRCLedger(Principal.from_str(ledger_canister().principal))
 
     args: TransferArg = TransferArg(
         to=Account(owner=to, subaccount=None),
