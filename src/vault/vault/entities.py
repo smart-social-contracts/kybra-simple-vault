@@ -1,7 +1,5 @@
 from kybra_simple_db import *
 
-from vault.constants import CKBTC_CANISTER
-
 
 class ApplicationData(Entity, TimestampedMixin):
     last_processed_index = Integer(min_value=0, default=0)
@@ -20,10 +18,15 @@ def app_data():
     return ApplicationData["main"] or ApplicationData(_id="main")
 
 
-def ledger_canister():
-    return LedgerCanister["ckBTC"] or LedgerCanister(
-        _id="ckBTC", principal=CKBTC_CANISTER
-    )
+# We expect to support multiple ledger canisters in the future
+ledger_canister_obj = None
+
+
+def ledger_canister() -> LedgerCanister:
+    global ledger_canister_obj
+    if ledger_canister_obj is None:
+        ledger_canister_obj = LedgerCanister.instances()[0]
+    return ledger_canister_obj
 
 
 class Category(Entity, TimestampedMixin):

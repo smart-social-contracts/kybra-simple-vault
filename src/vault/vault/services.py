@@ -10,7 +10,7 @@ from vault.candid_types import (
     ICRCLedger,
     Transaction,
 )
-from vault.constants import CKBTC_CANISTER, TRANSACTION_BATCH_SIZE
+from vault.constants import TRANSACTION_BATCH_SIZE
 from vault.entities import Balance, VaultTransaction, app_data
 from vault.utils import get_nested
 from vault.utils_icp import get_transactions

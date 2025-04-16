@@ -41,3 +41,6 @@ kybra_simple_logging/
 *.swp
 *.swo
 *~
+
+# Ignore all WASM artifacts
+*.wasm
