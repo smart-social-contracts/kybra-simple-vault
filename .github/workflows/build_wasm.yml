@@ -1,0 +1,39 @@
+name: Build canister wasm
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build setuptools wheel
+
+      - name: Build vault canister WASM in Docker
+        run: bash ./build_vault_wasm.sh
+
+      - name: Ensure WASM file exists
+        run: ls vault_*.wasm
+
+      - name: Upload WASM artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: vault-canister-wasm
+          path: vault_*.wasm
