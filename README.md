@@ -1,6 +1,6 @@
 # Kybra Simple Vault
 
-A canister written in Python using Kybra that manages cryptocurrency transactions on the Internet Computer.
+A canister written in Python using Kybra that manages ICRC-1 token transactions (e.g., ckBTC) on the Internet Computer.
 
 **WARNING: This is not ready for production use yet and funds stored in the vault canister can be lost. Use at your own risk.**
 
@@ -11,9 +11,10 @@ A canister written in Python using Kybra that manages cryptocurrency transaction
 
 ## Features
 
-- Receive ckBTC from any principal and track balances
-- Admin can withdraw ckBTC to specific addresses
+- Receive tokens from any principal and track balances
+- Admin can withdraw tokens to specific addresses
 - Query balances, transaction history and statistics
+- Automatic background synchronization with the ledger via heartbeat
 
 ## Getting Started
 
@@ -22,17 +23,34 @@ A canister written in Python using Kybra that manages cryptocurrency transaction
 - Python 3.10
 - dfx
 
-### Installation
+### Quick Start
 
 ```bash
 # Clone the repository
 git clone https://github.com/smart-social-contracts/kybra-simple-vault.git
 cd kybra-simple-vault
 
-# Deploy to local replica
-dfx start --clean --background
-dfx deploy
+# Deploy the vault canister with default arguments on the Internet Computer
+dfx deploy vault --network ic
 ```
+
+This will deploy the vault canister with default arguments, which will use the mainnet ckBTC ledger canister and your identity as the admin of the vault.
+
+
+### Vault Canister Initialization
+
+```bash
+dfx deploy vault --argument='(opt "<id>", opt principal "<princ>", opt principal "<admin>", 0)'
+```
+
+The `vault` canister supports optional init arguments for flexible deployment:
+- `ledger_canister_id` (opt text)
+- `ledger_canister_principal` (opt principal)
+- `admin_principal` (opt principal)
+- `heartbeat_interval_seconds` (nat, default 0)
+
+If not provided, ledger args default to mainnet values; admin defaults to the deployer. If you set one ledger arg, set both.
+
 
 ### Usage Examples
 
@@ -49,6 +67,25 @@ dfx canister call vault get_stats
 
 # Check logs
 dfx canister logs vault
+```
+
+Admin functions:
+
+```bash
+# Reset the vault
+dfx canister call vault reset
+
+# Set admin
+dfx canister call vault set_admin "<admin_principal>"
+
+# Set heartbeat interval
+dfx canister call vault set_heartbeat_interval_seconds <seconds>
+
+# Set ledger canister
+dfx canister call vault set_ledger_canister "<id>" "<principal>"
+
+# Transfer tokens out of the vault (amount in smallest unit, e.g., 100000000 for 1 ckBTC)
+dfx canister call vault do_transfer "<to>" <amount>
 ```
 
 ## License
