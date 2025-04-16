@@ -16,7 +16,13 @@ fi
 
 echo ">>> Building vault canister WASM in Docker using version $VERSION and image $IMAGE_NAME..."
 
-docker run --rm -it \
+# Detect if running in a TTY (local terminal) or not (CI) and add -t only if a TTY is present
+DOCKER_TTY=""
+if [ -t 1 ]; then
+  DOCKER_TTY="-t"
+fi
+
+docker run --rm -i $DOCKER_TTY \
   --entrypoint bash \
   -v "$(pwd)":/app \
   -w /app \
@@ -31,6 +37,7 @@ docker run --rm -it \
     echo '>>> Copying WASM...'; \
     cp .kybra/vault/vault.wasm /app/vault_${VERSION}.wasm; \
   "
+
 
 echo ">>> Build complete. vault_${VERSION}.wasm is ready."
 
