@@ -31,7 +31,7 @@ git clone https://github.com/smart-social-contracts/kybra-simple-vault.git
 cd kybra-simple-vault
 
 # Deploy the vault canister with default arguments on the Internet Computer
-dfx deploy vault --network ic
+dfx deploy vault --network ic --argument '(null, null, null, 0)'
 ```
 
 This will deploy the vault canister with default arguments, which will use the mainnet ckBTC ledger canister and your identity as the admin of the vault.
@@ -40,7 +40,7 @@ This will deploy the vault canister with default arguments, which will use the m
 ### Vault Canister Initialization
 
 ```bash
-dfx deploy vault --argument='(opt "<id>", opt principal "<princ>", opt principal "<admin>", 0)'
+dfx deploy vault --argument='(opt "<id>", opt principal "<princ>", opt principal "<admin>", <seconds>)'
 ```
 
 The `vault` canister supports optional init arguments for flexible deployment:

@@ -85,6 +85,12 @@ class TransactionTracker:
                         transaction, "transfer", "from_", "owner"
                     )
                     principal_to = get_nested(transaction, "transfer", "to", "owner")
+                    
+                    # Check if vault_principal exists before comparing
+                    if not app_data().vault_principal:
+                        logger.warning("vault_principal is not set in app_data. Using canister ID as vault principal.")
+                        app_data().vault_principal = ic.id().to_str()
+                        
                     relevant = app_data().vault_principal in (
                         principal_from,
                         principal_to,

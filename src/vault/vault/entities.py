@@ -6,6 +6,8 @@ class ApplicationData(Entity, TimestampedMixin):
     log_length = Integer(min_value=0, default=0)
     admin_principal = String()
     vault_principal = String()
+    ledger_canister_id = String()
+    ledger_canister_principal = String()
     last_heartbeat_time = Integer(min_value=0, default=0)
     heartbeat_interval_seconds = Integer(min_value=0, default=0)
 

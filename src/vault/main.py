@@ -113,7 +113,12 @@ def init_(
         f"  heartbeat_interval_seconds: {heartbeat_interval_seconds}"
     )
 
+    # Store the ledger principal in LedgerCanister
     LedgerCanister(_id=actual_ledger_id, principal=actual_ledger_principal.to_str())
+    
+    # Make sure these values are also stored in app_data for persistence
+    app_data().ledger_canister_id = actual_ledger_id
+    app_data().ledger_canister_principal = actual_ledger_principal.to_str()
     app_data().admin_principal = actual_admin.to_str()
     app_data().heartbeat_interval_seconds = heartbeat_interval_seconds
 
