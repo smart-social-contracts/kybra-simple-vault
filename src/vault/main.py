@@ -114,8 +114,16 @@ def init_(
     )
 
     # Store the ledger principal in LedgerCanister
-    LedgerCanister(_id=actual_ledger_id, principal=actual_ledger_principal.to_str())
+    ledger = LedgerCanister[actual_ledger_id] or LedgerCanister(_id=actual_ledger_id, principal=actual_ledger_principal.to_str())
+
+    logger.info('ledger = %s' % ledger)
+    logger.info('ledger.to_dict() = %s' % ledger.to_dict())
     
+    ledger = LedgerCanister[actual_ledger_id]
+    logger.info('ledger           (loaded) = %s' % ledger)
+    logger.info('ledger.to_dict() (loaded) = %s' % ledger.to_dict())
+
+
     # Make sure these values are also stored in app_data for persistence
     app_data().ledger_canister_id = actual_ledger_id
     app_data().ledger_canister_principal = actual_ledger_principal.to_str()
@@ -144,7 +152,11 @@ def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResult]:
 
 @query
 def get_canister_balance() -> Async[str]:
-    ledger = ICRCLedger(Principal.from_str(LedgerCanister[MAINNET_CKBTC_LEDGER_ID].principal))
+    logger.info('MAINNET_CKBTC_LEDGER_ID = %s' % MAINNET_CKBTC_LEDGER_ID)
+    ledger = LedgerCanister[MAINNET_CKBTC_LEDGER_ID]
+    logger.info('balance: ledger           = %s' % ledger)
+    logger.info('balance: ledger.to_dict() = %s' % ledger.to_dict())
+    ledger = ICRCLedger(Principal.from_str(ledger.principal))
     account = Account(owner=ic.id(), subaccount=None)
 
     result: CallResult[nat] = yield ledger.icrc1_balance_of(account)

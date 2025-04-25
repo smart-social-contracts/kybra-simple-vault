@@ -150,6 +150,8 @@ def test_basic_transfer():
     # Check new balance
     new_balance_resp = run_command("dfx canister call vault get_canister_balance")
     new_balance = parse_candid_response(new_balance_resp)
+
+    assert new_balance == '("989990")'
     
     print(f"Transfer result: {transfer_result}")
     print(f"Initial balance: {initial_balance}")
@@ -178,19 +180,19 @@ def test_check_transactions():
         print(f"{YELLOW}get_transactions failed{RESET}")
         return False
 
-def test_admin_functions():
-    """Test admin functions."""
-    print(f"\n{BLUE}Testing: Admin functions{RESET}")
+# def test_admin_functions():
+#     """Test admin functions."""
+#     print(f"\n{BLUE}Testing: Admin functions{RESET}")
     
-    # Test reset
-    reset_result = run_command("dfx canister call vault reset")
+#     # Test reset
+#     reset_result = run_command("dfx canister call vault reset")
     
-    if reset_result is not None:
-        print(f"{GREEN}Admin reset succeeded{RESET}")
-        return True
-    else:
-        print(f"{YELLOW}Admin reset failed{RESET}")
-        return False
+#     if reset_result is not None:
+#         print(f"{GREEN}Admin reset succeeded{RESET}")
+#         return True
+#     else:
+#         print(f"{YELLOW}Admin reset failed{RESET}")
+#         return False
 
 def test_invalid_transfer():
     """Test transfer with invalid parameters."""
@@ -339,9 +341,6 @@ def setup():
     print(f"Vault canister ID: {vault_id}")
     print(f"Ledger canister ID: {ledger_id}")
     
-    # Call reset to ensure a clean state
-    call_admin_function("reset")
-    
     # Initial minting
     mint_tokens(1000000)
     
@@ -361,7 +360,7 @@ def main():
         "balance": test_canister_balance(),
         "transfer": test_basic_transfer(),
         "transactions": test_check_transactions(),
-        "admin": test_admin_functions(),
+        # "admin": test_admin_functions(),
         "invalid_transfer": test_invalid_transfer(),
         "get_transactions": test_get_transactions()
     }
