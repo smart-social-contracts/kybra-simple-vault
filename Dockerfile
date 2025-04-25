@@ -8,7 +8,7 @@ WORKDIR /app
 COPY src /app/src
 COPY tests/dfx.json /app/dfx.json 
 COPY tests/entrypoint.sh /app/entrypoint.sh
-COPY tests/test_ic_vault_canister.py /app/test_ic_vault_canister.py
+COPY tests/test_ic_integration.py /app/test_ic_integration.py
 COPY tests/ledger_suite_icrc/* /app/ledger_suite_icrc/
 COPY requirements.txt /app/requirements.txt
 
