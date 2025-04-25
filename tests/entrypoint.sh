@@ -2,7 +2,6 @@
 set -e
 set -x
 
-sleep 999999
 # Start dfx in the background
 echo "Starting dfx...";
 dfx start --background --clean

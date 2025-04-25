@@ -11,6 +11,8 @@ import subprocess
 import sys
 import shutil
 from typing import Optional, Any
+# from src.vault.vault.constants import MAINNET_CKBTC_LEDGER_ID
+MAINNET_CKBTC_LEDGER_ID = "ckBTC"
 
 # Simple colored output
 GREEN = "\033[92m"
@@ -35,7 +37,7 @@ def run_command(command: str) -> Optional[str]:
     if process.returncode != 0:
         print(f"{RED}Error: {process.stderr}{RESET}")
         raise Exception("Error")
-    return '\n'.join([process.stdout.strip(), process.stderr.strip()])
+    return '\n'.join([process.stdout.strip(), process.stderr.strip()]).strip()
 
 def get_canister_id(canister_name: str) -> str:
     """Get the canister ID for the given canister name."""
@@ -83,15 +85,15 @@ def parse_candid_value(value: str) -> Any:
 def mint_tokens(amount: int) -> bool:
     """Mint tokens to the vault for testing."""
     mint_cmd = (
-        f"dfx canister call ckbtc_ledger icrc1_transfer '"
+        f"dfx canister call ckbtc_ledger icrc1_transfer \""
         f"(record {{ "
-        f"to = record {{ owner = principal \"{vault_id}\"; subaccount = null }}; "
+        f"to = record {{ owner = principal \\\"{vault_id}\\\"; subaccount = null }}; "
         f"amount = {amount}; "
         f"fee = null; "
         f"memo = null; "
         f"from_subaccount = null; "
         f"created_at_time = null "
-        f"}})'"
+        f"}})\""
     )
     result = run_command(mint_cmd)
     return result is not None
@@ -143,6 +145,8 @@ def test_basic_transfer():
         print(f"{YELLOW}Transfer failed{RESET}")
         return False
     
+    
+
     # Check new balance
     new_balance_resp = run_command("dfx canister call vault get_canister_balance")
     new_balance = parse_candid_response(new_balance_resp)
@@ -244,21 +248,19 @@ def deploy_ledger_canister():
         print(f"{RED}Failed to get principal{RESET}")
         return False
     
-
-    
     # Deploy the ledger canister
     ledger_arg = (
-        f"(variant {{ Init = record {{ "
-        f"minting_account = record {{ owner = principal \\\"{principal}\\\"; subaccount = null }}; "
-        f"transfer_fee = 10; "
-        f"token_symbol = \\\"ckBTC\\\"; "
-        f"token_name = \\\"ckBTC Test\\\"; "
-        f"decimals = opt 8; "
-        f"metadata = vec {{}}; "
-        f"initial_balances = vec {{ record {{ record {{ owner = principal \\\"{principal}\\\"; subaccount = null }}; "
-        f"1_000_000_000 }} }}; "
-        f"feature_flags = opt record {{ icrc2 = true }}; "
-        f"archive_options = record {{ num_blocks_to_archive = 1000; trigger_threshold = 2000; "
+        f"(variant {{ Init = record {{ " + '\n'
+        f"minting_account = record {{ owner = principal \\\"{principal}\\\"; subaccount = null }}; " + '\n'
+        f"transfer_fee = 10; " + '\n'
+        f"token_symbol = \\\"{MAINNET_CKBTC_LEDGER_ID}\\\"; " + '\n'
+        f"token_name = \\\"{MAINNET_CKBTC_LEDGER_ID}\\\"; " + '\n'
+        f"decimals = opt 8; " + '\n'
+        f"metadata = vec {{}}; " + '\n'
+        f"initial_balances = vec {{ record {{ record {{ owner = principal \\\"{principal}\\\"; subaccount = null }}; " + '\n'
+        f"1_000_000_000 }} }}; " + '\n'
+        f"feature_flags = opt record {{ icrc2 = true }}; " + '\n'
+        f"archive_options = record {{ num_blocks_to_archive = 1000; trigger_threshold = 2000; " + '\n'
         f"controller_id = principal \\\"{principal}\\\" }} }} }})"
     )
     
@@ -296,7 +298,7 @@ def deploy_vault_canister():
     vault_canister_id = ckbtc_principal  # Same as in entrypoint.sh
     
     # Deploy the vault canister
-    vault_arg = f"(opt \"{vault_canister_id}\", opt principal \"{ckbtc_principal}\", opt principal \"{principal}\", 0)"
+    vault_arg = f"(opt \\\"{MAINNET_CKBTC_LEDGER_ID}\\\", opt principal \\\"{ckbtc_principal}\\\", opt principal \\\"{principal}\\\", 0)"
     print(f"Deploying vault canister with arguments: {vault_arg}")
     
     deploy_cmd = f"dfx deploy vault --argument=\"{vault_arg}\""

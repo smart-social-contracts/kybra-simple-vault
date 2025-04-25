@@ -12,6 +12,7 @@ from vault.candid_types import (
     ICRCLedger,
 )
 from vault.entities import LedgerCanister
+from vault.constants import MAINNET_CKBTC_LEDGER_ID
 
 logger = get_logger(__name__)
 logger.set_level(logger.DEBUG)
@@ -21,7 +22,7 @@ def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResponse]:
     # First try to get the principal from LedgerCanister
     principal = None
     try:
-        principal = LedgerCanister["ckBTC"].principal
+        principal = LedgerCanister[MAINNET_CKBTC_LEDGER_ID].principal
         if principal:
             logger.debug(f"Using principal from LedgerCanister: {principal}")
     except (KeyError, AttributeError, IndexError) as e:

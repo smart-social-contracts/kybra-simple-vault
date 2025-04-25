@@ -8,12 +8,14 @@ tests/download_ledger.sh
 
 # Build the Docker image
 echo "Building Docker image..."
-docker build --no-cache -t $IMAGE_NAME .
+docker build -t $IMAGE_NAME .  # --no-cache 
 
 # Run the tests in a Docker container
 echo "Running IC tests in Docker container..."
-docker run --rm $IMAGE_NAME --entrypoint tests/entrypoint.sh || {
+
+docker run --rm --entrypoint tests/entrypoint.sh $IMAGE_NAME || {
     echo "❌ Tests failed"
+    sleep 999999
     exit 1
 }
 
