@@ -6,14 +6,13 @@ RUN mkdir -p /app/ledger_suite_icrc
 # Copy application files
 WORKDIR /app
 COPY src /app/src
-COPY tests/dfx.json /app/dfx.json 
-COPY tests/entrypoint.sh /app/entrypoint.sh
-COPY tests/test_ic_integration.py /app/test_ic_integration.py
-COPY tests/ledger_suite_icrc/* /app/ledger_suite_icrc/
+COPY dfx.json /app/dfx.json 
+COPY tests /app/tests
+# COPY tests/entrypoint.sh /app/entrypoint.sh
+# COPY tests/test_ic_integration.py /app/test_ic_integration.py
+# COPY tests/artifacts* /app/ledger_suite_icrc/
 COPY requirements.txt /app/requirements.txt
 
 # Install dependencies
 RUN pip install -r requirements.txt
-RUN pip install kybra_simple_db kybra_simple_logging
 
-ENTRYPOINT ["/app/entrypoint.sh"]

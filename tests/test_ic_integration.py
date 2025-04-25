@@ -29,10 +29,13 @@ def run_command(command: str) -> Optional[str]:
     """Run a shell command and return its output."""
     print(f"{YELLOW}Executing: {command}{RESET}")
     process = subprocess.run(command, shell=True, capture_output=True, text=True)
+    print('process.returncode', process.returncode)
+    print('process.stdout.strip()', process.stdout.strip())
+    print('process.stderr.strip()', process.stderr.strip())
     if process.returncode != 0:
         print(f"{RED}Error: {process.stderr}{RESET}")
-        return None
-    return process.stdout.strip()
+        raise Exception("Error")
+    return '\n'.join([process.stdout.strip(), process.stderr.strip()])
 
 def get_canister_id(canister_name: str) -> str:
     """Get the canister ID for the given canister name."""
@@ -217,19 +220,19 @@ def test_get_transactions():
         print(f"{YELLOW}get_transactions failed{RESET}")
         return False
 
-def setup_ledger_files():
-    """Set up the ledger wasm and did files."""
-    print(f"\n{BLUE}Setting up ledger suite...{RESET}")
+# def setup_ledger_files():
+#     """Set up the ledger wasm and did files."""
+#     print(f"\n{BLUE}Setting up ledger suite...{RESET}")
     
-    # Create directory if it doesn't exist
-    os.makedirs(".dfx/local/canisters", exist_ok=True)
+#     # Create directory if it doesn't exist
+#     os.makedirs(".dfx/local/canisters", exist_ok=True)
     
-    # Copy the ledger wasm and did files
-    ledger_suite_dir = "/app/ledger_suite_icrc"
-    shutil.copy(f"{ledger_suite_dir}/ic-icrc1-ledger.wasm", "ledger_suite_icrc.wasm")
-    shutil.copy(f"{ledger_suite_dir}/ledger.did", "ledger_suite_icrc.did")
+#     # Copy the ledger wasm and did files
+#     ledger_suite_dir = "./ledger_suite_icrc"
+#     shutil.copy(f"{ledger_suite_dir}/ic-icrc1-ledger.wasm", "ledger_suite_icrc.wasm")
+#     shutil.copy(f"{ledger_suite_dir}/ledger.did", "ledger_suite_icrc.did")
     
-    return True
+#     return True
 
 def deploy_ledger_canister():
     """Deploy the ledger canister with explicit arguments."""
@@ -241,24 +244,31 @@ def deploy_ledger_canister():
         print(f"{RED}Failed to get principal{RESET}")
         return False
     
+
+    
     # Deploy the ledger canister
     ledger_arg = (
         f"(variant {{ Init = record {{ "
-        f"minting_account = record {{ owner = principal \"{principal}\"; subaccount = null }}; "
+        f"minting_account = record {{ owner = principal \\\"{principal}\\\"; subaccount = null }}; "
         f"transfer_fee = 10; "
-        f"token_symbol = \"ckBTC\"; "
-        f"token_name = \"ckBTC Test\"; "
+        f"token_symbol = \\\"ckBTC\\\"; "
+        f"token_name = \\\"ckBTC Test\\\"; "
         f"decimals = opt 8; "
         f"metadata = vec {{}}; "
-        f"initial_balances = vec {{ record {{ record {{ owner = principal \"{principal}\"; subaccount = null }}; "
+        f"initial_balances = vec {{ record {{ record {{ owner = principal \\\"{principal}\\\"; subaccount = null }}; "
         f"1_000_000_000 }} }}; "
         f"feature_flags = opt record {{ icrc2 = true }}; "
         f"archive_options = record {{ num_blocks_to_archive = 1000; trigger_threshold = 2000; "
-        f"controller_id = principal \"{principal}\" }} }} }})"
+        f"controller_id = principal \\\"{principal}\\\" }} }} }})"
     )
     
     deploy_cmd = f"dfx deploy --no-wallet ckbtc_ledger --argument=\"{ledger_arg}\""
+    # dfx deploy --no-wallet ckbtc_ledger --argument="(variant { Init = record { minting_account = record { owner = principal \"$PRINCIPAL\"; subaccount = null }; transfer_fee = 10; token_symbol = \"ckBTC\"; token_name = \"ckBTC Test\"; decimals = opt 8; metadata = vec {}; initial_balances = vec { record { record { owner = principal \"$PRINCIPAL\"; subaccount = null }; 1_000_000_000 } }; feature_flags = opt record { icrc2 = true }; archive_options = record { num_blocks_to_archive = 1000; trigger_threshold = 2000; controller_id = principal \"$PRINCIPAL\" } } })"
+
+
     result = run_command(deploy_cmd)
+
+    print('result', result)
     
     if not result:
         print(f"{RED}Failed to deploy ledger canister{RESET}")
@@ -305,10 +315,10 @@ def setup():
     
     print(f"\n{BLUE}Setting up test environment...{RESET}")
     
-    # Setup ledger files
-    if not setup_ledger_files():
-        print(f"{RED}Failed to set up ledger files{RESET}")
-        return False
+    # # Setup ledger files
+    # if not setup_ledger_files():
+    #     print(f"{RED}Failed to set up ledger files{RESET}")
+    #     return False
     
     # Deploy ledger canister
     if not deploy_ledger_canister():
@@ -367,5 +377,6 @@ def main():
     return 0 if all_passed else 1
 
 if __name__ == "__main__":
+    print('it works')
     exit_code = main()
     sys.exit(exit_code)
