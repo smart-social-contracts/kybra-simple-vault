@@ -30,7 +30,7 @@ TEST_ARTIFACTS = {
     "leading_zeros": {
         "input": {
             "principal": "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae",
-            "subaccount": b'\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01'  # Leading zeros with single 1 at end
+            "subaccount": b'\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01'  # Single 1 at start, rest zeros
         },
         "output": "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae-6cc627i.1"
     }
