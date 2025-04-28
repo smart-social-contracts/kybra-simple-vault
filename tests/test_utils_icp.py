@@ -22,6 +22,24 @@ DEFAULT_SUBACCOUNT = bytes(32)  # 32 zeros
 SEQUENTIAL_SUBACCOUNT = bytes(range(1, 33))  # bytes 1 through 32
 LEADING_ZEROS_SUBACCOUNT = bytes([0, 0, 0, 0, 1, 2, 3, 4]) + bytes(24)  # Leading zeros followed by pattern
 
+# Hardcoded expected account IDs based on the implementation
+EXPECTED_ACCOUNT_IDS = {
+    # Principal-only accounts (no subaccount)
+    "principal_short": "2vxsx-fae",
+    "principal_long": "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe",
+    "principal_ic": "aaaaa-aa",
+    
+    # With sequential subaccount (1-32)
+    "sequential_short": "2vxsx-fae-muzavuq.102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+    "sequential_long": "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe-635b25y.102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", 
+    "sequential_ic": "aaaaa-aa-ejfzjpi.102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+    
+    # With leading zeros subaccount
+    "leading_zeros_short": "2vxsx-fae-f2m57rq.1020304000000000000000000000000000000000000000000000000",
+    "leading_zeros_long": "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe-xvi4qyy.1020304000000000000000000000000000000000000000000000000",
+    "leading_zeros_ic": "aaaaa-aa-nhqedki.1020304000000000000000000000000000000000000000000000000"
+}
+
 # Invalid account format examples
 INVALID_FORMATS = [
     "",                     # Empty string
@@ -46,35 +64,34 @@ def run_tests():
     # Test 1: Default subaccount encoding
     print("\n[TEST] Default subaccount encoding")
     try:
-        # Use first test principal
-        principal_text = TEST_PRINCIPALS[0]
-        principal = Principal.from_str(principal_text)
-        
-        # Encode with default subaccount (None)
-        encoded1 = encodeIcrcAccount(principal)
-        assert encoded1 == principal_text, f"Expected {principal_text}, got {encoded1}"
-        print(f"✓ Encoded with None subaccount to: {encoded1}")
-        
-        # Encode with empty subaccount
-        encoded2 = encodeIcrcAccount(principal, bytes(0))
-        assert encoded2 == principal_text, f"Expected {principal_text}, got {encoded2}"
-        print(f"✓ Encoded with empty subaccount to: {encoded2}")
-        
-        # Encode with zero subaccount
-        encoded3 = encodeIcrcAccount(principal, bytes(32))
-        assert encoded3 == principal_text, f"Expected {principal_text}, got {encoded3}"
-        print(f"✓ Encoded with zero subaccount to: {encoded3}")
-        
-        # Decode and verify the result
-        decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded1)
-        
-        # Owner should match the original principal
-        assert str(decoded_owner) == str(principal), f"Expected {principal}, got {decoded_owner}"
-        print(f"✓ Decoded owner matches: {decoded_owner}")
-        
-        # Default subaccount should be all zeros
-        assert decoded_subaccount == bytes(32), f"Expected 32 zero bytes, got {decoded_subaccount}"
-        print(f"✓ Default subaccount is correct: {decoded_subaccount[:3]}...{decoded_subaccount[-3:]}")
+        # Test all principal types with default subaccount
+        for i, principal_text in enumerate(TEST_PRINCIPALS):
+            principal = Principal.from_str(principal_text)
+            expected_account_id = principal_text  # Default subaccount should just be the principal
+            
+            # Encode with default subaccount (None)
+            encoded1 = encodeIcrcAccount(principal)
+            assert encoded1 == expected_account_id, f"Expected {expected_account_id}, got {encoded1}"
+            print(f"✓ Principal {i+1}: {principal_text} -> {encoded1}")
+            
+            # Encode with empty subaccount
+            encoded2 = encodeIcrcAccount(principal, bytes(0))
+            assert encoded2 == expected_account_id, f"Expected {expected_account_id}, got {encoded2}"
+            
+            # Encode with zero subaccount
+            encoded3 = encodeIcrcAccount(principal, bytes(32))
+            assert encoded3 == expected_account_id, f"Expected {expected_account_id}, got {encoded3}"
+            
+            # Decode the account ID
+            decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded1)
+            
+            # Verify owner
+            assert str(decoded_owner) == principal_text, f"Expected {principal_text}, got {decoded_owner}"
+            
+            # Verify subaccount (should be all zeros)
+            assert decoded_subaccount == bytes(32), f"Expected 32 zero bytes, got {decoded_subaccount}"
+            
+        print(f"✓ All default subaccount encodings verified against expected values")
         
         test_count += 1
         passed += 1
@@ -82,34 +99,39 @@ def run_tests():
         print(f"✗ Test failed: {str(e)}")
         test_count += 1
     
-    # Test 2: Specific subaccount encoding
-    print("\n[TEST] Specific subaccount encoding")
+    # Test 2: Specific subaccount encoding with sequential pattern
+    print("\n[TEST] Specific subaccount encoding with sequential pattern")
     try:
-        # Use first test principal
-        principal = Principal.from_str(TEST_PRINCIPALS[0])
-        
-        # Use the sequential subaccount pattern
-        subaccount = SEQUENTIAL_SUBACCOUNT
-        
-        # Encode the account
-        encoded = encodeIcrcAccount(principal, subaccount)
-        
-        # Verify it's a string and has the expected format with hyphen and period
-        assert isinstance(encoded, str), f"Expected string, got {type(encoded)}"
-        assert "-" in encoded, f"Expected hyphen in {encoded}"
-        assert "." in encoded, f"Expected period in {encoded}"
-        print(f"✓ Encoded with subaccount to: {encoded}")
-        
-        # Decode and verify
-        decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded)
-        
-        # Owner should match
-        assert str(decoded_owner) == str(principal), f"Expected {principal}, got {decoded_owner}"
-        print(f"✓ Decoded owner matches: {decoded_owner}")
-        
-        # Subaccount should match
-        assert decoded_subaccount == subaccount, f"Expected {subaccount}, got {decoded_subaccount}"
-        print(f"✓ Custom subaccount preserved: {decoded_subaccount[:3]}...{decoded_subaccount[-3:]}")
+        # Test all principals with sequential subaccount
+        for i, principal_text in enumerate(TEST_PRINCIPALS):
+            principal = Principal.from_str(principal_text)
+            subaccount = SEQUENTIAL_SUBACCOUNT
+            
+            # Get the expected account ID from our precomputed values
+            if i == 0:
+                expected_account_id = EXPECTED_ACCOUNT_IDS["sequential_short"]
+            elif i == 1:
+                expected_account_id = EXPECTED_ACCOUNT_IDS["sequential_long"]
+            else:
+                expected_account_id = EXPECTED_ACCOUNT_IDS["sequential_ic"]
+            
+            # Encode the account
+            encoded = encodeIcrcAccount(principal, subaccount)
+            
+            # Verify against expected account ID
+            assert encoded == expected_account_id, f"Expected {expected_account_id}, got {encoded}"
+            print(f"✓ Principal {i+1} with sequential subaccount: {encoded}")
+            
+            # Additional format checks
+            assert "-" in encoded, f"Expected hyphen in {encoded}"
+            assert "." in encoded, f"Expected period in {encoded}"
+            
+            # Decode to verify owner and subaccount
+            decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded)
+            assert str(decoded_owner) == principal_text, f"Expected owner {principal_text}, got {decoded_owner}"
+            assert decoded_subaccount == subaccount, f"Subaccount mismatch"
+            
+        print(f"✓ All sequential subaccount encodings verified against expected values")
         
         test_count += 1
         passed += 1
@@ -120,28 +142,39 @@ def run_tests():
     # Test 3: Leading zeros in subaccount
     print("\n[TEST] Leading zeros in subaccount")
     try:
-        principal = Principal.from_str(TEST_PRINCIPALS[0])
+        # Test all principals with leading zeros subaccount
+        for i, principal_text in enumerate(TEST_PRINCIPALS):
+            principal = Principal.from_str(principal_text)
+            subaccount = LEADING_ZEROS_SUBACCOUNT
+            
+            # Get the expected account ID from our precomputed values
+            if i == 0:
+                expected_account_id = EXPECTED_ACCOUNT_IDS["leading_zeros_short"]
+            elif i == 1:
+                expected_account_id = EXPECTED_ACCOUNT_IDS["leading_zeros_long"]
+            else:
+                expected_account_id = EXPECTED_ACCOUNT_IDS["leading_zeros_ic"]
+            
+            # Encode the account
+            encoded = encodeIcrcAccount(principal, subaccount)
+            
+            # Verify against expected account ID
+            assert encoded == expected_account_id, f"Expected {expected_account_id}, got {encoded}"
+            print(f"✓ Principal {i+1} with leading zeros: {encoded}")
+            
+            # Verify format
+            parts = encoded.split(".")
+            assert len(parts) == 2, f"Expected format with dot separator, got {encoded}"
+            
+            # Subaccount hex part should not have leading zeros
+            subaccount_hex = parts[1]
+            assert not subaccount_hex.startswith("0"), f"Should not have leading zeros: {subaccount_hex}"
+            
+            # Decode and verify subaccount
+            decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded)
+            assert decoded_subaccount == subaccount, f"Subaccount mismatch"
         
-        # Use the subaccount with leading zeros
-        subaccount = LEADING_ZEROS_SUBACCOUNT
-        
-        # Encode the account
-        encoded = encodeIcrcAccount(principal, subaccount)
-        
-        # Verify format
-        parts = encoded.split(".")
-        assert len(parts) == 2, f"Expected format with dot separator, got {encoded}"
-        
-        # Subaccount hex part should not have leading zeros
-        subaccount_hex = parts[1]
-        assert not subaccount_hex.startswith("0"), f"Should not have leading zeros: {subaccount_hex}"
-        
-        print(f"✓ Encoded with leading zero subaccount to: {encoded}")
-        
-        # Decode and verify roundtrip
-        decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded)
-        assert decoded_subaccount == subaccount, f"Roundtrip failed: {decoded_subaccount} != {subaccount}"
-        print(f"✓ Roundtrip successful with leading zeros")
+        print(f"✓ All leading zeros subaccount encodings verified against expected values")
         
         test_count += 1
         passed += 1
@@ -203,32 +236,70 @@ def run_tests():
         print(f"✗ Test failed unexpectedly: {str(e)}")
         test_count += 1
     
-    # Test 6: Round-trip with various principals
-    print("\n[TEST] Round-trip with various principals")
+    # Test 6: Completeness test with all expected IDs
+    print("\n[TEST] Completeness test with all expected IDs")
     try:
-        # Use the predefined test principals
-        test_principals = TEST_PRINCIPALS
-        
-        for principal_text in test_principals:
-            principal = Principal.from_str(principal_text)
-            print(f"\nTesting with principal: {principal_text}")
+        # Test all expected account IDs
+        for key, expected_account_id in EXPECTED_ACCOUNT_IDS.items():
+            print(f"Testing {key}: {expected_account_id[:20]}... ")
             
-            # Test with default subaccount
-            encoded = encodeIcrcAccount(principal)
-            decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded)
+            # Determine which subaccount to use based on the key
+            if key.startswith("principal_"):
+                # For principal-only keys, we use default subaccount
+                if key == "principal_short":
+                    principal = Principal.from_str(TEST_PRINCIPALS[0])
+                    subaccount = None
+                elif key == "principal_long":
+                    principal = Principal.from_str(TEST_PRINCIPALS[1])
+                    subaccount = None
+                else:  # principal_ic
+                    principal = Principal.from_str(TEST_PRINCIPALS[2])
+                    subaccount = None
+            elif key.startswith("sequential_"):
+                # For sequential subaccount keys
+                if key == "sequential_short":
+                    principal = Principal.from_str(TEST_PRINCIPALS[0])
+                    subaccount = SEQUENTIAL_SUBACCOUNT
+                elif key == "sequential_long":
+                    principal = Principal.from_str(TEST_PRINCIPALS[1])
+                    subaccount = SEQUENTIAL_SUBACCOUNT
+                else:  # sequential_ic
+                    principal = Principal.from_str(TEST_PRINCIPALS[2])
+                    subaccount = SEQUENTIAL_SUBACCOUNT
+            elif key.startswith("leading_zeros_"):
+                # For leading zeros subaccount keys
+                if key == "leading_zeros_short":
+                    principal = Principal.from_str(TEST_PRINCIPALS[0])
+                    subaccount = LEADING_ZEROS_SUBACCOUNT
+                elif key == "leading_zeros_long":
+                    principal = Principal.from_str(TEST_PRINCIPALS[1])
+                    subaccount = LEADING_ZEROS_SUBACCOUNT
+                else:  # leading_zeros_ic
+                    principal = Principal.from_str(TEST_PRINCIPALS[2])
+                    subaccount = LEADING_ZEROS_SUBACCOUNT
             
-            assert str(decoded_owner) == str(principal), f"Expected {principal}, got {decoded_owner}"
-            assert decoded_subaccount == bytes(32), f"Expected 32 zero bytes, got {decoded_subaccount}"
-            print(f"✓ Default subaccount roundtrip successful")
-            
-            # Test with a random subaccount
-            subaccount = create_random_subaccount()
+            # Encode with the specified principal and subaccount
             encoded = encodeIcrcAccount(principal, subaccount)
-            decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded)
             
-            assert str(decoded_owner) == str(principal), f"Expected {principal}, got {decoded_owner}"
-            assert decoded_subaccount == subaccount, f"Expected {subaccount}, got {decoded_subaccount}"
-            print(f"✓ Custom subaccount roundtrip successful")
+            # Verify against the expected account ID
+            assert encoded == expected_account_id, f"Expected {expected_account_id}, got {encoded}"
+            print(f"✓ Encoded correctly: {encoded[:20]}...")
+            
+            # Also verify decoding
+            decoded_owner, decoded_subaccount = decodeIcrcAccount(expected_account_id)
+            principal_str = str(principal)
+            assert str(decoded_owner) == principal_str, f"Expected {principal_str}, got {decoded_owner}"
+            print(f"✓ Decoded owner correctly: {decoded_owner}")
+            
+            # Verify subaccount if present
+            if subaccount is not None:
+                assert decoded_subaccount == subaccount, f"Subaccount mismatch"
+                print(f"✓ Decoded subaccount correctly")
+            else:
+                assert decoded_subaccount == bytes(32), f"Expected default subaccount"
+                print(f"✓ Decoded default subaccount correctly")
+        
+        print(f"\n✓ All expected account IDs verified successfully")
         
         test_count += 1
         passed += 1
