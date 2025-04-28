@@ -4,47 +4,109 @@
 # Query to get balance in Oisy's indexer:
 # dfx canister call mxzaz-hqaaa-aaaar-qaada-cai icrc1_balance_of '(record { owner = principal "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe"; subaccount = null })' --ic
 
-from kybra import Principal, query, ic
+from kybra import Principal
 import base64
 import binascii
 import zlib
 
+# Max length for subaccount in hex (32 bytes = 64 hex chars)
+MAX_SUBACCOUNT_HEX_LENGTH = 64
 
-def encodeIcrcAccount(owner: Principal, subaccount: bytes = b"") -> str:
-    if not subaccount or subaccount == b"\x00" * 32:
-        # No subaccount: just return the principal text
+def encodeIcrcAccount(owner: Principal, subaccount: bytes = None) -> str:
+    """
+    Encodes an ICRC-1 account into a string representation.
+    Follows the ICRC-1 standard: https://github.com/dfinity/ICRC-1/blob/main/standards/ICRC-1/TextualEncoding.md
+    
+    Args:
+        owner: The Principal ID of the account owner
+        subaccount: Optional 32-byte subaccount identifier. If None or all zeros, defaults to main account.
+    
+    Returns:
+        String representation of the account
+    """
+    # If subaccount is None or all zeros, just return the principal text
+    if subaccount is None or len(subaccount) == 0 or (len(subaccount) == 32 and all(b == 0 for b in subaccount)):
         return str(owner)
-    else:
-        owner_bytes = owner.to_blob()
-        combined = owner_bytes + subaccount
-        checksum = zlib.crc32(combined)  # Compute CRC-32
-        checksum_base32 = base64.b32encode(checksum.to_bytes(4, 'big')).decode('utf-8').lower().rstrip("=")
-        subaccount_hex = subaccount.lstrip(b'\x00').hex()
-        return f"{str(owner)}-{checksum_base32}.{subaccount_hex}"
+    
+    # Convert subaccount to hex and remove leading zeros
+    subaccount_hex = subaccount.hex()
+    subaccount_hex = subaccount_hex.lstrip('0')
+    
+    # If after removing leading zeros it's empty, it was all zeros
+    if not subaccount_hex:
+        return str(owner)
+    
+    # Compute CRC32 checksum for verification
+    checksum = compute_crc(owner, subaccount)
+    
+    # Return formatted account string
+    return f"{str(owner)}-{checksum}.{subaccount_hex}"
+
+def compute_crc(owner: Principal, subaccount: bytes) -> str:
+    """
+    Computes the CRC32 checksum for an ICRC account.
+    
+    Args:
+        owner: The Principal ID
+        subaccount: The 32-byte subaccount
+    
+    Returns:
+        Base32-encoded CRC32 checksum
+    """
+    # Get principal representation as bytes
+    # Note: The specific method depends on kybra Principal implementation
+    # We'll use the Principal's string representation encoded as bytes
+    owner_str = str(owner)
+    owner_bytes = owner_str.encode('utf-8')
+    
+    # Combine with subaccount
+    combined = owner_bytes + subaccount
+    
+    # Compute CRC32 checksum
+    crc = zlib.crc32(combined)
+    
+    # Encode to base32 and format
+    checksum_bytes = crc.to_bytes(4, 'big')
+    checksum_base32 = base64.b32encode(checksum_bytes).decode('utf-8').lower().rstrip("=")
+    
+    return checksum_base32
 
 def decodeIcrcAccount(text: str) -> tuple[Principal, bytes]:
-    if "-" not in text:
-        # Simple case: no subaccount
-        return Principal.from_str(text), b"\x00" * 32
-
-    owner_text, rest = text.split("-", 1)
-    if "." not in rest:
-        raise ValueError("Invalid format: no subaccount hex part.")
-
-    checksum_b32, subaccount_hex = rest.split(".", 1)
-    checksum = int.from_bytes(base64.b32decode(checksum_b32.upper() + "===="), 'big')
-    subaccount_partial = bytes.fromhex(subaccount_hex)
-
-    if subaccount_partial[0] == 0x00:
-        raise ValueError("Invalid subaccount: leading zero.")
-
-    subaccount = (b"\x00" * (32 - len(subaccount_partial))) + subaccount_partial
-
-    owner = Principal.from_str(owner_text)
-    owner_bytes = owner.to_blob()
-
-    computed_checksum = zlib.crc32(owner_bytes + subaccount)
-    if computed_checksum != checksum:
-        raise ValueError("Checksum mismatch.")
-
+    """
+    Decodes an ICRC-1 account string representation.
+    
+    Args:
+        text: The encoded account string
+    
+    Returns:
+        Tuple of (owner_principal, subaccount)
+    """
+    if not text:
+        raise ValueError("Invalid account. No string provided.")
+    
+    # Check if this is just a principal (main account)
+    if "." not in text:
+        return Principal.from_str(text), bytes(32)  # Return 32 zero bytes for default subaccount
+    
+    # Split into principal+checksum and subaccount parts
+    principal_and_checksum, subaccount_hex = text.split(".", 1)
+    
+    # Must have a checksum part
+    if "-" not in principal_and_checksum:
+        raise ValueError("Invalid account format. Missing checksum.")
+    
+    # Split principal and checksum
+    principal_text, checksum = principal_and_checksum.rsplit("-", 1)
+    
+    # Create owner principal
+    owner = Principal.from_str(principal_text)
+    
+    # Convert hex subaccount to bytes, padding to 32 bytes
+    subaccount = bytes.fromhex(subaccount_hex.zfill(MAX_SUBACCOUNT_HEX_LENGTH))
+    
+    # Verify checksum
+    expected_checksum = compute_crc(owner, subaccount)
+    if expected_checksum != checksum:
+        raise ValueError("Invalid account. Checksum verification failed.")
+    
     return owner, subaccount

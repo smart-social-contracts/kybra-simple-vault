@@ -6,7 +6,7 @@ import sys
 # Add the parent directory to sys.path to import the module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.vault.vault.utils_icp import encodeIcrcAccount, decodeIcrcAccount
+from src.vault.vault.utils_icp import encodeIcrcAccount, decodeIcrcAccount, compute_crc
 from kybra import Principal
 
 def run_tests():
@@ -23,22 +23,30 @@ def run_tests():
         principal_text = "2vxsx-fae"  # Example principal
         principal = Principal.from_str(principal_text)
         
-        # Encode the account with default subaccount
-        encoded = encodeIcrcAccount(principal)
+        # Encode with default subaccount (None)
+        encoded1 = encodeIcrcAccount(principal)
+        assert encoded1 == principal_text, f"Expected {principal_text}, got {encoded1}"
+        print(f"✓ Encoded with None subaccount to: {encoded1}")
         
-        # With default subaccount, output should be the principal text
-        assert encoded == principal_text, f"Expected {principal_text}, got {encoded}"
-        print(f"✓ Encoded to: {encoded}")
+        # Encode with empty subaccount
+        encoded2 = encodeIcrcAccount(principal, bytes(0))
+        assert encoded2 == principal_text, f"Expected {principal_text}, got {encoded2}"
+        print(f"✓ Encoded with empty subaccount to: {encoded2}")
+        
+        # Encode with zero subaccount
+        encoded3 = encodeIcrcAccount(principal, bytes(32))
+        assert encoded3 == principal_text, f"Expected {principal_text}, got {encoded3}"
+        print(f"✓ Encoded with zero subaccount to: {encoded3}")
         
         # Decode and verify the result
-        decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded)
+        decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded1)
         
         # Owner should match the original principal
         assert str(decoded_owner) == str(principal), f"Expected {principal}, got {decoded_owner}"
         print(f"✓ Decoded owner matches: {decoded_owner}")
         
         # Default subaccount should be all zeros
-        assert decoded_subaccount == b"\x00" * 32, f"Expected 32 zero bytes, got {decoded_subaccount}"
+        assert decoded_subaccount == bytes(32), f"Expected 32 zero bytes, got {decoded_subaccount}"
         print(f"✓ Default subaccount is correct: {decoded_subaccount[:3]}...{decoded_subaccount[-3:]}")
         
         test_count += 1
@@ -53,8 +61,8 @@ def run_tests():
         # Create a test principal
         principal = Principal.from_str("2vxsx-fae")
         
-        # Create a test subaccount with a non-zero value to ensure it's encoded
-        subaccount = bytes([1]) + bytes([0]) * 31  # First byte is 1, rest are 0
+        # Create a test subaccount with a pattern of bytes
+        subaccount = bytes(range(1, 33))  # bytes from 1-32
         
         # Encode the account
         encoded = encodeIcrcAccount(principal, subaccount)
@@ -82,49 +90,98 @@ def run_tests():
         print(f"✗ Test failed: {str(e)}")
         test_count += 1
     
-    # Test 3: Invalid subaccount format
-    print("\n[TEST] Invalid subaccount format")
+    # Test 3: Leading zeros in subaccount
+    print("\n[TEST] Leading zeros in subaccount")
     try:
-        # Invalid format: missing the subaccount part after the dot
-        invalid_encoded = "2vxsx-fae-abcde"
+        principal = Principal.from_str("2vxsx-fae")
         
-        # Should raise ValueError
+        # Create a subaccount with leading zeros
+        subaccount = bytes([0, 0, 0, 0, 1, 2, 3, 4]) + bytes(24)
+        
+        # Encode the account
+        encoded = encodeIcrcAccount(principal, subaccount)
+        
+        # Verify format
+        parts = encoded.split(".")
+        assert len(parts) == 2, f"Expected format with dot separator, got {encoded}"
+        
+        # Subaccount hex part should not have leading zeros
+        subaccount_hex = parts[1]
+        assert not subaccount_hex.startswith("0"), f"Should not have leading zeros: {subaccount_hex}"
+        
+        print(f"✓ Encoded with leading zero subaccount to: {encoded}")
+        
+        # Decode and verify roundtrip
+        decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded)
+        assert decoded_subaccount == subaccount, f"Roundtrip failed: {decoded_subaccount} != {subaccount}"
+        print(f"✓ Roundtrip successful with leading zeros")
+        
+        test_count += 1
+        passed += 1
+    except Exception as e:
+        print(f"✗ Test failed: {str(e)}")
+        test_count += 1
+    
+    # Test 4: Checksum validation
+    print("\n[TEST] Checksum validation")
+    try:
+        principal = Principal.from_str("2vxsx-fae")
+        subaccount = bytes(range(1, 33))
+        
+        # Compute valid checksum
+        checksum = compute_crc(principal, subaccount)
+        
+        # Create an account with invalid checksum
+        invalid_encoded = f"{principal}-invalcrc.{subaccount.hex().lstrip('0')}"
+        
         try:
-            decoded = decodeIcrcAccount(invalid_encoded)
-            # If we get here, the test failed
-            print(f"✗ Expected ValueError, but got: {decoded}")
+            decodeIcrcAccount(invalid_encoded)
+            print(f"✗ Should have rejected invalid checksum: {invalid_encoded}")
             test_count += 1
-        except ValueError:
-            # Expected error
-            print("✓ Correctly rejected invalid format")
-            test_count += 1
+        except ValueError as e:
+            if "Checksum verification failed" in str(e):
+                print(f"✓ Correctly rejected invalid checksum")
+                test_count += 1
+                passed += 1
+            else:
+                print(f"✗ Wrong error: {str(e)}")
+                test_count += 1
+    except Exception as e:
+        print(f"✗ Test failed unexpectedly: {str(e)}")
+        test_count += 1
+    
+    # Test 5: Invalid account format
+    print("\n[TEST] Invalid account format")
+    try:
+        invalid_formats = [
+            "",  # Empty string
+            "not-a-valid-account",  # Invalid principal
+            "2vxsx-fae-checksumonly",  # Missing dot and subaccount
+            "2vxsx-fae.",  # Missing subaccount after dot
+            ".01020304",  # Missing principal
+        ]
+        
+        # Count this as a single test with multiple cases
+        test_count += 1
+        invalid_format_passes = 0
+        
+        for i, invalid in enumerate(invalid_formats):
+            try:
+                decodeIcrcAccount(invalid)
+                print(f"✗ Should have rejected invalid format: {invalid}")
+            except (ValueError, Exception) as e:  # Catch any kind of error
+                # Both ValueError and principal format errors are acceptable
+                print(f"✓ Correctly rejected invalid format: {invalid} (error: {str(e)})")
+                invalid_format_passes += 1
+        
+        # All invalid formats should be rejected
+        if invalid_format_passes == len(invalid_formats):
             passed += 1
     except Exception as e:
         print(f"✗ Test failed unexpectedly: {str(e)}")
         test_count += 1
     
-    # Test 4: Invalid text format
-    print("\n[TEST] Invalid text format")
-    try:
-        # Invalid format: doesn't follow the expected pattern
-        invalid_encoded = "not-a-valid-account"
-        
-        # Should raise ValueError
-        try:
-            decoded = decodeIcrcAccount(invalid_encoded)
-            # If we get here, the test failed
-            print(f"✗ Expected ValueError, but got: {decoded}")
-            test_count += 1
-        except ValueError:
-            # Expected error
-            print("✓ Correctly rejected invalid account text")
-            test_count += 1
-            passed += 1
-    except Exception as e:
-        print(f"✗ Test failed unexpectedly: {str(e)}")
-        test_count += 1
-    
-    # Test 5: Round-trip with various principals
+    # Test 6: Round-trip with various principals
     print("\n[TEST] Round-trip with various principals")
     try:
         # Test with various principal IDs
@@ -143,16 +200,16 @@ def run_tests():
             decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded)
             
             assert str(decoded_owner) == str(principal), f"Expected {principal}, got {decoded_owner}"
-            assert decoded_subaccount == b"\x00" * 32, f"Expected 32 zero bytes, got {decoded_subaccount}"
+            assert decoded_subaccount == bytes(32), f"Expected 32 zero bytes, got {decoded_subaccount}"
             print(f"✓ Default subaccount roundtrip successful")
             
-            # Test with custom subaccount (ensure first byte is non-zero)
-            custom_subaccount = bytes([1]) + bytes(range(1, 32))  # Non-zero first byte
-            encoded = encodeIcrcAccount(principal, custom_subaccount)
+            # Test with non-default subaccount
+            subaccount = bytes([principal_text.encode()[0] % 255]) + os.urandom(31)
+            encoded = encodeIcrcAccount(principal, subaccount)
             decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded)
             
             assert str(decoded_owner) == str(principal), f"Expected {principal}, got {decoded_owner}"
-            assert decoded_subaccount == custom_subaccount, f"Expected {custom_subaccount}, got {decoded_subaccount}"
+            assert decoded_subaccount == subaccount, f"Expected {subaccount}, got {decoded_subaccount}"
             print(f"✓ Custom subaccount roundtrip successful")
         
         test_count += 1
