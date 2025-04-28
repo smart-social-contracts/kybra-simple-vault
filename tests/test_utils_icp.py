@@ -12,30 +12,30 @@ from kybra import Principal
 
 # Test constants - modify these to test with different values
 TEST_PRINCIPALS = [
-    "2vxsx-fae",                                                     # Short principal
+    "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae",  # Principal from TS example
     "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe",  # Long principal
-    "aaaaa-aa"                                                      # IC management canister
+    "aaaaa-aa"                                                          # IC management canister
 ]
 
 # Create different patterns of subaccounts for testing
 DEFAULT_SUBACCOUNT = bytes(32)  # 32 zeros
-SEQUENTIAL_SUBACCOUNT = bytes(range(1, 33))  # bytes 1 through 32
+SEQUENTIAL_SUBACCOUNT = bytes(range(1, 33))  # bytes 1 through 32 (same as TS example)
 LEADING_ZEROS_SUBACCOUNT = bytes([0, 0, 0, 0, 1, 2, 3, 4]) + bytes(24)  # Leading zeros followed by pattern
 
 # Hardcoded expected account IDs based on the implementation
 EXPECTED_ACCOUNT_IDS = {
     # Principal-only accounts (no subaccount)
-    "principal_short": "2vxsx-fae",
+    "principal_short": "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae",
     "principal_long": "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe",
     "principal_ic": "aaaaa-aa",
     
     # With sequential subaccount (1-32)
-    "sequential_short": "2vxsx-fae-muzavuq.102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+    "sequential_short": "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae-dfxgiyy.102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
     "sequential_long": "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe-635b25y.102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20", 
     "sequential_ic": "aaaaa-aa-ejfzjpi.102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
     
     # With leading zeros subaccount
-    "leading_zeros_short": "2vxsx-fae-f2m57rq.1020304000000000000000000000000000000000000000000000000",
+    "leading_zeros_short": "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae-owbgcnq.1020304000000000000000000000000000000000000000000000000",
     "leading_zeros_long": "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe-xvi4qyy.1020304000000000000000000000000000000000000000000000000",
     "leading_zeros_ic": "aaaaa-aa-nhqedki.1020304000000000000000000000000000000000000000000000000"
 }
