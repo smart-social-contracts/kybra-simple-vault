@@ -3,13 +3,11 @@ from kybra import (
     CallResult,
     Principal,
     StableBTreeMap,
-    heartbeat,
     ic,
     match,
     nat,
     query,
     update,
-    void,
 )
 from kybra_simple_db import *
 from kybra_simple_logging import get_logger, set_log_level
@@ -44,30 +42,13 @@ if not app_data().vault_principal:
     app_data().vault_principal = ic.id().to_str()
 
 
-heartbeat_interval_seconds = app_data().heartbeat_interval_seconds
-
-if not DO_NOT_IMPLEMENT_HEARTBEAT:
-
-    @heartbeat
-    def heartbeat_() -> Async[void]:
-        if (
-            heartbeat_interval_seconds
-            and ic.time() - app_data().last_heartbeat_time
-            > heartbeat_interval_seconds * 1e9
-        ):
-            logger.debug("Heartbeat started")
-            app_data().last_heartbeat_time = ic.time()
-            yield services.TransactionTracker().check_transactions()
-            logger.debug("Heartbeat finished")
-
-
 @query
-def get_canister_id() -> Async[Principal]:
+def get_balance() -> Async[Principal]:
     return ic.id()
 
 
 @update
-def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResult]:
+def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResult]: # TODO: use indexer instead
     ret: CallResult[GetTransactionsResponse] = yield utils_icp.get_transactions(
         start, length
     )
@@ -81,7 +62,7 @@ def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResult]:
 
 
 @query
-def get_canister_balance() -> Async[str]:
+def get_canister_balance() -> Async[str]:  # TODO: probably use indexer instead
     ledger = ICRCLedger(Principal.from_str(CKBTC_CANISTER))
     account = Account(owner=ic.id(), subaccount=None)
 
@@ -131,31 +112,16 @@ def do_transfer(to: Principal, amount: nat) -> Async[nat]:
     )
 
 
-@update
-def check_transactions() -> Async[str]:
-    ret = yield services.TransactionTracker().check_transactions()
-    return str(ret)
 
 
 @query
-def stats() -> str:
+def get_stats() -> str:
     return str(stats())
 
 
 @update
 def set_admin(principal: Principal) -> str:
     return admin.set_admin(ic.caller().to_str(), principal.to_str())
-
-
-if not DO_NOT_IMPLEMENT_HEARTBEAT:
-
-    @update
-    def set_heartbeat_interval_seconds(seconds: nat) -> nat:
-        global heartbeat_interval_seconds
-        heartbeat_interval_seconds = admin.set_heartbeat_interval_seconds(
-            ic.caller().to_str(), seconds
-        )
-        return heartbeat_interval_seconds
 
 
 @update

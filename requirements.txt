@@ -1,3 +1,4 @@
 kybra
 kybra-simple-logging
 kybra_simple_db
+cbor2
