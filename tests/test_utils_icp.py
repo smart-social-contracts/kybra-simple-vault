@@ -2,12 +2,39 @@
 
 import os
 import sys
+import random
 
 # Add the parent directory to sys.path to import the module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.vault.vault.utils_icp import encodeIcrcAccount, decodeIcrcAccount, compute_crc
 from kybra import Principal
+
+# Test constants - modify these to test with different values
+TEST_PRINCIPALS = [
+    "2vxsx-fae",                                                     # Short principal
+    "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe",  # Long principal
+    "aaaaa-aa"                                                      # IC management canister
+]
+
+# Create different patterns of subaccounts for testing
+DEFAULT_SUBACCOUNT = bytes(32)  # 32 zeros
+SEQUENTIAL_SUBACCOUNT = bytes(range(1, 33))  # bytes 1 through 32
+LEADING_ZEROS_SUBACCOUNT = bytes([0, 0, 0, 0, 1, 2, 3, 4]) + bytes(24)  # Leading zeros followed by pattern
+
+# Invalid account format examples
+INVALID_FORMATS = [
+    "",                     # Empty string
+    "not-a-valid-account",  # Invalid principal
+    "2vxsx-fae-checksumonly",  # Missing dot and subaccount
+    "2vxsx-fae.",           # Missing subaccount after dot
+    ".01020304"             # Missing principal
+]
+
+def create_random_subaccount():
+    """Create a random subaccount with non-zero first byte"""
+    first_byte = random.randint(1, 255)  # Ensure non-zero first byte
+    return bytes([first_byte]) + os.urandom(31)  # Random 31 remaining bytes
 
 def run_tests():
     """Run all tests for ICRC account encoding/decoding functions"""
@@ -19,8 +46,8 @@ def run_tests():
     # Test 1: Default subaccount encoding
     print("\n[TEST] Default subaccount encoding")
     try:
-        # Create a test principal
-        principal_text = "2vxsx-fae"  # Example principal
+        # Use first test principal
+        principal_text = TEST_PRINCIPALS[0]
         principal = Principal.from_str(principal_text)
         
         # Encode with default subaccount (None)
@@ -58,11 +85,11 @@ def run_tests():
     # Test 2: Specific subaccount encoding
     print("\n[TEST] Specific subaccount encoding")
     try:
-        # Create a test principal
-        principal = Principal.from_str("2vxsx-fae")
+        # Use first test principal
+        principal = Principal.from_str(TEST_PRINCIPALS[0])
         
-        # Create a test subaccount with a pattern of bytes
-        subaccount = bytes(range(1, 33))  # bytes from 1-32
+        # Use the sequential subaccount pattern
+        subaccount = SEQUENTIAL_SUBACCOUNT
         
         # Encode the account
         encoded = encodeIcrcAccount(principal, subaccount)
@@ -93,10 +120,10 @@ def run_tests():
     # Test 3: Leading zeros in subaccount
     print("\n[TEST] Leading zeros in subaccount")
     try:
-        principal = Principal.from_str("2vxsx-fae")
+        principal = Principal.from_str(TEST_PRINCIPALS[0])
         
-        # Create a subaccount with leading zeros
-        subaccount = bytes([0, 0, 0, 0, 1, 2, 3, 4]) + bytes(24)
+        # Use the subaccount with leading zeros
+        subaccount = LEADING_ZEROS_SUBACCOUNT
         
         # Encode the account
         encoded = encodeIcrcAccount(principal, subaccount)
@@ -125,8 +152,8 @@ def run_tests():
     # Test 4: Checksum validation
     print("\n[TEST] Checksum validation")
     try:
-        principal = Principal.from_str("2vxsx-fae")
-        subaccount = bytes(range(1, 33))
+        principal = Principal.from_str(TEST_PRINCIPALS[0])
+        subaccount = SEQUENTIAL_SUBACCOUNT
         
         # Compute valid checksum
         checksum = compute_crc(principal, subaccount)
@@ -153,13 +180,8 @@ def run_tests():
     # Test 5: Invalid account format
     print("\n[TEST] Invalid account format")
     try:
-        invalid_formats = [
-            "",  # Empty string
-            "not-a-valid-account",  # Invalid principal
-            "2vxsx-fae-checksumonly",  # Missing dot and subaccount
-            "2vxsx-fae.",  # Missing subaccount after dot
-            ".01020304",  # Missing principal
-        ]
+        # Use the predefined invalid formats
+        invalid_formats = INVALID_FORMATS
         
         # Count this as a single test with multiple cases
         test_count += 1
@@ -184,12 +206,8 @@ def run_tests():
     # Test 6: Round-trip with various principals
     print("\n[TEST] Round-trip with various principals")
     try:
-        # Test with various principal IDs
-        test_principals = [
-            "2vxsx-fae",  # Short
-            "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe",  # Long
-            "aaaaa-aa"  # IC management canister
-        ]
+        # Use the predefined test principals
+        test_principals = TEST_PRINCIPALS
         
         for principal_text in test_principals:
             principal = Principal.from_str(principal_text)
@@ -203,8 +221,8 @@ def run_tests():
             assert decoded_subaccount == bytes(32), f"Expected 32 zero bytes, got {decoded_subaccount}"
             print(f"✓ Default subaccount roundtrip successful")
             
-            # Test with non-default subaccount
-            subaccount = bytes([principal_text.encode()[0] % 255]) + os.urandom(31)
+            # Test with a random subaccount
+            subaccount = create_random_subaccount()
             encoded = encodeIcrcAccount(principal, subaccount)
             decoded_owner, decoded_subaccount = decodeIcrcAccount(encoded)
             
