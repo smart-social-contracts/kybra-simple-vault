@@ -5,14 +5,14 @@ from unittest.mock import patch
 
 from entities import app_data
 from kybra_simple_db import *
-from kybra_simple_logging import get_logger, set_log_level
+from kybra_simple_logging import get_logger, set_log_level, DEBUG
 from services import TransactionTracker, reset
 from utils_icp import get_transactions
 
 from vault.constants import TRANSACTION_BATCH_SIZE
 
 logger = get_logger(__name__)
-logger.set_level(logger.DEBUG)
+logger.set_level(DEBUG)
 
 
 async def run_generator(gen):

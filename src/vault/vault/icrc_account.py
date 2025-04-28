@@ -47,30 +47,12 @@ def compute_crc(owner: Principal, subaccount: bytes) -> str:
     Computes the CRC32 checksum for an ICRC account.
     Matches the TypeScript implementation from @dfinity/utils.
     """
-    # Get the raw bytes of the principal
-    # Try common attributes/methods for kybra Principal
-    try:
-        if hasattr(owner, 'bytes'):
-            owner_bytes = owner.bytes
-        elif hasattr(owner, '_bytes'):
-            owner_bytes = owner._bytes
-        elif hasattr(owner, 'to_bytes'):
-            owner_bytes = owner.to_bytes()
-        elif hasattr(owner, 'to_uint8array'):
-            owner_bytes = bytes(owner.to_uint8array())
-        else:
-            # Fallback: decode from textual form (not preferred, but a last resort)
-            owner_bytes = Principal.from_str(str(owner)).bytes
-    except Exception:
-        # As a last fallback, use the string encoding (will not match TypeScript)
-        owner_bytes = str(owner).encode('utf-8')
-
+    # Use the canonical bytes attribute for kybra.Principal
+    owner_bytes = owner.bytes
     combined = owner_bytes + subaccount
-
     crc = zlib.crc32(combined)
     checksum_bytes = crc.to_bytes(4, 'big')
     checksum_base32 = base64.b32encode(checksum_bytes).decode('utf-8').lower().rstrip("=")
-
     return checksum_base32
 
 def decodeIcrcAccount(text: str) -> tuple[Principal, bytes]:
