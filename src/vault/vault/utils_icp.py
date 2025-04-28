@@ -4,7 +4,7 @@ from kybra import (
     Principal,
     nat,
 )
-from kybra_simple_logging import get_logger
+from kybra_simple_logging import get_logger, Level
 
 from vault.candid_types import (
     GetTransactionsRequest,
@@ -15,7 +15,7 @@ from vault.entities import LedgerCanister
 from vault.constants import MAINNET_CKBTC_LEDGER_ID
 
 logger = get_logger(__name__)
-logger.set_level(logger.DEBUG)
+logger.set_level(Level.DEBUG)
 
 
 def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResponse]:

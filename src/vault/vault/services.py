@@ -2,7 +2,7 @@ import traceback
 
 from kybra import Async, CallResult, ic, query, update, void
 from kybra_simple_db import *
-from kybra_simple_logging import get_logger
+from kybra_simple_logging import get_logger, Level
 
 from vault.candid_types import (
     GetTransactionsRequest,
@@ -16,7 +16,7 @@ from vault.utils import get_nested
 from vault.utils_icp import get_transactions
 
 logger = get_logger(__name__)
-logger.set_level(logger.DEBUG)
+logger.set_level(Level.DEBUG)
 
 
 def reset() -> void:
