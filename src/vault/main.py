@@ -182,7 +182,7 @@ def get_account_transactions_ic(
         max_results=max_results,
     )
     indexer = ICRCIndexer(Principal.from_str(canister_id))
-    result: CallResult = yield indexer.get_account_transactions(req)
+    result: CallResult[GetAccountTransactionsResponse] = yield indexer.get_account_transactions(req)
 
     ic.print(result.Ok if result.Ok else result.Err)
     return result
@@ -199,7 +199,7 @@ def get_account_transactions_indexer() -> Async[GetAccountTransactionsResponse]:
     subaccount = None
     max_results = 5
 
-    result: CallResult[GetTransactionsResponse] = yield get_account_transactions_ic(
+    result: CallResult[GetAccountTransactionsResponse] = yield get_account_transactions_ic(
         canister_id=canister_id,
         owner_principal=owner_principal,
         subaccount=subaccount,
