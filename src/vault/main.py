@@ -190,10 +190,31 @@ def get_account_transactions_indexer() -> Async[GetAccountTransactionsResponse]:
         
         ic.print(f"Got result type: {type(result)}")
         
-        # Now result is a variant with Ok/Err fields
+        # Now result is a CallResult with Ok/Err fields
         if hasattr(result, 'Ok') and result.Ok is not None:
-            ic.print(f"Successfully retrieved transactions with balance: {result.Ok.balance}")
-            return result.Ok
+            # Here the Ok field is a dictionary, not an object
+            ok_data = result.Ok
+            ic.print(f"Result.Ok content: {ok_data}")
+            
+            # The actual data is nested inside ok_data['Ok']
+            if isinstance(ok_data, dict) and 'Ok' in ok_data:
+                transaction_data = ok_data['Ok']
+                
+                # Extract the balance, transactions and oldest_tx_id from the inner dictionary
+                balance = transaction_data.get('balance', 0)
+                transactions = transaction_data.get('transactions', [])
+                oldest_tx_id = transaction_data.get('oldest_tx_id')
+                
+                ic.print(f"Successfully retrieved transactions with balance: {balance}")
+                
+                # Build our response object with the extracted values
+                return GetAccountTransactionsResponse(
+                    balance=balance,
+                    transactions=transactions,
+                    oldest_tx_id=oldest_tx_id,
+                )
+            else:
+                ic.print(f"Ok data doesn't have the expected 'Ok' nested structure: {ok_data}")
         elif hasattr(result, 'Err') and result.Err is not None:
             ic.print(f"Error from indexer: {result.Err}")
         else:
