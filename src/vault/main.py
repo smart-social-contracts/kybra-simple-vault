@@ -23,6 +23,7 @@ from kybra import (
     Service,
     service_query,
     service_update,
+    init,
 )
 from typing import Optional, List
 from kybra_simple_db import *
@@ -33,7 +34,8 @@ from kybra_simple_logging import get_logger, set_log_level, Level
 # import vault.utils_icp as utils_icp
 # import vault.utils_neural as utils_neural
 from vault.ic_util_calls import get_account_transactions
-from vault.entities import VaultTransaction
+from vault.entities import VaultTransaction, Canisters
+from vault.constants import CANISTER_PRINCIPALS
 
 # import vault.candid_types as candid_types
 # from vault.constants import CKBTC_CANISTER, DO_NOT_IMPLEMENT_HEARTBEAT
@@ -51,17 +53,23 @@ db_audit = StableBTreeMap[str, str](
     memory_id=1, max_key_size=100_000, max_value_size=1_000_000
 )
 
+# Initialize the database
 Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
 
-# if not app_data().vault_principal:
-#     app_data().vault_principal = ic.id().to_str()
+
+@init
+def init_() -> void:
+    logger.info("Initializing vault...")
+    Canisters(_id="ckBTC ledger", principal=CANISTER_PRINCIPALS['ckBTC']['ledger'])
+    Canisters(_id="ckBTC indexer", principal=CANISTER_PRINCIPALS['ckBTC']['indexer'])
+    logger.info("Vault initialized.")
 
 
 @update
 def do_transfer(to: Principal, amount: nat) -> Async[nat]:
-    from vault.entities import ledger_canister
+    from vault.entities import LEDGER_SUITE_canister
 
-    principal = ledger_canister().principal
+    principal = LEDGER_SUITE_canister().principal
     ledger = ICRCLedger(Principal.from_str(principal))
 
     args: TransferArg = TransferArg(
@@ -106,8 +114,8 @@ def update_transaction_history(principal_id: str) -> str:
     """
     ic.print(f"Updating transaction history for {principal_id}...")
     
-    # Default indexer canister for ckBTC
-    indexer_canister_id = "n5wcd-faaaa-aaaar-qaaea-cai"
+    # Get the configured indexer canister ID
+    indexer_canister_id = Canisters["ckBTC indexer"].principal
     max_results = 20
     
     # Query the indexer for transactions

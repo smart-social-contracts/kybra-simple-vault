@@ -1,24 +1,18 @@
 from kybra_simple_db import *
 
-from vault.constants import CKBTC_CANISTER
+from vault.constants import CANISTER_PRINCIPALS
 
 
 class ApplicationData(Entity, TimestampedMixin):
     admin_principal = String()
 
 
-class LedgerCanister(Entity, TimestampedMixin):
+class Canisters(Entity, TimestampedMixin):
     principal = String()
 
 
 def app_data():
     return ApplicationData["main"] or ApplicationData(_id="main")
-
-
-def ledger_canister():
-    return LedgerCanister["ckBTC"] or LedgerCanister(
-        _id="ckBTC", principal=CKBTC_CANISTER
-    )
 
 
 class Category(Entity, TimestampedMixin):
@@ -35,8 +29,9 @@ class VaultTransaction(Entity, TimestampedMixin):
 
 
 class Balance(Entity, TimestampedMixin):
+    principal_id = String()  # Owner of this balance
     amount = Integer(default=0)
-    currency = String()
+    LEDGER_SUITE_canister = OneToMany("Canister", "balances")
 
 
 def stats():
@@ -44,5 +39,5 @@ def stats():
         "app_data": app_data().to_dict(),
         "balances": [_.to_dict() for _ in Balance.instances()],
         "vault_transactions": [_.to_dict() for _ in VaultTransaction.instances()],
-        "ledger_canisters": [_.to_dict() for _ in LedgerCanister.instances()],
+        "LEDGER_SUITE_canisters": [_.to_dict() for _ in LedgerCanister.instances()],
     }
