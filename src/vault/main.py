@@ -137,15 +137,17 @@ class GetAccountTransactionsResponse(Record):
     # Add other fields as needed
 
 
+class GetTransactionsResult(Variant):
+    Ok: GetAccountTransactionsResponse
+    Err: str
+
+
 class ICRCIndexer(Service):
     @service_query
     def get_account_transactions(
         self, request: GetAccountTransactionsRequest
-    ) -> Async[GetAccountTransactionsResponse]:
+    ) -> Async[GetTransactionsResult]:
         ...
-
-    # @service_query
-    # def icrc1_balance_of(self, account: Account) -> nat: ...
 
     # @service_query
     # def icrc1_fee(self) -> nat: ...
@@ -186,26 +188,19 @@ def get_account_transactions_indexer() -> Async[GetAccountTransactionsResponse]:
         indexer = ICRCIndexer(Principal.from_str(canister_id))
         result = yield indexer.get_account_transactions(req)
         
-        # Handle potential None values
-        if result is None:
-            ic.print("Service call failed with None result")
-            return GetAccountTransactionsResponse(
-                balance=0,
-                transactions=[],
-                oldest_tx_id=None,
-            )
+        ic.print(f"Got result type: {type(result)}")
         
-        # Check if we have an Ok value
+        # Now result is a variant with Ok/Err fields
         if hasattr(result, 'Ok') and result.Ok is not None:
-            ic.print(f"Successfully retrieved transactions: {result.Ok}")
+            ic.print(f"Successfully retrieved transactions with balance: {result.Ok.balance}")
             return result.Ok
         elif hasattr(result, 'Err') and result.Err is not None:
             ic.print(f"Error from indexer: {result.Err}")
         else:
             ic.print(f"Unexpected result structure: {result}")
         
-        ic.print("Returning default response in error cases")
         # Default response in error cases
+        ic.print("Returning default response in error cases")
         return GetAccountTransactionsResponse(
             balance=0,
             transactions=[],
