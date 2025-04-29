@@ -4,12 +4,7 @@ from vault.constants import CKBTC_CANISTER
 
 
 class ApplicationData(Entity, TimestampedMixin):
-    last_processed_index = Integer(min_value=0, default=0)
-    log_length = Integer(min_value=0, default=0)
     admin_principal = String()
-    vault_principal = String()
-    last_heartbeat_time = Integer(min_value=0, default=0)
-    heartbeat_interval_seconds = Integer(min_value=0, default=0)
 
 
 class LedgerCanister(Entity, TimestampedMixin):

@@ -57,183 +57,39 @@ Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
 #     app_data().vault_principal = ic.id().to_str()
 
 
-# @update
-# def do_transfer(to: Principal, amount: nat) -> Async[nat]:
-#     from vault.entities import ledger_canister
+@update
+def do_transfer(to: Principal, amount: nat) -> Async[nat]:
+    from vault.entities import ledger_canister
 
-#     principal = ledger_canister().principal
-#     ledger = ICRCLedger(Principal.from_str(principal))
+    principal = ledger_canister().principal
+    ledger = ICRCLedger(Principal.from_str(principal))
 
-#     args: TransferArg = TransferArg(
-#         to=Account(owner=to, subaccount=None),
-#         amount=amount,
-#         fee=None,  # Optional fee, will use default
-#         memo=None,  # Optional memo field
-#         from_subaccount=None,  # No subaccount specified
-#         created_at_time=None,  # System will use current time
-#     )
+    args: TransferArg = TransferArg(
+        to=Account(owner=to, subaccount=None),
+        amount=amount,
+        fee=None,  # Optional fee, will use default
+        memo=None,  # Optional memo field
+        from_subaccount=None,  # No subaccount specified
+        created_at_time=None,  # System will use current time
+    )
 
-#     logger.debug(f"Transferring {amount} tokens to {to.to_str()}")
-#     result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
+    logger.debug(f"Transferring {amount} tokens to {to.to_str()}")
+    result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
 
-#     # Return the transaction id on success or -1 on error
-#     return match(
-#         result,
-#         {
-#             "Ok": lambda result_variant: match(
-#                 result_variant,
-#                 {
-#                     "Ok": lambda tx_id: tx_id,  # Return the transaction ID directly
-#                     "Err": lambda _: -1,  # Return -1 on transfer error
-#                 },
-#             ),
-#             "Err": lambda _: -1,  # Return -1 on call error
-#         },
-#     )
-
-
-# ---- Candid Type Definitions ----
-
-
-
-# class Account(Record):
-#     owner: Principal
-#     subaccount: Opt[Vec[nat8]]  # 32 bytes or None
-
-
-# class Transfer(Record):
-#     from_: Account
-#     to: Account
-#     amount: nat
-#     fee: Opt[nat]
-#     memo: Opt[Vec[nat8]]
-#     created_at_time: Opt[nat64]
-#     spender: Opt[Account]
-
-
-# class Transaction(Record):
-#     burn: Opt[null]
-#     kind: str
-#     mint: Opt[null]
-#     approve: Opt[null]
-#     timestamp: nat64
-#     transfer: Opt[Transfer]
-
-
-# class AccountTransaction(Record):
-#     id: nat
-#     transaction: Transaction
-
-
-# class GetAccountTransactionsRequest(Record):
-#     account: Account
-#     max_results: nat
-
-
-# class GetAccountTransactionsResponse(Record):
-#     balance: nat
-#     transactions: Vec[AccountTransaction]
-#     oldest_tx_id: Opt[nat]
-#     # Add other fields as needed
-
-
-# class GetTransactionsResult(Variant):
-#     Ok: GetAccountTransactionsResponse
-#     Err: str
-
-
-# class ICRCIndexer(Service):
-#     @service_query
-#     def get_account_transactions(
-#         self, request: GetAccountTransactionsRequest
-#     ) -> Async[GetTransactionsResult]:
-#         ...
-
-#     # @service_query
-#     # def icrc1_fee(self) -> nat: ...
-
-#     # @service_update
-#     # def icrc1_transfer(self, args: TransferArg) -> TransferResult: ...
-
-#     # @service_query
-#     # def get_transactions(
-#     #     self, request: GetTransactionsRequest
-#     # ) -> Async[GetTransactionsResponse]: ...
-
-
-# @update
-# def get_account_transactions_indexer() -> Async[GetAccountTransactionsResponse]:
-#     """
-#     Query the indexer canister for account transactions, matching the user's dfx example.
-#     Returns the CallResult variant (Kybra-compatible).
-#     """
-
-#     ic.print("\nQuerying indexer canister for account transactions...")
-
-#     canister_id = "n5wcd-faaaa-aaaar-qaaea-cai"
-#     owner_principal = "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe"
-#     subaccount = None
-#     max_results = 5
-
-#     account = Account(
-#         owner=Principal.from_str(owner_principal),
-#         subaccount=subaccount if subaccount else None,
-#     )
-#     req = GetAccountTransactionsRequest(
-#         account=account,
-#         max_results=max_results,
-#     )
-
-#     try:
-#         indexer = ICRCIndexer(Principal.from_str(canister_id))
-#         result = yield indexer.get_account_transactions(req)
-        
-#         ic.print(f"Got result type: {type(result)}")
-        
-#         # Now result is a CallResult with Ok/Err fields
-#         if hasattr(result, 'Ok') and result.Ok is not None:
-#             # Here the Ok field is a dictionary, not an object
-#             ok_data = result.Ok
-#             ic.print(f"Result.Ok content: {ok_data}")
-            
-#             # The actual data is nested inside ok_data['Ok']
-#             if isinstance(ok_data, dict) and 'Ok' in ok_data:
-#                 transaction_data = ok_data['Ok']
-                
-#                 # Extract the balance, transactions and oldest_tx_id from the inner dictionary
-#                 balance = transaction_data.get('balance', 0)
-#                 transactions = transaction_data.get('transactions', [])
-#                 oldest_tx_id = transaction_data.get('oldest_tx_id')
-                
-#                 ic.print(f"Successfully retrieved transactions with balance: {balance}")
-                
-#                 # Build our response object with the extracted values
-#                 return GetAccountTransactionsResponse(
-#                     balance=balance,
-#                     transactions=transactions,
-#                     oldest_tx_id=oldest_tx_id,
-#                 )
-#             else:
-#                 ic.print(f"Ok data doesn't have the expected 'Ok' nested structure: {ok_data}")
-#         elif hasattr(result, 'Err') and result.Err is not None:
-#             ic.print(f"Error from indexer: {result.Err}")
-#         else:
-#             ic.print(f"Unexpected result structure: {result}")
-        
-#         # Default response in error cases
-#         ic.print("Returning default response in error cases")
-#         return GetAccountTransactionsResponse(
-#             balance=0,
-#             transactions=[],
-#             oldest_tx_id=None,
-#         )
-#     except Exception as e:
-#         ic.print(f"Exception occurred: {str(e)}")
-#         return GetAccountTransactionsResponse(
-#             balance=0,
-#             transactions=[],
-#             oldest_tx_id=None,
-#         )
+    # Return the transaction id on success or -1 on error
+    return match(
+        result,
+        {
+            "Ok": lambda result_variant: match(
+                result_variant,
+                {
+                    "Ok": lambda tx_id: tx_id,  # Return the transaction ID directly
+                    "Err": lambda _: -1,  # Return -1 on transfer error
+                },
+            ),
+            "Err": lambda _: -1,  # Return -1 on call error
+        },
+    )
 
 
 @update
