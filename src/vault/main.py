@@ -25,8 +25,8 @@ from kybra import (
     service_update,
 )
 from typing import Optional, List
-from kybra_simple_db import *
-from kybra_simple_logging import get_logger, set_log_level, Level
+# from kybra_simple_db import *
+# from kybra_simple_logging import get_logger, set_log_level, Level
 
 # import vault.admin as admin
 # import vault.services as services
@@ -42,18 +42,18 @@ from kybra_simple_logging import get_logger, set_log_level, Level
 # from vault.entities import app_data, stats
 
 
-logger = get_logger(__name__)
-set_log_level(Level.DEBUG)
+# logger = get_logger(__name__)
+# set_log_level(Level.DEBUG)
 
 
-db_storage = StableBTreeMap[str, str](
-    memory_id=0, max_key_size=100_000, max_value_size=1_000_000
-)
-db_audit = StableBTreeMap[str, str](
-    memory_id=1, max_key_size=100_000, max_value_size=1_000_000
-)
+# db_storage = StableBTreeMap[str, str](
+#     memory_id=0, max_key_size=100_000, max_value_size=1_000_000
+# )
+# db_audit = StableBTreeMap[str, str](
+#     memory_id=1, max_key_size=100_000, max_value_size=1_000_000
+# )
 
-Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
+# Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
 
 # if not app_data().vault_principal:
 #     app_data().vault_principal = ic.id().to_str()
@@ -137,11 +137,6 @@ class GetAccountTransactionsResponse(Record):
     # Add other fields as needed
 
 
-class CallResult(Variant):
-    Ok: GetAccountTransactionsResponse
-    Err: str
-
-
 class ICRCIndexer(Service):
     @service_query
     def get_account_transactions(
@@ -164,14 +159,19 @@ class ICRCIndexer(Service):
     # ) -> Async[GetTransactionsResponse]: ...
 
 
-# ---- Utility function ----
+@update
+def get_account_transactions_indexer() -> Async[GetAccountTransactionsResponse]:
+    """
+    Query the indexer canister for account transactions, matching the user's dfx example.
+    Returns the CallResult variant (Kybra-compatible).
+    """
 
-def get_account_transactions_ic(
-    canister_id: str,
-    owner_principal: str,
-    subaccount: Optional[List[int]] = None,
-    max_results: int = 50,
-) -> Async[GetAccountTransactionsResponse]:
+    ic.print("\nQuerying indexer canister for account transactions...")
+
+    canister_id = "n5wcd-faaaa-aaaar-qaaea-cai"
+    owner_principal = "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe"
+    subaccount = None
+    max_results = 5
 
     account = Account(
         owner=Principal.from_str(owner_principal),
@@ -181,68 +181,40 @@ def get_account_transactions_ic(
         account=account,
         max_results=max_results,
     )
-    indexer = ICRCIndexer(Principal.from_str(canister_id))
-    result: CallResult[GetAccountTransactionsResponse] = yield indexer.get_account_transactions(req)
 
-    ic.print(result.Ok if result.Ok else result.Err)
-    return result
-
-
-@query
-def get_account_transactions_indexer() -> Async[GetAccountTransactionsResponse]:
-    """
-    Query the indexer canister for account transactions, matching the user's dfx example.
-    Returns the CallResult variant (Kybra-compatible).
-    """
-    canister_id = "n5wcd-faaaa-aaaar-qaaea-cai"
-    owner_principal = "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe"
-    subaccount = None
-    max_results = 5
-
-    result: CallResult[GetAccountTransactionsResponse] = yield get_account_transactions_ic(
-        canister_id=canister_id,
-        owner_principal=owner_principal,
-        subaccount=subaccount,
-        max_results=max_results,
-    )
-
-    return match(
-        result,
-        {
-            "Ok": lambda ok: ok,
-            "Err": lambda err: str(err),
-        },
-    )
-
-# def get_transactions(start: nat, length: nat) -> Async[GetTransactionsResult]: # TODO: use indexer instead
-#     ret: CallResult[GetTransactionsResponse] = yield utils_icp.get_transactions(
-#         start, length
-#     )
-#     return match(
-#         ret,
-#         {
-#             "Ok": lambda ok: {"Ok": ok},
-#             "Err": lambda err: {"Err": str(err)},
-#         },
-#     )
-
-# @query
-# def get_stats() -> str:
-#     return str(stats())
-
-
-# @update
-# def set_admin(principal: Principal) -> str:
-#     return admin.set_admin(ic.caller().to_str(), principal.to_str())
-
-
-# @update
-# def reset() -> str:
-#     return admin.reset(ic.caller().to_str())
-
-
-# @update
-# def set_ledger_canister(canister_id: str, principal: Principal) -> str:
-#     return admin.set_ledger_canister(
-#         ic.caller().to_str(), canister_id, principal.to_str()
-#     )
+    try:
+        indexer = ICRCIndexer(Principal.from_str(canister_id))
+        result = yield indexer.get_account_transactions(req)
+        
+        # Handle potential None values
+        if result is None:
+            ic.print("Service call failed with None result")
+            return GetAccountTransactionsResponse(
+                balance=0,
+                transactions=[],
+                oldest_tx_id=None,
+            )
+        
+        # Check if we have an Ok value
+        if hasattr(result, 'Ok') and result.Ok is not None:
+            ic.print(f"Successfully retrieved transactions: {result.Ok}")
+            return result.Ok
+        elif hasattr(result, 'Err') and result.Err is not None:
+            ic.print(f"Error from indexer: {result.Err}")
+        else:
+            ic.print(f"Unexpected result structure: {result}")
+        
+        ic.print("Returning default response in error cases")
+        # Default response in error cases
+        return GetAccountTransactionsResponse(
+            balance=0,
+            transactions=[],
+            oldest_tx_id=None,
+        )
+    except Exception as e:
+        ic.print(f"Exception occurred: {str(e)}")
+        return GetAccountTransactionsResponse(
+            balance=0,
+            transactions=[],
+            oldest_tx_id=None,
+        )
