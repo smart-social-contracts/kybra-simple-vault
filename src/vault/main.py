@@ -261,7 +261,12 @@ def update_transaction_history(principal_id: str) -> str:
         max_results=max_results
     )
     
-    if not response or not hasattr(response, "transactions") or not response.transactions:
+    ic.print(f"Response: {response}")
+    
+    # Check if we have transactions in the response
+    has_transactions = 'transactions' in response and response['transactions']
+    
+    if not response or not has_transactions:
         return f"No transactions found for principal {principal_id}"
     
     # Track new and updated transactions
@@ -269,26 +274,28 @@ def update_transaction_history(principal_id: str) -> str:
     updated_count = 0
     
     # Process each transaction and update the database
-    for tx in response.transactions:
-        tx_id = str(tx.id)
-        transaction = tx.transaction
+    for tx in response['transactions']:
+        # Extract transaction data using dictionary access
+        tx_id = str(tx['id'])
+        transaction = tx['transaction']
         
         # Skip if the transaction doesn't have a transfer
-        if not hasattr(transaction, "transfer") or not transaction.transfer:
+        if 'transfer' not in transaction or not transaction['transfer']:
             continue
             
-        transfer = transaction.transfer
+        transfer = transaction['transfer']
         
         # Get principals for from and to accounts
-        principal_from = str(transfer.from_.owner) if hasattr(transfer, "from_") and hasattr(transfer.from_, "owner") else "unknown"
-        principal_to = str(transfer.to.owner) if hasattr(transfer, "to") and hasattr(transfer.to, "owner") else "unknown"
+        principal_from = str(transfer['from_']['owner']) if 'from_' in transfer and 'owner' in transfer['from_'] else "unknown"
+        principal_to = str(transfer['to']['owner']) if 'to' in transfer and 'owner' in transfer['to'] else "unknown"
         
         # Get amount and timestamp
-        amount = int(transfer.amount) if hasattr(transfer, "amount") else 0
-        timestamp = int(transaction.timestamp) if hasattr(transaction, "timestamp") else 0
+        amount = int(transfer['amount']) if 'amount' in transfer else 0
+        timestamp = int(transaction['timestamp']) if 'timestamp' in transaction else 0
+        kind = transaction['kind'] if 'kind' in transaction else "unknown"
         
         # Create or update the VaultTransaction
-        existing_tx = VaultTransaction.get(tx_id)
+        existing_tx = VaultTransaction[tx_id]
         if existing_tx:
             # Update existing transaction if needed
             if (
@@ -296,14 +303,13 @@ def update_transaction_history(principal_id: str) -> str:
                 existing_tx.principal_to != principal_to or
                 existing_tx.amount != amount or
                 existing_tx.timestamp != timestamp or
-                existing_tx.kind != transaction.kind
+                existing_tx.kind != kind
             ):
                 existing_tx.principal_from = principal_from
                 existing_tx.principal_to = principal_to
                 existing_tx.amount = amount
                 existing_tx.timestamp = timestamp
-                existing_tx.kind = transaction.kind
-                existing_tx.save()
+                existing_tx.kind = kind
                 updated_count += 1
         else:
             # Create new transaction
@@ -313,10 +319,10 @@ def update_transaction_history(principal_id: str) -> str:
                 principal_to=principal_to,
                 amount=amount,
                 timestamp=timestamp,
-                kind=transaction.kind
-            ).save()
+                kind=kind
+            )
             new_count += 1
     
-    result = f"Processed {len(response.transactions)} transactions: {new_count} new, {updated_count} updated"
+    result = f"Processed {len(response['transactions'])} transactions: {new_count} new, {updated_count} updated"
     ic.print(result)
     return result
