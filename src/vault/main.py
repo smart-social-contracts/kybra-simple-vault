@@ -35,7 +35,7 @@ from kybra_simple_logging import get_logger, set_log_level, Level
 # import vault.utils_icp as utils_icp
 # import vault.utils_neural as utils_neural
 from vault.ic_util_calls import get_account_transactions
-from vault.entities import VaultTransaction, Canisters
+from vault.entities import VaultTransaction, Canisters, app_data
 from vault.constants import CANISTER_PRINCIPALS
 
 # import vault.candid_types as candid_types
@@ -69,11 +69,12 @@ Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
 @init
 def init_() -> void:
     logger.info("Initializing vault...")
+
     Canisters(_id="ckBTC ledger", principal=CANISTER_PRINCIPALS['ckBTC']['ledger'])
     Canisters(_id="ckBTC indexer", principal=CANISTER_PRINCIPALS['ckBTC']['indexer'])
+    app_data().admin_principal = ic.caller().to_str()
+
     logger.info("Vault initialized.")
-
-
 
 
 @update
