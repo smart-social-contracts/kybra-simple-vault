@@ -144,7 +144,7 @@ def do_transfer(to: Principal, amount: nat) -> Async[nat]:
 
 @update
 def update_transaction_history() -> str:
-    return _update_transaction_history(ic.principal().to_str())
+    return _update_transaction_history(ic.id().to_str())
 
 
 def _update_transaction_history(principal_id: str) -> str:
