@@ -31,7 +31,7 @@ class VaultTransaction(Entity, TimestampedMixin):
 class Balance(Entity, TimestampedMixin):
     principal_id = String()  # Owner of this balance
     amount = Integer(default=0)
-    LEDGER_SUITE_canister = OneToMany("Canister", "balances")
+    canister = OneToMany("Canister", "balances")
 
 
 def stats():
@@ -39,5 +39,5 @@ def stats():
         "app_data": app_data().to_dict(),
         "balances": [_.to_dict() for _ in Balance.instances()],
         "vault_transactions": [_.to_dict() for _ in VaultTransaction.instances()],
-        "LEDGER_SUITE_canisters": [_.to_dict() for _ in LedgerCanister.instances()],
+        "canisters": [_.to_dict() for _ in Canisters.instances()],
     }

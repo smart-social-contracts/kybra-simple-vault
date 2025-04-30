@@ -24,6 +24,7 @@ from kybra import (
     service_query,
     service_update,
     init,
+    text,
 )
 from typing import Optional, List
 from kybra_simple_db import *
@@ -63,6 +64,36 @@ def init_() -> void:
     Canisters(_id="ckBTC ledger", principal=CANISTER_PRINCIPALS['ckBTC']['ledger'])
     Canisters(_id="ckBTC indexer", principal=CANISTER_PRINCIPALS['ckBTC']['indexer'])
     logger.info("Vault initialized.")
+
+
+
+
+@update
+def set_canister(canister_name: str, principal_id: Principal) -> str:
+    """
+    Set or update the principal ID for a specific canister in the Canisters entity.
+    
+    Args:
+        canister_name: The name of the canister to set/update (e.g., "ckBTC ledger", "ckBTC indexer")
+        principal_id: The principal ID of the canister
+        
+    Returns:
+        Status message
+    """
+    logger.info(f"Setting canister '{canister_name}' to principal: {principal_id.to_str()}")
+    
+    # Check if the canister already exists
+    existing_canister = Canisters[canister_name]
+    if existing_canister:
+        # Update the existing canister record
+        existing_canister.principal = principal_id.to_str()
+        logger.info(f"Updated existing canister '{canister_name}' with new principal.")
+    else:
+        # Create a new canister record
+        Canisters(_id=canister_name, principal=principal_id.to_str())
+        logger.info(f"Created new canister '{canister_name}' with principal.")
+    
+    return f"Canister '{canister_name}' principal set to: {principal_id.to_str()}"
 
 
 @update
@@ -190,3 +221,106 @@ def update_transaction_history(principal_id: str) -> str:
     result = f"Processed {len(response['transactions'])} transactions: {new_count} new, {updated_count} updated"
     ic.print(result)
     return result
+
+
+# Define Candid record types for stats
+class CanisterRecord(Record):
+    _id: text
+    principal: text
+    created_at: nat
+    updated_at: nat
+
+
+class BalanceRecord(Record):
+    principal_id: text
+    amount: nat
+    created_at: nat
+    updated_at: nat
+
+
+class TransactionRecord(Record):
+    _id: text
+    principal_from: text
+    principal_to: text
+    amount: nat
+    timestamp: nat
+    kind: text
+    created_at: nat
+    updated_at: nat
+
+
+class AppDataRecord(Record):
+    admin_principal: Opt[text]
+    created_at: nat
+    updated_at: nat
+
+
+class StatsRecord(Record):
+    app_data: AppDataRecord
+    balances: Vec[BalanceRecord]
+    vault_transactions: Vec[TransactionRecord]
+    canisters: Vec[CanisterRecord]
+
+
+@query
+def get_stats() -> StatsRecord:
+    """
+    Get statistics about the vault's state including balances, transactions, and canister references.
+    
+    Returns:
+        A record containing vault statistics including app_data, balances, transactions,
+        and canister references.
+    """
+    from vault.entities import stats, app_data, Balance, VaultTransaction, Canisters
+    
+    logger.debug("Retrieving vault statistics")
+    
+    # Get app_data with proper typing
+    app_data_obj = app_data()
+    app_data_record = {
+        "admin_principal": app_data_obj.admin_principal if hasattr(app_data_obj, "admin_principal") else None,
+        "created_at": app_data_obj.created_at if hasattr(app_data_obj, "created_at") else 0,
+        "updated_at": app_data_obj.updated_at if hasattr(app_data_obj, "updated_at") else 0,
+    }
+    
+    # Get balances with proper typing
+    balances = []
+    for balance in Balance.instances():
+        balances.append({
+            "principal_id": balance.principal_id,
+            "amount": balance.amount,
+            "created_at": balance.created_at if hasattr(balance, "created_at") else 0,
+            "updated_at": balance.updated_at if hasattr(balance, "updated_at") else 0,
+        })
+    
+    # Get transactions with proper typing
+    transactions = []
+    for tx in VaultTransaction.instances():
+        transactions.append({
+            "_id": tx._id,
+            "principal_from": tx.principal_from,
+            "principal_to": tx.principal_to,
+            "amount": tx.amount,
+            "timestamp": tx.timestamp,
+            "kind": tx.kind if hasattr(tx, "kind") else "unknown",
+            "created_at": tx.created_at if hasattr(tx, "created_at") else 0,
+            "updated_at": tx.updated_at if hasattr(tx, "updated_at") else 0,
+        })
+    
+    # Get canisters with proper typing
+    canisters = []
+    for canister in Canisters.instances():
+        canisters.append({
+            "_id": canister._id,
+            "principal": canister.principal,
+            "created_at": canister.created_at if hasattr(canister, "created_at") else 0,
+            "updated_at": canister.updated_at if hasattr(canister, "updated_at") else 0,
+        })
+    
+    # Return properly typed stats record
+    return {
+        "app_data": app_data_record,
+        "balances": balances,
+        "vault_transactions": transactions, 
+        "canisters": canisters,
+    }
