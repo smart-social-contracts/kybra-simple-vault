@@ -35,7 +35,7 @@ from kybra_simple_logging import get_logger, set_log_level, Level
 # import vault.utils_icp as utils_icp
 # import vault.utils_neural as utils_neural
 from vault.ic_util_calls import get_account_transactions
-from vault.entities import VaultTransaction, Canisters, app_data
+from vault.entities import VaultTransaction, Canisters, app_data, Balance
 from vault.constants import CANISTER_PRINCIPALS
 
 # import vault.candid_types as candid_types
@@ -176,6 +176,14 @@ def update_transaction_history(principal_id: str) -> str:
     # Track new and updated transactions
     new_count = 0
     updated_count = 0
+
+    balance = response['balance']
+    logger.debug(f"Balance: {balance}")
+    b = Balance[principal_id]
+    if not b:
+        Balance(principal_id=principal_id, amount=balance)
+    else:
+        b.amount = balance
     
     # Process each transaction and update the database
     for tx in response['transactions']:
@@ -294,3 +302,49 @@ def get_stats() -> StatsRecord:
         "vault_transactions": transactions, 
         "canisters": canisters,
     }
+
+
+# ##### Import Kybra and the internal function #####
+
+from kybra import Opt, Record, Vec, nat, query
+from kybra_simple_logging import get_canister_logs as _get_canister_logs
+
+
+# Define the PublicLogEntry class directly in the test canister
+class PublicLogEntry(Record):
+    timestamp: nat
+    level: str
+    logger_name: str
+    message: str
+    id: nat
+
+
+@query
+def get_canister_logs(
+        from_entry: Opt[nat] = None,
+        max_entries: Opt[nat] = None,
+        min_level: Opt[str] = None,
+        logger_name: Opt[str] = None,
+) -> Vec[PublicLogEntry]:
+    """
+    Re-export the get_canister_logs query function from the library
+    This makes it accessible as a query method on the test canister
+    """
+    logs = _get_canister_logs(
+        from_entry=from_entry,
+        max_entries=max_entries,
+        min_level=min_level,
+        logger_name=logger_name
+    )
+
+    # Convert the logs to our local PublicLogEntry type
+    return [
+        PublicLogEntry(
+            timestamp=log["timestamp"],
+            level=log["level"],
+            logger_name=log["logger_name"],
+            message=log["message"],
+            id=log["id"],
+        )
+        for log in logs
+    ]
