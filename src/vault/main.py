@@ -41,7 +41,7 @@ from kybra_simple_logging import get_logger, set_log_level, Level
 from vault.ic_util_calls import get_account_transactions
 from vault.entities import VaultTransaction, Canisters, app_data, Balance
 from vault.constants import CANISTER_PRINCIPALS
-from vault.candid_types import TransferArg, TransferResult, ICRCLedger
+from vault.candid_types import TransferArg, TransferResult, ICRCLedger, Account
 
 # import vault.candid_types as candid_types
 # from vault.constants import CKBTC_CANISTER, DO_NOT_IMPLEMENT_HEARTBEAT
@@ -113,8 +113,12 @@ def set_canister(canister_name: str, principal_id: Principal) -> str:
 
 @update
 def transfer(to: Principal, amount: nat) -> Async[nat]:
+    logger.debug(f"Transferring {amount} tokens to {to.to_str()}")
+
     principal = Canisters["ckBTC ledger"].principal
     ledger = ICRCLedger(Principal.from_str(principal))
+
+    logger.debug(f"Ledger: {ledger}")
 
     args: TransferArg = TransferArg(
         to=Account(owner=to, subaccount=None),
