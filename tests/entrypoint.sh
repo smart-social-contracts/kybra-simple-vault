@@ -2,9 +2,14 @@
 set -e
 set -x
 
-# Start dfx in the background
-echo "Starting dfx..."
-dfx start --background --clean
+# Start dfx in the background (only if not already running)
+echo "Checking if dfx is already running..."
+if ! dfx ping &>/dev/null; then
+    echo "Starting dfx..."
+    dfx start --background --clean
+else
+    echo "dfx is already running"
+fi
 
 # Get the current principal
 PRINCIPAL=$(dfx identity get-principal)
@@ -32,19 +37,23 @@ dfx canister call vault set_canister '("ckBTC indexer", principal "'"$INDEXER_ID
 
 # Run tests against the vault canister
 echo "Running IC integration tests..."
-python /app/test_ic_vault.py
+python tests/test_ic_vault.py
 
 # Check the exit code of the tests
 if [ $? -ne 0 ]; then
     echo "❌ IC integration tests failed"
-    dfx stop
+    # sleep 999999
+    # dfx stop
     exit 1
+    
 fi
 
 # Successfully complete the test
 echo "Canister deployment tests passed successfully!"
 
-echo "Stopping dfx..."
-dfx stop
+# echo "Stopping dfx..."
+# dfx stop
 
 echo "All tests passed successfully!"
+
+# sleep 999999

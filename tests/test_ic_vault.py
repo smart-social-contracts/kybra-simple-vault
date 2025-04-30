@@ -106,7 +106,7 @@ def test_update_transactions():
     
     try:
         # Update transaction history
-        update_result = run_command(f"dfx canister call vault update_transaction_history '(\"{principal}\")'")
+        update_result = run_command(f"dfx canister call vault update_transaction_history")
         
         if update_result:
             print(f"{GREEN}✓ Transaction history update succeeded{RESET}")

@@ -143,7 +143,7 @@ def get_account_transactions(
                 transactions = transaction_data.get('transactions', [])
                 oldest_tx_id = transaction_data.get('oldest_tx_id')
 
-                ic.print(f"Successfully retrieved {len(transactions)} transactions with balance: {balance}")
+                ic.print(f"Successfully retrieved {len(transactions)} transactions and total principal balance of {balance}")
 
                 # Build our response object
                 return GetAccountTransactionsResponse(
