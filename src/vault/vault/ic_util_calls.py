@@ -17,75 +17,14 @@ from kybra import (
 )
 from typing import Optional, List
 
-
-class Account(Record):
-    owner: Principal
-    subaccount: Opt[Vec[nat8]]
-
-
-class Transfer(Record):
-    from_: Account
-    to: Account
-    amount: nat
-    fee: Opt[nat]
-    memo: Opt[Vec[nat8]]
-    created_at_time: Opt[nat64]
-    spender: Opt[Account]
+from vault.candid_types import (
+    GetAccountTransactionsRequest,
+    GetAccountTransactionsResponse,
+    ICRCIndexer,
+    Account,
+)
 
 
-class Transaction(Record):
-    burn: Opt[null]
-    kind: str
-    mint: Opt[null]
-    approve: Opt[null]
-    timestamp: nat64
-    transfer: Opt[Transfer]
-
-
-class AccountTransaction(Record):
-    id: nat
-    transaction: Transaction
-
-
-class GetAccountTransactionsRequest(Record):
-    account: Account
-    max_results: nat
-
-
-class GetAccountTransactionsResponse(Record):
-    balance: nat
-    transactions: Vec[AccountTransaction]
-    oldest_tx_id: Opt[nat]
-
-
-class GetTransactionsResult(Variant):
-    Ok: GetAccountTransactionsResponse
-    Err: str
-
-
-# class ICRCIndexer:
-#     def __init__(self, principal_id: Principal):
-#         self.principal_id = principal_id
-
-#     def get_account_transactions(self, req: GetAccountTransactionsRequest) -> Async[GetTransactionsResult]:
-#         from kybra import Service, service_query
-
-#         class IndexerService(Service):
-#             @service_query
-#             def get_account_transactions(
-#                 self, request: GetAccountTransactionsRequest
-#             ) -> Async[GetTransactionsResult]: ...
-
-#         indexer = IndexerService(self.principal_id)
-#         return indexer.get_account_transactions(req)
-
-
-class ICRCIndexer(Service):
-    @service_query
-    def get_account_transactions(
-        self, request: GetAccountTransactionsRequest
-    ) -> Async[GetTransactionsResult]:
-        ...
 
 
 def get_account_transactions(
