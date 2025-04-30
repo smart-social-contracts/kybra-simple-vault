@@ -257,8 +257,6 @@ def get_stats() -> StatsRecord:
     app_data_obj = app_data()
     app_data_record = {
         "admin_principal": app_data_obj.admin_principal if hasattr(app_data_obj, "admin_principal") else None,
-        "created_at": app_data_obj.created_at if hasattr(app_data_obj, "created_at") else 0,
-        "updated_at": app_data_obj.updated_at if hasattr(app_data_obj, "updated_at") else 0,
     }
     
     # Get balances with proper typing
@@ -267,8 +265,6 @@ def get_stats() -> StatsRecord:
         balances.append({
             "principal_id": balance.principal_id,
             "amount": balance.amount,
-            "created_at": balance.created_at if hasattr(balance, "created_at") else 0,
-            "updated_at": balance.updated_at if hasattr(balance, "updated_at") else 0,
         })
     
     # Get transactions with proper typing
@@ -281,8 +277,6 @@ def get_stats() -> StatsRecord:
             "amount": tx.amount,
             "timestamp": tx.timestamp,
             "kind": tx.kind if hasattr(tx, "kind") else "unknown",
-            "created_at": tx.created_at if hasattr(tx, "created_at") else 0,
-            "updated_at": tx.updated_at if hasattr(tx, "updated_at") else 0,
         })
     
     # Get canisters with proper typing
@@ -291,8 +285,6 @@ def get_stats() -> StatsRecord:
         canisters.append({
             "_id": canister._id,
             "principal": canister.principal,
-            "created_at": canister.created_at if hasattr(canister, "created_at") else 0,
-            "updated_at": canister.updated_at if hasattr(canister, "updated_at") else 0,
         })
     
     # Return properly typed stats record
