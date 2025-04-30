@@ -296,6 +296,60 @@ def get_stats() -> StatsRecord:
     }
 
 
+@query
+def get_balance(principal_id: str) -> nat:
+    """
+    Get the balance for a specific principal.
+    
+    Args:
+        principal_id: The principal ID to check balance for
+        
+    Returns:
+        The current balance amount for the specified principal
+    """
+    logger.debug(f"Getting balance for principal: {principal_id}")
+    
+    # Look up the balance in the database
+    balance = Balance[principal_id]
+    
+    # Return the balance amount or 0 if not found
+    if balance:
+        return balance.amount
+    
+    return 0
+
+
+@query
+def get_transactions(principal_id: str) -> Vec[TransactionRecord]:
+    """
+    Get all transactions associated with a specific principal.
+    
+    Args:
+        principal_id: The principal ID to get transactions for
+        
+    Returns:
+        A list of transactions where the principal is either sender or receiver
+    """
+    logger.debug(f"Getting transactions for principal: {principal_id}")
+    
+    # Collect all transactions where this principal is involved
+    transactions = []
+    
+    for tx in VaultTransaction.instances():
+        # Check if this principal is either the sender or receiver
+        if tx.principal_from == principal_id or tx.principal_to == principal_id:
+            transactions.append({
+                "_id": tx._id,
+                "principal_from": tx.principal_from,
+                "principal_to": tx.principal_to,
+                "amount": tx.amount,
+                "timestamp": tx.timestamp,
+                "kind": tx.kind if hasattr(tx, "kind") else "unknown",
+            })
+    
+    return transactions
+
+
 # ##### Import Kybra and the internal function #####
 
 from kybra import Opt, Record, Vec, nat, query
