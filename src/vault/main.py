@@ -1,3 +1,5 @@
+from kybra_simple_logging import get_canister_logs as _get_canister_logs
+from kybra import Opt, Record, Vec, nat, query
 from kybra import (
     Async,
     CallResult,
@@ -81,16 +83,16 @@ def init_() -> void:
 def set_canister(canister_name: str, principal_id: Principal) -> str:
     """
     Set or update the principal ID for a specific canister in the Canisters entity.
-    
+
     Args:
         canister_name: The name of the canister to set/update (e.g., "ckBTC ledger", "ckBTC indexer")
         principal_id: The principal ID of the canister
-        
+
     Returns:
         Status message
     """
     logger.info(f"Setting canister '{canister_name}' to principal: {principal_id.to_str()}")
-    
+
     # Check if the canister already exists
     existing_canister = Canisters[canister_name]
     if existing_canister:
@@ -101,7 +103,7 @@ def set_canister(canister_name: str, principal_id: Principal) -> str:
         # Create a new canister record
         Canisters(_id=canister_name, principal=principal_id.to_str())
         logger.info(f"Created new canister '{canister_name}' with principal.")
-    
+
     return f"Canister '{canister_name}' principal set to: {principal_id.to_str()}"
 
 
@@ -141,81 +143,79 @@ def do_transfer(to: Principal, amount: nat) -> Async[nat]:
 
 
 @update
-def update_transaction_history(principal_id: str) -> str:
+def update_transaction_history() -> str:
+    return _update_transaction_history(ic.principal().to_str())
+
+
+def _update_transaction_history(principal_id: str) -> str:
     """
     Updates the transaction history for a given principal by querying the ICRC indexer
     and storing the transactions in the VaultTransaction database.
-    
+
     Args:
         principal_id: The principal ID to update transaction history for
-        
+
     Returns:
         A status message indicating the number of transactions processed
     """
     ic.print(f"Updating transaction history for {principal_id}...")
-    
+
     # Get the configured indexer canister ID
     indexer_canister_id = Canisters["ckBTC indexer"].principal
     max_results = 20
-    
+
     # Query the indexer for transactions
     response = yield get_account_transactions(
         canister_id=indexer_canister_id,
         owner_principal=principal_id,
         max_results=max_results
     )
-    
+
     ic.print(f"Response: {response}")
-    
+
     # Check if we have transactions in the response
     has_transactions = 'transactions' in response and response['transactions']
-    
+
     if not response or not has_transactions:
         return f"No transactions found for principal {principal_id}"
-    
+
     # Track new and updated transactions
     new_count = 0
     updated_count = 0
 
-    balance = response['balance']
-    logger.debug(f"Balance: {balance}")
-    b = Balance[principal_id]
-    if not b:
-        Balance(principal_id=principal_id, amount=balance)
-    else:
-        b.amount = balance
-    
     # Process each transaction and update the database
     for tx in response['transactions']:
         # Extract transaction data using dictionary access
         tx_id = str(tx['id'])
         transaction = tx['transaction']
-        
+
         # Skip if the transaction doesn't have a transfer
         if 'transfer' not in transaction or not transaction['transfer']:
             continue
-            
+
         transfer = transaction['transfer']
-        
+
         # Get principals for from and to accounts
         principal_from = str(transfer['from_']['owner']) if 'from_' in transfer and 'owner' in transfer['from_'] else "unknown"
         principal_to = str(transfer['to']['owner']) if 'to' in transfer and 'owner' in transfer['to'] else "unknown"
-        
+
         # Get amount and timestamp
         amount = int(transfer['amount']) if 'amount' in transfer else 0
         timestamp = int(transaction['timestamp']) if 'timestamp' in transaction else 0
         kind = transaction['kind'] if 'kind' in transaction else "unknown"
-        
+
+        logger.debug(f"Processing transaction {tx_id}")
+
         # Create or update the VaultTransaction
         existing_tx = VaultTransaction[tx_id]
         if existing_tx:
             # Update existing transaction if needed
             if (
-                existing_tx.principal_from != principal_from or
-                existing_tx.principal_to != principal_to or
-                existing_tx.amount != amount or
-                existing_tx.timestamp != timestamp or
-                existing_tx.kind != kind
+                existing_tx.principal_from != principal_from
+                or existing_tx.principal_to != principal_to
+                or existing_tx.amount != amount
+                or existing_tx.timestamp != timestamp
+                or existing_tx.kind != kind
             ):
                 existing_tx.principal_from = principal_from
                 existing_tx.principal_to = principal_to
@@ -234,7 +234,14 @@ def update_transaction_history(principal_id: str) -> str:
                 kind=kind
             )
             new_count += 1
-    
+
+            balance_from = Balance[principal_from] or Balance(principal_id=principal_from)
+            balance_to = Balance[principal_to] or Balance(principal_id=principal_to)
+            balance_from.amount = balance_from.amount - amount
+            balance_to.amount = balance_to.amount + amount
+
+            logger.debug(f"Updated balances: {balance_from.amount} for {principal_from}, {balance_to.amount} for {principal_to}")
+
     result = f"Processed {len(response['transactions'])} transactions: {new_count} new, {updated_count} updated"
     ic.print(result)
     return result
@@ -244,21 +251,21 @@ def update_transaction_history(principal_id: str) -> str:
 def get_stats() -> StatsRecord:
     """
     Get statistics about the vault's state including balances, transactions, and canister references.
-    
+
     Returns:
         A record containing vault statistics including app_data, balances, transactions,
         and canister references.
     """
     from vault.entities import stats, app_data, Balance, VaultTransaction, Canisters
-    
+
     logger.debug("Retrieving vault statistics")
-    
+
     # Get app_data with proper typing
     app_data_obj = app_data()
     app_data_record = {
         "admin_principal": app_data_obj.admin_principal if hasattr(app_data_obj, "admin_principal") else None,
     }
-    
+
     # Get balances with proper typing
     balances = []
     for balance in Balance.instances():
@@ -266,7 +273,7 @@ def get_stats() -> StatsRecord:
             "principal_id": balance.principal_id,
             "amount": balance.amount,
         })
-    
+
     # Get transactions with proper typing
     transactions = []
     for tx in VaultTransaction.instances():
@@ -278,7 +285,7 @@ def get_stats() -> StatsRecord:
             "timestamp": tx.timestamp,
             "kind": tx.kind if hasattr(tx, "kind") else "unknown",
         })
-    
+
     # Get canisters with proper typing
     canisters = []
     for canister in Canisters.instances():
@@ -286,12 +293,12 @@ def get_stats() -> StatsRecord:
             "_id": canister._id,
             "principal": canister.principal,
         })
-    
+
     # Return properly typed stats record
     return {
         "app_data": app_data_record,
         "balances": balances,
-        "vault_transactions": transactions, 
+        "vault_transactions": transactions,
         "canisters": canisters,
     }
 
@@ -300,22 +307,22 @@ def get_stats() -> StatsRecord:
 def get_balance(principal_id: str) -> nat:
     """
     Get the balance for a specific principal.
-    
+
     Args:
         principal_id: The principal ID to check balance for
-        
+
     Returns:
         The current balance amount for the specified principal
     """
     logger.debug(f"Getting balance for principal: {principal_id}")
-    
+
     # Look up the balance in the database
     balance = Balance[principal_id]
-    
+
     # Return the balance amount or 0 if not found
     if balance:
         return balance.amount
-    
+
     return 0
 
 
@@ -323,18 +330,18 @@ def get_balance(principal_id: str) -> nat:
 def get_transactions(principal_id: str) -> Vec[TransactionRecord]:
     """
     Get all transactions associated with a specific principal.
-    
+
     Args:
         principal_id: The principal ID to get transactions for
-        
+
     Returns:
         A list of transactions where the principal is either sender or receiver
     """
     logger.debug(f"Getting transactions for principal: {principal_id}")
-    
+
     # Collect all transactions where this principal is involved
     transactions = []
-    
+
     for tx in VaultTransaction.instances():
         # Check if this principal is either the sender or receiver
         if tx.principal_from == principal_id or tx.principal_to == principal_id:
@@ -346,14 +353,11 @@ def get_transactions(principal_id: str) -> Vec[TransactionRecord]:
                 "timestamp": tx.timestamp,
                 "kind": tx.kind if hasattr(tx, "kind") else "unknown",
             })
-    
+
     return transactions
 
 
 # ##### Import Kybra and the internal function #####
-
-from kybra import Opt, Record, Vec, nat, query
-from kybra_simple_logging import get_canister_logs as _get_canister_logs
 
 
 # Define the PublicLogEntry class directly in the test canister
