@@ -41,7 +41,15 @@ from vault.constants import CANISTER_PRINCIPALS
 # import vault.candid_types as candid_types
 # from vault.constants import CKBTC_CANISTER, DO_NOT_IMPLEMENT_HEARTBEAT
 # from vault.entities import app_data, stats
+# Import at the top of the file
 
+from vault.candid_types import (
+    CanisterRecord,
+    BalanceRecord,
+    TransactionRecord,
+    AppDataRecord,
+    StatsRecord,
+)
 
 logger = get_logger(__name__)
 set_log_level(Level.DEBUG)
@@ -221,45 +229,6 @@ def update_transaction_history(principal_id: str) -> str:
     result = f"Processed {len(response['transactions'])} transactions: {new_count} new, {updated_count} updated"
     ic.print(result)
     return result
-
-
-# Define Candid record types for stats
-class CanisterRecord(Record):
-    _id: text
-    principal: text
-    created_at: nat
-    updated_at: nat
-
-
-class BalanceRecord(Record):
-    principal_id: text
-    amount: nat
-    created_at: nat
-    updated_at: nat
-
-
-class TransactionRecord(Record):
-    _id: text
-    principal_from: text
-    principal_to: text
-    amount: nat
-    timestamp: nat
-    kind: text
-    created_at: nat
-    updated_at: nat
-
-
-class AppDataRecord(Record):
-    admin_principal: Opt[text]
-    created_at: nat
-    updated_at: nat
-
-
-class StatsRecord(Record):
-    app_data: AppDataRecord
-    balances: Vec[BalanceRecord]
-    vault_transactions: Vec[TransactionRecord]
-    canisters: Vec[CanisterRecord]
 
 
 @query
