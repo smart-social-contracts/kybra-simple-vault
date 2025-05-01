@@ -113,7 +113,6 @@ def set_canister(canister_name: str, principal_id: Principal) -> str:
 
 @update
 def transfer(to: Principal, amount: nat) -> Async[nat]:
-    logger.debug(f"Transferring {amount} tokens to {to.to_str()}")
 
     principal = Canisters["ckBTC ledger"].principal
     ledger = ICRCLedger(Principal.from_str(principal))
@@ -129,23 +128,42 @@ def transfer(to: Principal, amount: nat) -> Async[nat]:
         created_at_time=None,  # System will use current time
     )
 
-    logger.debug(f"Transferring {amount} tokens to {to.to_str()}")
+    logger.debug(f"(1) Transferring {amount} tokens to {to.to_str()}")
     result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
+    logger.debug(f"(2) Transferring {amount} tokens to {to.to_str()}")
 
-    # Return the transaction id on success or -1 on error
-    return match(
-        result,
-        {
-            "Ok": lambda result_variant: match(
-                result_variant,
-                {
-                    "Ok": lambda tx_id: tx_id,  # Return the transaction ID directly
-                    "Err": lambda _: -1,  # Return -1 on transfer error
-                },
-            ),
-            "Err": lambda _: -1,  # Return -1 on call error
-        },
-    )
+    logger.debug(f"result = {result}")
+    logger.debug(f"result type = {type(result)}")
+    
+    # Try to access result members carefully for debugging
+    try:
+        logger.debug(f"result.Ok = {result.Ok}")
+    except Exception as e:
+        logger.error(f"Error accessing result.Ok: {e}")
+        
+    try:
+        logger.debug(f"result.Err = {result.Err}")
+    except Exception as e:
+        logger.error(f"Error accessing result.Err: {e}")
+
+    # Return -1 if there's any exception in processing the result
+    try:
+        return match(
+            result,
+            {
+                "Ok": lambda result_variant: match(
+                    result_variant,
+                    {
+                        "Ok": lambda tx_id: tx_id,  # Return the transaction ID directly
+                        "Err": lambda err: (logger.error(f"Transfer error: {err}"), -1)[1],  # Return -1 on transfer error with logging
+                    },
+                ),
+                "Err": lambda err: (logger.error(f"Call error: {err}"), -1)[1],  # Return -1 on call error with logging
+            },
+        )
+    except Exception as e:
+        logger.error(f"Exception in match processing: {e}")
+        return -1
 
 
 @update

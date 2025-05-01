@@ -81,7 +81,7 @@ def test_transfer_from_vault(amount=100000):
     print(f"Destination principal: {destination_principal}")
 
     # Transfer tokens from the vault
-    transfer_cmd = f"dfx canister call vault transfer '(record {{ to = principal \"{destination_principal}\"; amount = {amount} }})'"
+    transfer_cmd = f"dfx canister call vault transfer '(principal \"{destination_principal}\", {amount})'"
 
     transfer_result = run_command(transfer_cmd)
     if not transfer_result:
