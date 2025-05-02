@@ -14,9 +14,12 @@ fi
 # Get the current principal
 PRINCIPAL=$(dfx identity get-principal)
 
+# Create a dedicated minting principal
+MINTING_PRINCIPAL="aaaaa-aa"
+
 # Deploy the ledger canister with explicit arguments
 echo "Deploying ckbtc_ledger canister..."
-dfx deploy --no-wallet ckbtc_ledger --argument="(variant { Init = record { minting_account = record { owner = principal \"$PRINCIPAL\"; subaccount = null }; transfer_fee = 10; token_symbol = \"ckBTC\"; token_name = \"ckBTC Test\"; decimals = opt 8; metadata = vec {}; initial_balances = vec { record { record { owner = principal \"$PRINCIPAL\"; subaccount = null }; 1_000_000_000 } }; feature_flags = opt record { icrc2 = true }; archive_options = record { num_blocks_to_archive = 1000; trigger_threshold = 2000; controller_id = principal \"$PRINCIPAL\" } } })"
+dfx deploy --no-wallet ckbtc_ledger --argument="(variant { Init = record { minting_account = record { owner = principal \"$MINTING_PRINCIPAL\"; subaccount = null }; transfer_fee = 10; token_symbol = \"ckBTC\"; token_name = \"ckBTC Test\"; decimals = opt 8; metadata = vec {}; initial_balances = vec { record { record { owner = principal \"$PRINCIPAL\"; subaccount = null }; 1_000_000_000 } }; feature_flags = opt record { icrc2 = true }; archive_options = record { num_blocks_to_archive = 1000; trigger_threshold = 2000; controller_id = principal \"$PRINCIPAL\" } } })"
 
 # Get the ledger canister ID
 LEDGER_ID=$(dfx canister id ckbtc_ledger)
