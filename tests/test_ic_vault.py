@@ -282,7 +282,7 @@ def main():
     update_success = test_update_transactions(3)
 
     # Check balance
-    balance_success = test_balance(1100 + 1200 - 1300, -100)  # balance of vault and user
+    balance_success = test_balance(1100 + 1200 - 1300, -100)  # balance of vault and user (1000 and -100, respectively)
 
     # Get transaction history
     tx_success = test_get_transactions([1100, 1200, 1300])
@@ -309,4 +309,5 @@ def main():
 
 if __name__ == "__main__":
     exit_code = main()
+    time.sleep(999999)
     sys.exit(exit_code)

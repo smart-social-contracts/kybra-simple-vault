@@ -1,4 +1,4 @@
-import traceback 
+import traceback
 from pprint import pformat
 
 from kybra_simple_logging import get_canister_logs as _get_canister_logs
@@ -135,13 +135,13 @@ def transfer(to: Principal, amount: nat) -> Async[nat]:
 
     logger.debug(f"result = {result}")
     logger.debug(f"result type = {type(result)}")
-    
+
     # Try to access result members carefully for debugging
     try:
         logger.debug(f"result.Ok = {result.Ok}")
     except Exception as e:
         logger.error(f"Error accessing result.Ok: {e}")
-        
+
     try:
         logger.debug(f"result.Err = {result.Err}")
     except Exception as e:
@@ -213,47 +213,50 @@ def _update_transaction_history(principal_id: str) -> str:
     for tx in transactions:
         try:
             logger.debug(f"Processing transaction {tx['id']}: {pformat(tx)}")
-            
+
             # Extract transaction data using dictionary access
             tx_id = str(tx['id'])
             transaction = tx['transaction']
             timestamp = int(transaction['timestamp']) if 'timestamp' in transaction else 0
             kind = transaction['kind'] if 'kind' in transaction else "unknown"
-            
+
             # Initialize default values
             principal_from = "unknown"
             principal_to = "unknown"
             amount = 0
-            
+
             # Handle different transaction types
             if kind == 'mint':
                 # For mint transactions, the recipient is this principal
                 principal_to = principal_id
                 principal_from = "mint"
-                # Use balance as the amount for mint transaction
-                amount = response.get('balance', 0)
+
+                if transaction.get('mint'):
+                    amount = int(transaction['mint'].get('amount', 0))
+
                 logger.debug(f"Processing mint transaction {tx_id} to {principal_to} with amount {amount}")
-                
+
             elif kind == 'burn':
                 # For burn transactions, the sender is this principal
                 principal_from = principal_id
                 principal_to = "burn"
-                # Extract amount from burn transaction if available
-                if 'burn' in transaction and transaction['burn']:
+
+                if transaction.get('burn'):
                     amount = int(transaction['burn'].get('amount', 0))
+
                 logger.debug(f"Processing burn transaction {tx_id} from {principal_from} with amount {amount}")
-                
+
             elif 'transfer' in transaction and transaction['transfer']:
                 # Handle transfer transactions
                 transfer = transaction['transfer']
-                
+
                 # Get principals for from and to accounts
                 principal_from = str(transfer['from_']['owner']) if 'from_' in transfer and 'owner' in transfer['from_'] else "unknown"
                 principal_to = str(transfer['to']['owner']) if 'to' in transfer and 'owner' in transfer['to'] else "unknown"
-                
-                # Get amount
-                amount = int(transfer['amount']) if 'amount' in transfer else 0
-                
+
+                if transaction.get('transfer'):
+                    amount = int(transaction['transfer'].get('amount', 0))
+
                 logger.debug(f"Processing transfer transaction {tx_id} from {principal_from} to {principal_to} with amount {amount}")
             else:
                 # Skip unknown transaction types
@@ -290,7 +293,7 @@ def _update_transaction_history(principal_id: str) -> str:
                     kind=kind
                 )
                 new_count += 1
-                
+
                 # Update balances based on transaction type
                 some_balance_update = False
                 if kind == 'mint':
@@ -310,7 +313,7 @@ def _update_transaction_history(principal_id: str) -> str:
                     user deposits in the vault => balance of user increases
                     vault transfers to user => balance of user decreases
                     '''
-                    
+
                     if principal_id == principal_to:
                         balance_from = Balance[principal_from] or Balance(_id=principal_from, amount=0)
                         balance_from.amount = balance_from.amount + amount
@@ -327,7 +330,6 @@ def _update_transaction_history(principal_id: str) -> str:
                 if not some_balance_update:
                     logger.warning(f"No balance updates for transaction {tx_id}")
 
-        
         except Exception as e:
             logger.error(f"Error processing transaction {tx_id}: {e}\n {traceback.format_exc()}")
 

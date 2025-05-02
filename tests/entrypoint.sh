@@ -37,12 +37,14 @@ dfx canister call vault set_canister '("ckBTC indexer", principal "'"$INDEXER_ID
 
 # Run tests against the vault canister
 echo "Running IC integration tests..."
-python tests/test_ic_vault.py
+python -u tests/test_ic_vault.py
+
+sleep 99999
 
 # Check the exit code of the tests
 if [ $? -ne 0 ]; then
     echo "❌ IC integration tests failed"
-    # sleep 999999
+    sleep 999999
     # dfx stop
     exit 1
     
@@ -56,4 +58,4 @@ echo "Canister deployment tests passed successfully!"
 
 echo "All tests passed successfully!"
 
-# sleep 999999
+sleep 999999
