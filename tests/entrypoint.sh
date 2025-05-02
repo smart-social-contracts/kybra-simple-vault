@@ -23,7 +23,7 @@ LEDGER_ID=$(dfx canister id ckbtc_ledger)
 
 # Deploy the indexer canister with the ledger ID
 echo "Deploying indexer canister..."
-dfx deploy --no-wallet ckbtc_indexer --argument="(opt variant { Init = record { ledger_id = principal \"$LEDGER_ID\"; } })"
+dfx deploy --no-wallet ckbtc_indexer --argument="(opt variant { Init = record { ledger_id = principal \"$LEDGER_ID\"; retrieve_blocks_from_ledger_interval_seconds = opt 1 } })"
 
 # Deploy the vault canister
 echo "Deploying vault canister..."

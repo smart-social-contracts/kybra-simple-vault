@@ -1,4 +1,5 @@
 import traceback 
+from pprint import pformat
 
 from kybra_simple_logging import get_canister_logs as _get_canister_logs
 from kybra import Opt, Record, Vec, nat, query
@@ -182,7 +183,7 @@ def _update_transaction_history(principal_id: str) -> str:
     Returns:
         A status message indicating the number of transactions processed
     """
-    ic.print(f"Updating transaction history for {principal_id}...")
+    logger.info(f"Updating transaction history for {principal_id}...")
 
     # Get the configured indexer canister ID
     indexer_canister_id = Canisters["ckBTC indexer"].principal
@@ -195,7 +196,7 @@ def _update_transaction_history(principal_id: str) -> str:
         max_results=max_results
     )
 
-    ic.print(f"Response: {response}")
+    logger.debug(f"Response: {response}")
 
     # Check if we have transactions in the response
     has_transactions = 'transactions' in response and response['transactions']
@@ -211,7 +212,7 @@ def _update_transaction_history(principal_id: str) -> str:
     transactions = sorted(response['transactions'], key=lambda x: x['id'])
     for tx in transactions:
         try:
-            logger.debug(f"Processing transaction {tx['id']}: {tx}")
+            logger.debug(f"Processing transaction {tx['id']}: {pformat(tx)}")
             
             # Extract transaction data using dictionary access
             tx_id = str(tx['id'])

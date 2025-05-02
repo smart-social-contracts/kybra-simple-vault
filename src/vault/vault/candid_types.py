@@ -156,10 +156,10 @@ class ICRCLedger(Service):
 
 
 class Transaction(Record):
-    burn: Opt[null]
+    burn: Opt[Burn]  
     kind: str
-    mint: Opt[null]
-    approve: Opt[null]
+    mint: Opt[Mint]  
+    approve: Opt[Approve]  
     timestamp: nat64
     transfer: Opt[Transfer]
 
