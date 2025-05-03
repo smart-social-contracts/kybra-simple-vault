@@ -31,9 +31,9 @@ from vault.candid_types import (
 def get_account_transactions(
     canister_id: str,
     owner_principal: str,
+    max_results: nat,
     subaccount: Optional[List[int]] = None,
     start_tx_id: Optional[nat] = 0,
-    max_results: int = 10
 ) -> Async[GetAccountTransactionsResponse]:
     """
     Query the indexer canister for account transactions.

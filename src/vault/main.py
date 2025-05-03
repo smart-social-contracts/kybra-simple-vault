@@ -1,3 +1,4 @@
+from kybra import update, ic
 import traceback
 from pprint import pformat
 
@@ -63,6 +64,7 @@ set_log_level(Level.DEBUG)
 # Initialize database
 storage = StableBTreeMap[str, str](memory_id=1, max_key_size=100, max_value_size=1000)  # Use a unique memory ID for each storage instance
 Database(storage)
+
 
 @init
 def init_() -> void:
@@ -183,217 +185,234 @@ def _update_transaction_history(principal_id: str, start_tx_id: nat, max_results
     Returns:
         A status message indicating the number of transactions processed
     """
-    logger.info(f"Updating transaction history for {principal_id}...")
 
-    # Get the configured indexer canister ID
-    indexer_canister = Canisters["ckBTC indexer"]
-    if not indexer_canister:
-        return f"Error: ckBTC indexer canister not configured. Please set it using set_canister() first."
-    
-    indexer_canister_id = indexer_canister.principal
+    try:
 
-    # Pagination flow STARTS
-    
-    # Initialize collections to store all transactions and track pagination
-    all_transactions = []
-    has_more = True
-    current_start = start_tx_id  # Use the provided start_tx_id as initial cursor
-    iterations = 0
-    max_iterations = 5  # Limit pagination to prevent excessive calls
-    
-    # Implement cursor-based pagination to fetch all transactions
-    while has_more and iterations < max_iterations:
-        # Log the current request parameters
-        logger.debug(f"Fetching transactions with start={current_start}, max_results={max_results}")
-        
-        # Query the indexer for transactions using the current cursor position
-        response = yield get_account_transactions(
-            canister_id=indexer_canister_id,
-            owner_principal=principal_id,
-            start_tx_id=current_start,
-            max_results=max_results
-        )
-        
-        # Check if we received a valid response with transactions
-        if not response or 'transactions' not in response or not response['transactions']:
-            logger.debug(f"No more transactions found at cursor {current_start}")
-            has_more = False
-            break
-            
-        # Collect the transactions from this batch
-        batch_transactions = response['transactions']
-        all_transactions.extend(batch_transactions)
-        logger.debug(f"Received {len(batch_transactions)} transactions, total now: {len(all_transactions)}")
-        
-        # Check if we got fewer transactions than requested - means we've reached the end
-        if len(batch_transactions) < max_results:
-            logger.debug(f"Received fewer transactions than requested ({len(batch_transactions)} < {max_results})")
-            has_more = False
-            break
-            
-        # Get the oldest transaction ID to use as the next cursor
-        oldest_tx_id = response.get('oldest_tx_id')
-        if oldest_tx_id is None:
-            logger.debug(f"No oldest_tx_id in response, pagination complete")
-            has_more = False
-            break
-            
-        # Update the cursor for the next iteration
-        current_start = oldest_tx_id
-        iterations += 1
-        
-        logger.debug(f"Next cursor will be {current_start}, iteration {iterations}/{max_iterations}")
-    
-    # Update the response to use the aggregated transactions
-    if all_transactions:
-        response['transactions'] = all_transactions
-        if 'balance' in response:
-            logger.debug(f"Balance found in response: {response['balance']}")
-    
-    # Pagination flow ENDS
+        logger.info(f"Updating transaction history for {principal_id}...")
 
-    logger.debug(f"Response: {response}")
+        # Get the configured indexer canister ID
+        indexer_canister = Canisters["ckBTC indexer"]
+        if not indexer_canister:
+            return f"Error: ckBTC indexer canister not configured. Please set it using set_canister() first."
 
-    # Check if we have transactions in the response
-    has_transactions = 'transactions' in response and response['transactions']
+        indexer_canister_id = indexer_canister.principal
 
-    if not response or not has_transactions:
-        return f"No transactions found for principal {principal_id}"
+        # Pagination flow STARTS
 
-    # Track new and updated transactions
-    new_count = 0
-    updated_count = 0
+        # Initialize collections to store all transactions and track pagination
+        all_transactions = []
+        has_more = True
+        current_start = start_tx_id  # Use the provided start_tx_id as initial cursor
+        iterations = 0
+        max_iterations = 5  # Limit pagination to prevent excessive calls
 
-    # Process each transaction and update the database
-    transactions = sorted(response['transactions'], key=lambda x: x['id'])
-    for tx in transactions:
-        try:
-            logger.debug(f"Processing transaction {tx['id']}: {pformat(tx)}")
+        # Implement cursor-based pagination to fetch all transactions
+        while has_more and iterations < max_iterations:
+            # Log the current request parameters
+            logger.debug(f"Fetching transactions with start={current_start}, max_results={max_results}")
 
-            # Extract transaction data using dictionary access
-            tx_id = str(tx['id'])
-            transaction = tx['transaction']
-            timestamp = int(transaction['timestamp']) if 'timestamp' in transaction else 0
-            kind = transaction['kind'] if 'kind' in transaction else "unknown"
+            # Query the indexer for transactions using the current cursor position
+            response = yield get_account_transactions(
+                canister_id=indexer_canister_id,
+                owner_principal=principal_id,
+                start_tx_id=current_start,
+                max_results=max_results
+            )
 
-            # Initialize default values
-            principal_from = "unknown"
-            principal_to = "unknown"
-            amount = 0
+            # Check if we received a valid response with transactions
+            if not response or 'transactions' not in response or not response['transactions']:
+                logger.debug(f"No more transactions found at cursor {current_start}")
+                has_more = False
+                break
 
-            # Handle different transaction types
-            if kind == 'mint':
-                # For mint transactions, the recipient is this principal
-                principal_to = principal_id
-                principal_from = "mint"
+            # Collect the transactions from this batch
+            batch_transactions = response['transactions']
+            all_transactions.extend(batch_transactions)
+            logger.debug(f"Received {len(batch_transactions)} transactions, total now: {len(all_transactions)}")
 
-                if transaction.get('mint'):
-                    amount = int(transaction['mint'].get('amount', 0))
+            # Check if we got fewer transactions than requested - means we've reached the end
+            if len(batch_transactions) < max_results:
+                logger.debug(f"Received fewer transactions than requested ({len(batch_transactions)} < {max_results})")
+                has_more = False
+                break
 
-                logger.debug(f"Processing mint transaction {tx_id} to {principal_to} with amount {amount}")
+            # Get the oldest transaction ID to use as the next cursor
+            oldest_tx_id = response.get('oldest_tx_id')
+            if oldest_tx_id is None:
+                logger.debug(f"No oldest_tx_id in response, pagination complete")
+                has_more = False
+                break
 
-            elif kind == 'burn':
-                # For burn transactions, the sender is this principal
-                principal_from = principal_id
-                principal_to = "burn"
+            logger.debug(f"batch_transactions = {batch_transactions}")
+            tx_id_oldest = batch_transactions[-1]['id']
 
-                if transaction.get('burn'):
-                    amount = int(transaction['burn'].get('amount', 0))
+            logger.debug(f"tx_id_oldest = {tx_id_oldest}")
+            logger.debug(f"app_data().last_transaction_id = {app_data().last_transaction_id}")
 
-                logger.debug(f"Processing burn transaction {tx_id} from {principal_from} with amount {amount}")
-
-            elif 'transfer' in transaction and transaction['transfer']:
-                # Handle transfer transactions
-                transfer = transaction['transfer']
-
-                # Get principals for from and to accounts
-                principal_from = str(transfer['from_']['owner']) if 'from_' in transfer and 'owner' in transfer['from_'] else "unknown"
-                principal_to = str(transfer['to']['owner']) if 'to' in transfer and 'owner' in transfer['to'] else "unknown"
-
-                if transaction.get('transfer'):
-                    amount = int(transaction['transfer'].get('amount', 0))
-
-                logger.debug(f"Processing transfer transaction {tx_id} from {principal_from} to {principal_to} with amount {amount}")
+            # take the the oldest tx id received (not oldest_tx_id) but, if that tx id was already processed, break
+            if app_data().last_transaction_id and tx_id_oldest > app_data().last_transaction_id:
+                logger.debug(f"continuing pagination loop, setting current_start to {tx_id_oldest}")
+                current_start = tx_id_oldest
+                iterations += 1
             else:
-                # Skip unknown transaction types
-                logger.debug(f"Skipping unknown transaction type: {kind} for tx {tx_id}")
-                continue
+                has_more = False
+                break
 
-            logger.debug(f"Processing transaction {tx_id}")
+            logger.debug(f"Next cursor will be {current_start}, iteration {iterations}/{max_iterations}")
 
-            # Create or update the VaultTransaction
-            existing_tx = VaultTransaction[tx_id]
-            if existing_tx:
-                # Update existing transaction if needed
-                if (
-                    existing_tx.principal_from != principal_from
-                    or existing_tx.principal_to != principal_to
-                    or existing_tx.amount != amount
-                    or existing_tx.timestamp != timestamp
-                    or existing_tx.kind != kind
-                ):
-                    existing_tx.principal_from = principal_from
-                    existing_tx.principal_to = principal_to
-                    existing_tx.amount = amount
-                    existing_tx.timestamp = timestamp
-                    existing_tx.kind = kind
-                    updated_count += 1
-            else:
-                # Create new transaction
-                VaultTransaction(
-                    _id=tx_id,
-                    principal_from=principal_from,
-                    principal_to=principal_to,
-                    amount=amount,
-                    timestamp=timestamp,
-                    kind=kind
-                )
-                new_count += 1
+        # Update the response to use the aggregated transactions
+        if all_transactions:
+            response['transactions'] = all_transactions
+            if 'balance' in response:
+                logger.debug(f"Balance found in response: {response['balance']}")
 
-                # Update balances based on transaction type
-                some_balance_update = False
+        # Pagination flow ENDS
+
+        logger.debug(f"Response: {response}")
+
+        # Check if we have transactions in the response
+        has_transactions = 'transactions' in response and response['transactions']
+
+        if not response or not has_transactions:
+            return f"No transactions found for principal {principal_id}"
+
+        # Track new and updated transactions
+        new_count = 0
+        updated_count = 0
+
+        # Process each transaction and update the database
+        transactions = sorted(response['transactions'], key=lambda x: x['id'])
+        for tx in transactions:
+            try:
+                logger.debug(f"Processing transaction {tx['id']}: {pformat(tx)}")
+
+                # Extract transaction data using dictionary access
+                tx_id = str(tx['id'])
+                transaction = tx['transaction']
+                timestamp = int(transaction['timestamp']) if 'timestamp' in transaction else 0
+                kind = transaction['kind'] if 'kind' in transaction else "unknown"
+
+                # Initialize default values
+                principal_from = "unknown"
+                principal_to = "unknown"
+                amount = 0
+
+                # Handle different transaction types
                 if kind == 'mint':
-                    # For mint, only update the recipient's balance
-                    balance_to = Balance[principal_to] or Balance(_id=principal_to, amount=0)
-                    balance_to.amount = balance_to.amount + amount
-                    some_balance_update = True
-                    logger.debug(f"Updated balance for {principal_to} to {balance_to.amount}")
+                    # For mint transactions, the recipient is this principal
+                    principal_to = principal_id
+                    principal_from = "mint"
+
+                    if transaction.get('mint'):
+                        amount = int(transaction['mint'].get('amount', 0))
+
+                    logger.debug(f"Processing mint transaction {tx_id} to {principal_to} with amount {amount}")
+
                 elif kind == 'burn':
-                    # For burn, only update the sender's balance
-                    balance_from = Balance[principal_from] or Balance(_id=principal_from, amount=0)
-                    balance_from.amount = balance_from.amount - amount
-                    some_balance_update = True
-                    logger.debug(f"Updated balance for {principal_from} to {balance_from.amount}")
-                elif kind == 'transfer':
-                    '''
-                    user deposits in the vault => balance of user increases
-                    vault transfers to user => balance of user decreases
-                    '''
+                    # For burn transactions, the sender is this principal
+                    principal_from = principal_id
+                    principal_to = "burn"
 
-                    if principal_id == principal_to:
-                        balance_from = Balance[principal_from] or Balance(_id=principal_from, amount=0)
-                        balance_from.amount = balance_from.amount + amount
-                        some_balance_update = True
-                        logger.debug(f"Updated balance for {principal_from} to {balance_from.amount}")
+                    if transaction.get('burn'):
+                        amount = int(transaction['burn'].get('amount', 0))
 
-                    if principal_id == principal_from:
+                    logger.debug(f"Processing burn transaction {tx_id} from {principal_from} with amount {amount}")
+
+                elif 'transfer' in transaction and transaction['transfer']:
+                    # Handle transfer transactions
+                    transfer = transaction['transfer']
+
+                    # Get principals for from and to accounts
+                    principal_from = str(transfer['from_']['owner']) if 'from_' in transfer and 'owner' in transfer['from_'] else "unknown"
+                    principal_to = str(transfer['to']['owner']) if 'to' in transfer and 'owner' in transfer['to'] else "unknown"
+
+                    if transaction.get('transfer'):
+                        amount = int(transaction['transfer'].get('amount', 0))
+
+                    logger.debug(f"Processing transfer transaction {tx_id} from {principal_from} to {principal_to} with amount {amount}")
+                else:
+                    # Skip unknown transaction types
+                    logger.debug(f"Skipping unknown transaction type: {kind} for tx {tx_id}")
+                    continue
+
+                logger.debug(f"Processing transaction {tx_id}")
+
+                # Create or update the VaultTransaction
+                existing_tx = VaultTransaction[tx_id]
+                if existing_tx:
+                    # Update existing transaction if needed
+                    if (
+                        existing_tx.principal_from != principal_from
+                        or existing_tx.principal_to != principal_to
+                        or existing_tx.amount != amount
+                        or existing_tx.timestamp != timestamp
+                        or existing_tx.kind != kind
+                    ):
+                        existing_tx.principal_from = principal_from
+                        existing_tx.principal_to = principal_to
+                        existing_tx.amount = amount
+                        existing_tx.timestamp = timestamp
+                        existing_tx.kind = kind
+                        updated_count += 1
+                else:
+                    # Create new transaction
+                    VaultTransaction(
+                        _id=tx_id,
+                        principal_from=principal_from,
+                        principal_to=principal_to,
+                        amount=amount,
+                        timestamp=timestamp,
+                        kind=kind
+                    )
+                    new_count += 1
+
+                    # Update balances based on transaction type
+                    some_balance_update = False
+                    if kind == 'mint':
+                        # For mint, only update the recipient's balance
                         balance_to = Balance[principal_to] or Balance(_id=principal_to, amount=0)
-                        balance_to.amount = balance_to.amount - amount
+                        balance_to.amount = balance_to.amount + amount
                         some_balance_update = True
                         logger.debug(f"Updated balance for {principal_to} to {balance_to.amount}")
+                    elif kind == 'burn':
+                        # For burn, only update the sender's balance
+                        balance_from = Balance[principal_from] or Balance(_id=principal_from, amount=0)
+                        balance_from.amount = balance_from.amount - amount
+                        some_balance_update = True
+                        logger.debug(f"Updated balance for {principal_from} to {balance_from.amount}")
+                    elif kind == 'transfer':
+                        '''
+                        user deposits in the vault => balance of user increases
+                        vault transfers to user => balance of user decreases
+                        '''
 
-                logger.debug(f"Setting last_transaction_id to {tx_id}")
-                app_data().last_transaction_id = tx_id
+                        if principal_id == principal_to:
+                            balance_from = Balance[principal_from] or Balance(_id=principal_from, amount=0)
+                            balance_from.amount = balance_from.amount + amount
+                            some_balance_update = True
+                            logger.debug(f"Updated balance for {principal_from} to {balance_from.amount}")
 
-                logger.info(f'Processed transaction {tx_id}: kind={kind}, amount={amount}, from={principal_from}, to={principal_to}')
-                if not some_balance_update:
-                    logger.warning(f"No balance updates for transaction {tx_id}")
+                        if principal_id == principal_from:
+                            balance_to = Balance[principal_to] or Balance(_id=principal_to, amount=0)
+                            balance_to.amount = balance_to.amount - amount
+                            some_balance_update = True
+                            logger.debug(f"Updated balance for {principal_to} to {balance_to.amount}")
 
-        except Exception as e:
-            logger.error(f"Error processing transaction {tx_id}: {e}\n {traceback.format_exc()}")
+                    logger.debug(f"Setting last_transaction_id to {tx_id}")
+                    app_data().last_transaction_id = tx_id
 
-    result = f"Processed {len(transactions)} transactions: {new_count} new, {updated_count} updated"
-    return result
+                    logger.info(f'Processed transaction {tx_id}: kind={kind}, amount={amount}, from={principal_from}, to={principal_to}')
+                    if not some_balance_update:
+                        logger.warning(f"No balance updates for transaction {tx_id}")
+
+            except Exception as e:
+                logger.error(f"Error processing transaction {tx_id}: {e}\n {traceback.format_exc()}")
+
+        result = f"Processed {len(transactions)} transactions: {new_count} new, {updated_count} updated"
+        return result
+    except Exception as e:
+        logger.error(f"Error processing transactions: {e}\n {traceback.format_exc()}")
+        raise e
 
 
 @update
@@ -559,9 +578,6 @@ def get_canister_logs(
         for log in logs
     ]
 
-
-
-from kybra import update, ic
 
 @update
 def execute_code(code: str) -> str:
