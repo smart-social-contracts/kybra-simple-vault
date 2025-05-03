@@ -41,7 +41,7 @@ from kybra_simple_logging import get_logger, set_log_level, Level
 # import vault.utils_neural as utils_neural
 from vault.ic_util_calls import get_account_transactions
 from vault.entities import VaultTransaction, Canisters, app_data, Balance
-from vault.constants import CANISTER_PRINCIPALS
+from vault.constants import CANISTER_PRINCIPALS, MAX_RESULTS
 from vault.candid_types import TransferArg, TransferResult, ICRCLedger, Account
 
 # import vault.candid_types as candid_types
@@ -60,17 +60,9 @@ from vault.candid_types import (
 logger = get_logger(__name__)
 set_log_level(Level.DEBUG)
 
-
-db_storage = StableBTreeMap[str, str](
-    memory_id=0, max_key_size=100_000, max_value_size=1_000_000
-)
-db_audit = StableBTreeMap[str, str](
-    memory_id=1, max_key_size=100_000, max_value_size=1_000_000
-)
-
-# Initialize the database
-Database.init(audit_enabled=True, db_storage=db_storage, db_audit=db_audit)
-
+# Initialize database
+storage = StableBTreeMap[str, str](memory_id=1, max_key_size=100, max_value_size=1000)  # Use a unique memory ID for each storage instance
+Database(storage)
 
 @init
 def init_() -> void:
@@ -169,16 +161,24 @@ def transfer(to: Principal, amount: nat) -> Async[nat]:
 
 @update
 def update_transaction_history() -> str:
-    return _update_transaction_history(ic.id().to_str())
+    # Always start with None (not the last_transaction_id) to get the newest transactions
+    # The indexer API returns transactions BEFORE the given ID, so using the last_transaction_id
+    # would skip newer transactions
+    return _update_transaction_history(
+        ic.id().to_str(),
+        None,  # Use None instead of app_data().last_transaction_id
+        MAX_RESULTS)
 
 
-def _update_transaction_history(principal_id: str) -> str:
+def _update_transaction_history(principal_id: str, start_tx_id: nat, max_results: nat) -> str:
     """
     Updates the transaction history for a given principal by querying the ICRC indexer
     and storing the transactions in the VaultTransaction database.
 
     Args:
         principal_id: The principal ID to update transaction history for
+        start_tx_id: The transaction ID to start from
+        max_results: Maximum number of transactions to return
 
     Returns:
         A status message indicating the number of transactions processed
@@ -186,15 +186,71 @@ def _update_transaction_history(principal_id: str) -> str:
     logger.info(f"Updating transaction history for {principal_id}...")
 
     # Get the configured indexer canister ID
-    indexer_canister_id = Canisters["ckBTC indexer"].principal
-    max_results = 20
+    indexer_canister = Canisters["ckBTC indexer"]
+    if not indexer_canister:
+        return f"Error: ckBTC indexer canister not configured. Please set it using set_canister() first."
+    
+    indexer_canister_id = indexer_canister.principal
 
-    # Query the indexer for transactions
-    response = yield get_account_transactions(
-        canister_id=indexer_canister_id,
-        owner_principal=principal_id,
-        max_results=max_results
-    )
+    # Pagination flow STARTS
+    
+    # Initialize collections to store all transactions and track pagination
+    all_transactions = []
+    has_more = True
+    current_start = start_tx_id  # Use the provided start_tx_id as initial cursor
+    iterations = 0
+    max_iterations = 5  # Limit pagination to prevent excessive calls
+    
+    # Implement cursor-based pagination to fetch all transactions
+    while has_more and iterations < max_iterations:
+        # Log the current request parameters
+        logger.debug(f"Fetching transactions with start={current_start}, max_results={max_results}")
+        
+        # Query the indexer for transactions using the current cursor position
+        response = yield get_account_transactions(
+            canister_id=indexer_canister_id,
+            owner_principal=principal_id,
+            start_tx_id=current_start,
+            max_results=max_results
+        )
+        
+        # Check if we received a valid response with transactions
+        if not response or 'transactions' not in response or not response['transactions']:
+            logger.debug(f"No more transactions found at cursor {current_start}")
+            has_more = False
+            break
+            
+        # Collect the transactions from this batch
+        batch_transactions = response['transactions']
+        all_transactions.extend(batch_transactions)
+        logger.debug(f"Received {len(batch_transactions)} transactions, total now: {len(all_transactions)}")
+        
+        # Check if we got fewer transactions than requested - means we've reached the end
+        if len(batch_transactions) < max_results:
+            logger.debug(f"Received fewer transactions than requested ({len(batch_transactions)} < {max_results})")
+            has_more = False
+            break
+            
+        # Get the oldest transaction ID to use as the next cursor
+        oldest_tx_id = response.get('oldest_tx_id')
+        if oldest_tx_id is None:
+            logger.debug(f"No oldest_tx_id in response, pagination complete")
+            has_more = False
+            break
+            
+        # Update the cursor for the next iteration
+        current_start = oldest_tx_id
+        iterations += 1
+        
+        logger.debug(f"Next cursor will be {current_start}, iteration {iterations}/{max_iterations}")
+    
+    # Update the response to use the aggregated transactions
+    if all_transactions:
+        response['transactions'] = all_transactions
+        if 'balance' in response:
+            logger.debug(f"Balance found in response: {response['balance']}")
+    
+    # Pagination flow ENDS
 
     logger.debug(f"Response: {response}")
 
@@ -326,6 +382,9 @@ def _update_transaction_history(principal_id: str) -> str:
                         some_balance_update = True
                         logger.debug(f"Updated balance for {principal_to} to {balance_to.amount}")
 
+                logger.debug(f"Setting last_transaction_id to {tx_id}")
+                app_data().last_transaction_id = tx_id
+
                 logger.info(f'Processed transaction {tx_id}: kind={kind}, amount={amount}, from={principal_from}, to={principal_to}')
                 if not some_balance_update:
                     logger.warning(f"No balance updates for transaction {tx_id}")
@@ -337,7 +396,7 @@ def _update_transaction_history(principal_id: str) -> str:
     return result
 
 
-@query
+@update
 def get_stats() -> StatsRecord:
     """
     Get statistics about the vault's state including balances, transactions, and canister references.
@@ -346,51 +405,62 @@ def get_stats() -> StatsRecord:
         A record containing vault statistics including app_data, balances, transactions,
         and canister references.
     """
-    from vault.entities import stats, app_data, Balance, VaultTransaction, Canisters
 
-    logger.debug("Retrieving vault statistics")
+    try:
 
-    # Get app_data with proper typing
-    app_data_obj = app_data()
-    app_data_record = {
-        "admin_principal": app_data_obj.admin_principal if hasattr(app_data_obj, "admin_principal") else None,
-    }
+        logger.debug("Retrieving vault statistics")
 
-    # Get balances with proper typing
-    balances = []
-    for balance in Balance.instances():
-        balances.append({
-            "principal_id": balance.principal_id,
-            "amount": balance.amount,
-        })
+        # Get app_data with proper typing
+        app_data_obj = app_data()
+        app_data_record = AppDataRecord(
+            admin_principal=app_data_obj.admin_principal if hasattr(app_data_obj, "admin_principal") else None,
+            last_transaction_id=app_data_obj.last_transaction_id if hasattr(app_data_obj, "last_transaction_id") else None,
+        )
 
-    # Get transactions with proper typing
-    transactions = []
-    for tx in VaultTransaction.instances():
-        transactions.append({
-            "_id": tx._id,
-            "principal_from": tx.principal_from,
-            "principal_to": tx.principal_to,
-            "amount": tx.amount,
-            "timestamp": tx.timestamp,
-            "kind": tx.kind if hasattr(tx, "kind") else "unknown",
-        })
+        # Get balances with proper typing
+        balances = []
+        for balance in Balance.instances():
+            balances.append(BalanceRecord(
+                principal_id=balance._id,
+                amount=balance.amount,
+            ))
 
-    # Get canisters with proper typing
-    canisters = []
-    for canister in Canisters.instances():
-        canisters.append({
-            "_id": canister._id,
-            "principal": canister.principal,
-        })
+        # Get transactions with proper typing
+        transactions = []
+        for tx in VaultTransaction.instances():
+            transactions.append(TransactionRecord(
+                _id=tx._id,
+                principal_from=tx.principal_from,
+                principal_to=tx.principal_to,
+                amount=tx.amount,
+                timestamp=tx.timestamp,
+                kind=tx.kind if hasattr(tx, "kind") else "unknown",
+            ))
 
-    # Return properly typed stats record
-    return {
-        "app_data": app_data_record,
-        "balances": balances,
-        "vault_transactions": transactions,
-        "canisters": canisters,
-    }
+        # Get canisters with proper typing
+        canisters = []
+        for canister in Canisters.instances():
+            canisters.append(CanisterRecord(
+                _id=canister._id,
+                principal=canister.principal,
+            ))
+
+        ic.print('app_data_record', app_data_record)
+        ic.print('balances', balances)
+        ic.print('transactions', transactions)
+        ic.print('canisters', canisters)
+
+        # Return properly typed stats record
+        return StatsRecord(
+            app_data=app_data_record,
+            balances=balances,
+            vault_transactions=transactions,
+            canisters=canisters,
+        )
+
+    except Exception as e:
+        logger.error(f"Error retrieving vault statistics: {e}\n{traceback.format_exc()}")
+        raise e
 
 
 @query
@@ -435,14 +505,14 @@ def get_transactions(principal_id: str) -> Vec[TransactionRecord]:
     for tx in VaultTransaction.instances():
         # Check if this principal is either the sender or receiver
         if tx.principal_from == principal_id or tx.principal_to == principal_id:
-            transactions.append({
-                "_id": tx._id,
-                "principal_from": tx.principal_from,
-                "principal_to": tx.principal_to,
-                "amount": tx.amount,
-                "timestamp": tx.timestamp,
-                "kind": tx.kind if hasattr(tx, "kind") else "unknown",
-            })
+            transactions.append(TransactionRecord(
+                _id=tx._id,
+                principal_from=tx.principal_from,
+                principal_to=tx.principal_to,
+                amount=tx.amount,
+                timestamp=tx.timestamp,
+                kind=tx.kind if hasattr(tx, "kind") else "unknown",
+            ))
 
     return transactions
 
@@ -488,3 +558,43 @@ def get_canister_logs(
         )
         for log in logs
     ]
+
+
+
+from kybra import update, ic
+
+@update
+def execute_code(code: str) -> str:
+    """Executes Python code and returns the output.
+
+    This is the core function needed for the Kybra Simple Shell to work.
+    It captures stdout, stderr, and return values from the executed code.
+    """
+    import io
+    import sys
+    import traceback
+
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    sys.stdout = stdout
+    sys.stderr = stderr
+
+    try:
+        # Try to evaluate as an expression
+        result = eval(code, globals())
+        if result is not None:
+            ic.print(repr(result))
+    except SyntaxError:
+        try:
+            # If it's not an expression, execute it as a statement
+            # Use the built-in exec function but with a different name to avoid conflict
+            exec_builtin = exec
+            exec_builtin(code, globals())
+        except Exception:
+            traceback.print_exc()
+    except Exception:
+        traceback.print_exc()
+
+    sys.stdout = sys.__stdout__
+    sys.stderr = sys.__stderr__
+    return stdout.getvalue() + stderr.getvalue()

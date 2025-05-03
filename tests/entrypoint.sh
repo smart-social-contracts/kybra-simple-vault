@@ -31,6 +31,7 @@ dfx deploy --no-wallet ckbtc_indexer --argument="(opt variant { Init = record { 
 # Deploy the vault canister
 echo "Deploying vault canister..."
 dfx deploy vault
+VAULT_ID=$(dfx canister id vault)
 
 # Set the ckBTC ledger canister principal in the vault canister
 echo "Setting ckBTC ledger canister principal in vault..."

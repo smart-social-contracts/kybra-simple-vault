@@ -5,7 +5,7 @@ from vault.constants import CANISTER_PRINCIPALS
 
 class ApplicationData(Entity, TimestampedMixin):
     admin_principal = String()
-
+    last_transaction_id = Integer()
 
 class Canisters(Entity, TimestampedMixin):
     principal = String()
@@ -29,9 +29,8 @@ class VaultTransaction(Entity, TimestampedMixin):
 
 
 class Balance(Entity, TimestampedMixin):
-    principal_id = String()  # Owner of this balance
     amount = Integer(default=0)
-    canister = OneToMany("Canister", "balances")
+    # canister = OneToMany("Canister", "balances")
 
 
 def stats():

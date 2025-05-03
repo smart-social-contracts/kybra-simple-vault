@@ -40,7 +40,7 @@ class TransactionRecord(Record):
 
 class AppDataRecord(Record):
     admin_principal: Opt[text]
-
+    last_transaction_id: Opt[nat]
 
 class Account(Record):
     owner: Principal
@@ -142,8 +142,6 @@ class StatsRecord(Record):
     balances: Vec[BalanceRecord]
     vault_transactions: Vec[TransactionRecord]
     canisters: Vec[CanisterRecord]
-
-
 class ICRCLedger(Service):
     @service_query
     def icrc1_balance_of(self, account: Account) -> nat: ...
@@ -171,6 +169,7 @@ class AccountTransaction(Record):
 
 class GetAccountTransactionsRequest(Record):
     account: Account
+    start: Opt[nat]
     max_results: nat
 
 

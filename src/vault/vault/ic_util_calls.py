@@ -1,3 +1,5 @@
+import traceback
+
 from kybra import (
     Async,
     CallResult,
@@ -26,11 +28,11 @@ from vault.candid_types import (
 
 
 
-
 def get_account_transactions(
     canister_id: str,
     owner_principal: str,
     subaccount: Optional[List[int]] = None,
+    start_tx_id: Optional[nat] = 0,
     max_results: int = 10
 ) -> Async[GetAccountTransactionsResponse]:
     """
@@ -45,7 +47,9 @@ def get_account_transactions(
     Returns:
         A GetAccountTransactionsResponse object containing balance and transactions
     """
-    ic.print(f"\nQuerying indexer canister for account transactions for {owner_principal}...")
+
+    # start_tx_id = 0 if start_tx_id is None else start_tx_id
+    ic.print(f"\nQuerying indexer canister for account transactions for {owner_principal} starting from tx id {start_tx_id}...")
 
     account = Account(
         owner=Principal.from_str(owner_principal),
@@ -53,6 +57,7 @@ def get_account_transactions(
     )
     req = GetAccountTransactionsRequest(
         account=account,
+        start=start_tx_id,
         max_results=max_results,
     )
 
@@ -64,9 +69,13 @@ def get_account_transactions(
 
     try:
         indexer = ICRCIndexer(Principal.from_str(canister_id))
+
+        ic.print('req = ' + str(req))
+
         result = yield indexer.get_account_transactions(req)
 
         ic.print(f"Got result type: {type(result)}")
+        ic.print(f"Result: {result}")
 
         # Handle the CallResult with Ok/Err fields
         if hasattr(result, 'Ok') and result.Ok is not None:
@@ -76,6 +85,7 @@ def get_account_transactions(
             # The actual data is nested inside ok_data['Ok']
             if isinstance(ok_data, dict) and 'Ok' in ok_data:
                 transaction_data = ok_data['Ok']
+                ic.print(f"Transaction data: {transaction_data}")
 
                 # Extract the balance, transactions and oldest_tx_id from the inner dictionary
                 balance = transaction_data.get('balance', 0)
@@ -83,6 +93,9 @@ def get_account_transactions(
                 oldest_tx_id = transaction_data.get('oldest_tx_id')
 
                 ic.print(f"Successfully retrieved {len(transactions)} transactions and total principal balance of {balance}")
+                ic.print(f"Oldest tx id: {oldest_tx_id}")
+                ic.print(f"Transactions: {transactions}")
+                ic.print(f"Balance: {balance}")
 
                 # Build our response object
                 return GetAccountTransactionsResponse(
@@ -101,7 +114,7 @@ def get_account_transactions(
         ic.print("Returning default response in error cases")
         return default_response
     except Exception as e:
-        ic.print(f"Exception occurred: {str(e)}")
+        ic.print(f"Exception occurred: {str(e)}\n{traceback.format_exc()}")
         return default_response
 
 

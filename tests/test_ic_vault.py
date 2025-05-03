@@ -37,33 +37,34 @@ def get_canister_id(canister_name):
     return result
 
 
-def test_mint_to_vault(amount=1000000):
-    """Mint tokens directly to the vault canister for testing."""
-    print(f"\nTesting token minting to vault with amount {amount}...")
+# def test_mint_to_vault(amount=1000000):
+#     """Mint tokens directly to the vault canister for testing."""
+#     print(f"\nTesting token minting to vault with amount {amount}...")
 
-    # Get canister IDs
-    vault_id = get_canister_id("vault")
-    ledger_id = get_canister_id("ckbtc_ledger")
+#     # Get canister IDs
+#     vault_id = get_canister_id("vault")
+#     ledger_id = get_canister_id("ckbtc_ledger")
 
-    print(f"Vault canister ID: {vault_id}")
-    print(f"Ledger canister ID: {ledger_id}")
+#     print(f"Vault canister ID: {vault_id}")
+#     print(f"Ledger canister ID: {ledger_id}")
 
-    # Mint tokens to the vault
-    mint_cmd = f"dfx canister call ckbtc_ledger icrc1_transfer '(record {{ to = record {{ owner = principal \"{vault_id}\"; subaccount = null }}; amount = {amount}; fee = null; memo = null; from_subaccount = null; created_at_time = null }})'"
+#     # Mint tokens to the vault
+#     # Equivalent command: AMOUNT=1000000 dfx canister call ckbtc_ledger icrc1_transfer '(record { to = record { owner = principal "'"$VAULT_ID"'"; subaccount = null }; amount = '$AMOUNT'; fee = null; memo = null; from_subaccount = null; created_at_time = null })'
+#     mint_cmd = f"dfx canister call ckbtc_ledger icrc1_transfer '(record {{ to = record {{ owner = principal \"{vault_id}\"; subaccount = null }}; amount = {amount}; fee = null; memo = null; from_subaccount = null; created_at_time = null }})'"
 
-    mint_result = run_command(mint_cmd)
-    if not mint_result:
-        print(f"{RED}✗ Token minting failed{RESET}")
-        return False
+#     mint_result = run_command(mint_cmd)
+#     if not mint_result:
+#         print(f"{RED}✗ Token minting failed{RESET}")
+#         return False
 
-    print(f"{GREEN}✓ Token minting succeeded{RESET}")
-    print(f"Mint result: {mint_result}")
+#     print(f"{GREEN}✓ Token minting succeeded{RESET}")
+#     print(f"Mint result: {mint_result}")
 
-    # Wait for the ledger to process the transaction
-    print("Waiting for the transaction to be processed...")
-    time.sleep(2)
+#     # Wait for the ledger to process the transaction
+#     print("Waiting for the transaction to be processed...")
+#     time.sleep(2)
 
-    return True
+#     return True
 
 
 def test_transfer_from_vault(amount=100000):
@@ -270,7 +271,7 @@ def main():
     print(f"{GREEN}=== Starting Vault IC Tests ==={RESET}")
 
     # Mint tokens to the vault
-    mint_success = test_mint_to_vault(1100)
+    # mint_success = test_mint_to_vault(1100)
 
     # Transfer tokens to the vault
     transfer_to_success = test_transfer_to_vault(1200)
@@ -286,6 +287,12 @@ def main():
 
     # Get transaction history
     tx_success = test_get_transactions([1100, 1200, 1300])
+
+    '''
+    Equivalent commands:
+    AMOUNT=1100 dfx canister call ckbtc_ledger icrc1_transfer '(record {
+        to = record { owner = principal "'"$VAULT_ID"'"; subaccount = null }; amount = '$AMOUNT'; fee = null; memo = null; from_subaccount = null; created_at_time = null })'
+    '''
 
     # Print test summary
     print(f"\n{GREEN}=== Test Summary ==={RESET}")

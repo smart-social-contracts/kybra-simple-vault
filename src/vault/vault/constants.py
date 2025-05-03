@@ -4,3 +4,5 @@ CANISTER_PRINCIPALS = {
         'indexer': "n5wcd-faaaa-aaaar-qaaea-cai"
     }
 }
+
+MAX_RESULTS = 20
