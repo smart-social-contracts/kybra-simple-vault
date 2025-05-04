@@ -516,24 +516,34 @@ def get_transactions(principal_id: str) -> Vec[TransactionRecord]:
     Returns:
         A list of transactions where the principal is either sender or receiver
     """
-    logger.debug(f"Getting transactions for principal: {principal_id}")
 
-    # Collect all transactions where this principal is involved
-    transactions = []
+    try:
+        logger.debug(f"Getting transactions for principal: {principal_id}")
 
-    for tx in VaultTransaction.instances():
-        # Check if this principal is either the sender or receiver
-        if tx.principal_from == principal_id or tx.principal_to == principal_id:
-            transactions.append(TransactionRecord(
-                _id=tx._id,
-                principal_from=tx.principal_from,
-                principal_to=tx.principal_to,
-                amount=tx.amount,
-                timestamp=tx.timestamp,
-                kind=tx.kind if hasattr(tx, "kind") else "unknown",
-            ))
+        # Collect all transactions where this principal is involved
+        transactions = []
 
-    return transactions
+        for tx in VaultTransaction.instances():
+            logger.debug(f"Processing transaction {tx.to_dict()}")
+            # Check if this principal is either the sender or receiver
+            if tx.principal_from == principal_id or tx.principal_to == principal_id:
+                transactions.append(TransactionRecord(
+                    _id=tx._id,
+                    principal_from=tx.principal_from,
+                    principal_to=tx.principal_to,
+                    amount=tx.amount,
+                    timestamp=tx.timestamp,
+                    kind=tx.kind if hasattr(tx, "kind") else "unknown",
+                ))
+
+        logger.debug(f"Transactions for principal {principal_id}: {transactions}")
+        # Sort transactions by timestamp (newest first)
+        transactions.sort(key=lambda tx: tx['_id'], reverse=True)
+
+        return transactions
+    except Exception as e:
+        logger.error(f"Error getting transactions for principal {principal_id}: {e}\n {traceback.format_exc()}")
+        raise e
 
 
 # ##### Import Kybra and the internal function #####

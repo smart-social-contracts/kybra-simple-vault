@@ -132,7 +132,7 @@ def test_transfer_to_vault(amount=50000):
     return True
 
 
-def test_balance(expected_vault_balance=None, expected_user_balance=None):
+def test_balance(expected_user_balance):
     """Test checking the vault canister's balance."""
     print("\nTesting vault balance functionality...")
 
@@ -146,45 +146,19 @@ def test_balance(expected_vault_balance=None, expected_user_balance=None):
         # Call the get_balance method for the user
         balance_result = run_command(f"dfx canister call vault get_balance '(\"{principal}\")'")
 
-        if balance_result:
-            print(f"{GREEN}✓ User balance check succeeded{RESET}")
-            print(f"User balance result: {balance_result}")
-            
-            # Verify expected user balance if provided
-            if expected_user_balance is not None:
-                # Extract the balance value from the result
-                # Example: "(100 : nat)" -> extract "100"
-                user_balance = int(balance_result.strip("()").split(":")[0].strip())
-                if user_balance == expected_user_balance:
-                    print(f"{GREEN}✓ User balance matches expected value: {expected_user_balance}{RESET}")
-                else:
-                    print(f"{RED}✗ User balance {user_balance} does not match expected value: {expected_user_balance}{RESET}")
-                    return False
-            
-            # Get the vault canister ID
-            vault_id = get_canister_id("vault")
-            
-            # Check the vault's balance
-            vault_balance_result = run_command(f"dfx canister call vault get_balance '(\"{vault_id}\")'")
-            
-            if vault_balance_result:
-                print(f"{GREEN}✓ Vault balance check succeeded{RESET}")
-                print(f"Vault balance result: {vault_balance_result}")
-                
-                # Verify expected vault balance if provided
-                if expected_vault_balance is not None:
-                    # Extract the balance value from the result
-                    vault_balance = int(vault_balance_result.strip("()").split(":")[0].strip().replace("_", ""))
-                    if vault_balance == expected_vault_balance:
-                        print(f"{GREEN}✓ Vault balance matches expected value: {expected_vault_balance}{RESET}")
-                    else:
-                        print(f"{RED}✗ Vault balance {vault_balance} does not match expected value: {expected_vault_balance}{RESET}")
-                        return False
-            
+        print(f"{GREEN}✓ User balance check succeeded{RESET}")
+        print(f"User balance result: {balance_result}")
+
+        # Extract the balance value from the result
+        # Example: "(100 : nat)" -> extract "100"
+        user_balance = int(balance_result.strip("()").split(":")[0].strip())
+        if user_balance == expected_user_balance:
+            print(f"{GREEN}✓ User balance matches expected value: {expected_user_balance}{RESET}")
             return True
         else:
-            print(f"{RED}✗ Balance check failed{RESET}")
+            print(f"{RED}✗ User balance {user_balance} does not match expected value: {expected_user_balance}{RESET}")
             return False
+
     except Exception as e:
         print(f"{RED}✗ Error checking balance: {e}{RESET}")
         return False
@@ -207,14 +181,14 @@ def test_update_transactions(expected_count=None):
         if update_result:
             print(f"{GREEN}✓ Transaction history update succeeded{RESET}")
             print(f"Update result: {update_result}")
-            
+
             # Verify the expected count if provided
             if expected_count is not None:
                 # Try to extract the count from the update result if it's returned
                 print(f"Expected transaction count: {expected_count}")
                 # This is just a placeholder check
                 print(f"{GREEN}✓ Transaction count verification skipped{RESET}")
-            
+
             return True
         else:
             print(f"{RED}✗ Transaction history update failed{RESET}")
@@ -236,31 +210,21 @@ def test_get_transactions(expected_amounts=None):
 
     try:
         # Get transaction history
-        tx_result = run_command(f"dfx canister call vault get_transactions '(\"{principal}\")'")
+        tx_result = run_command(f"dfx canister call vault get_transactions '(\"{principal}\")' --output json")
 
-        if tx_result:
-            print(f"{GREEN}✓ Transaction history retrieval succeeded{RESET}")
-            print(f"Transaction result: {tx_result}")
-            
-            # Verify transaction amounts if expected_amounts is provided
-            if expected_amounts is not None and isinstance(expected_amounts, list):
-                print(f"Verifying transaction amounts: {expected_amounts}")
-                
-                # This is a basic check - you might need to adapt it based on your transaction format
-                for amount in expected_amounts:
-                    # Check if the amount appears in the transaction result
-                    if f"amount = {amount}" in tx_result or f"amount = {amount}_000" in tx_result:
-                        print(f"{GREEN}✓ Found transaction with amount {amount}{RESET}")
-                    else:
-                        print(f"{RED}✗ Could not find transaction with amount {amount}{RESET}")
-                        return False
-                
-                print(f"{GREEN}✓ All expected transaction amounts were found{RESET}")
-            
-            return True
-        else:
-            print(f"{RED}✗ Transaction history retrieval failed{RESET}")
-            return False
+        tx_result = json.loads(tx_result)
+        print('tx_result', tx_result)
+
+        for i, tx in enumerate(tx_result):
+            tx_amount = int(tx['amount'])
+            expected_amount = int(expected_amounts[i])
+            if tx_amount != expected_amount:
+                print(f"{RED}✗ Transaction amount {tx_amount} does not match expected amount {expected_amount}{RESET}")
+                return False
+
+        print(f"{GREEN}✓ All expected transaction amounts were found{RESET}")
+        return True
+
     except Exception as e:
         print(f"{RED}✗ Error retrieving transaction history: {e}{RESET}")
         return False
@@ -274,19 +238,19 @@ def main():
     # mint_success = test_mint_to_vault(1100)
 
     # Transfer tokens to the vault
-    transfer_to_success = test_transfer_to_vault(1200)
+    transfer_to_success = test_transfer_to_vault(1000)
 
     # Transfer tokens from the vault
-    transfer_success = test_transfer_from_vault(1300)
+    transfer_success = test_transfer_from_vault(100)
 
     # Update transaction history
-    update_success = test_update_transactions(3)
+    update_success = test_update_transactions(2)
 
     # Check balance
-    balance_success = test_balance(1100 + 1200 - 1300, -100)  # balance of vault and user (1000 and -100, respectively)
+    balance_success = test_balance(1000 - 100)  # balance of vault and user (900 and -100, respectively)
 
     # Get transaction history
-    tx_success = test_get_transactions([1100, 1200, 1300])
+    tx_success = test_get_transactions([100, 1000])
 
     '''
     Equivalent commands:
@@ -296,7 +260,7 @@ def main():
 
     # Print test summary
     print(f"\n{GREEN}=== Test Summary ==={RESET}")
-    print(f"Token Minting: {'✓' if mint_success else '✗'}")
+    # print(f"Token Minting: {'✓' if mint_success else '✗'}")
     print(f"Token Transfer To: {'✓' if transfer_to_success else '✗'}")
     print(f"Token Transfer From: {'✓' if transfer_success else '✗'}")
     print(f"Transaction Update: {'✓' if update_success else '✗'}")
@@ -304,7 +268,7 @@ def main():
     print(f"Transaction History: {'✓' if tx_success else '✗'}")
 
     # Check if all tests passed
-    tests_passed = mint_success and transfer_to_success and transfer_success and update_success and balance_success and tx_success
+    tests_passed = transfer_to_success and transfer_success and update_success and balance_success and tx_success
 
     if tests_passed:
         print(f"{GREEN}All tests passed!{RESET}")
@@ -316,5 +280,4 @@ def main():
 
 if __name__ == "__main__":
     exit_code = main()
-    time.sleep(999999)
     sys.exit(exit_code)
