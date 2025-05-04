@@ -16,7 +16,6 @@ docker build -t $IMAGE_NAME .
 echo "Running IC tests in Docker container..."
 docker run --rm $IMAGE_NAME || {
     echo "❌ Tests failed"
-    sleep 999999
     exit 1
 }
 
