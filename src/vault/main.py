@@ -1,6 +1,5 @@
 import traceback
 from pprint import pformat
-from typing import List, Optional
 
 from kybra import (
     Async,
@@ -8,28 +7,19 @@ from kybra import (
     Opt,
     Principal,
     Record,
-    Service,
     StableBTreeMap,
-    Variant,
+    Tuple,
     Vec,
     ic,
     init,
     match,
     nat,
-    nat8,
-    nat64,
-    null,
     query,
-    service_query,
-    service_update,
-    text,
     update,
     void,
 )
-from kybra_simple_db import *
-from kybra_simple_logging import Level
-from kybra_simple_logging import get_canister_logs as _get_canister_logs
-from kybra_simple_logging import get_logger, set_log_level
+from kybra_simple_db import Database
+from kybra_simple_logging import Level, get_logger, set_log_level
 
 from vault.candid_types import (
     Account,
@@ -42,34 +32,30 @@ from vault.candid_types import (
     TransferArg,
     TransferResult,
 )
-from vault.constants import CANISTER_PRINCIPALS, MAX_RESULTS
+from vault.constants import CANISTER_PRINCIPALS, MAX_ITERATIONS, MAX_RESULTS
 from vault.entities import Balance, Canisters, VaultTransaction, app_data
-
-# import vault.admin as admin
-# import vault.services as services
-# import vault.utils_icp as utils_icp
-# import vault.utils_neural as utils_neural
 from vault.ic_util_calls import get_account_transactions
 
-# import vault.candid_types as candid_types
-# from vault.constants import CKBTC_CANISTER, DO_NOT_IMPLEMENT_HEARTBEAT
-# from vault.entities import app_data, stats
-# Import at the top of the file
-
-
 logger = get_logger(__name__)
-set_log_level(Level.DEBUG)
 
-# Initialize database
-storage = StableBTreeMap[str, str](
-    memory_id=1, max_key_size=100, max_value_size=1000
-)  # Use a unique memory ID for each storage instance
+storage = StableBTreeMap[str, str](memory_id=1, max_key_size=100, max_value_size=1000)
 Database(storage)
 
 
 @init
-def init_() -> void:
+def init_(
+    canisters: Opt[Vec[Tuple[str, Principal]]] = None,
+    admin_principal: Opt[Principal] = None,
+    max_results: Opt[nat] = None,
+    max_iterations: Opt[nat] = None,
+) -> void:
     logger.info("Initializing vault...")
+
+    if canisters:
+        for canister_name, principal_id in canisters:
+            Canisters[canister_name] or Canisters(
+                _id=canister_name, principal=principal_id.to_str()
+            )
 
     Canisters["ckBTC ledger"] or Canisters(
         _id="ckBTC ledger", principal=CANISTER_PRINCIPALS["ckBTC"]["ledger"]
@@ -77,14 +63,26 @@ def init_() -> void:
     Canisters["ckBTC indexer"] or Canisters(
         _id="ckBTC indexer", principal=CANISTER_PRINCIPALS["ckBTC"]["indexer"]
     )
-    if not app_data().admin_principal:
-        app_data().admin_principal = ic.caller().to_str()
+
+    logger.info(
+        f"Canisters: {[canister.to_dict() for canister in Canisters.instances()]}"
+    )
+
+    app_data().admin_principal = (
+        admin_principal.to_str() if admin_principal else ic.caller().to_str()
+    )
+    app_data().max_results = max_results or MAX_RESULTS
+    app_data().max_iterations = max_iterations or MAX_ITERATIONS
+
+    logger.info(f"Admin principal: {app_data().admin_principal}")
+    logger.info(f"Max results: {app_data().max_results}")
+    logger.info(f"Max iterations: {app_data().max_iterations}")
 
     logger.info("Vault initialized.")
 
 
 @update
-def set_canister(canister_name: str, principal_id: Principal) -> str:
+def set_canister(canister_name: str, principal_id: Principal) -> bool:
     """
     Set or update the principal ID for a specific canister in the Canisters entity.
 
@@ -95,130 +93,115 @@ def set_canister(canister_name: str, principal_id: Principal) -> str:
     Returns:
         Status message
     """
-    logger.info(
-        f"Setting canister '{canister_name}' to principal: {principal_id.to_str()}"
-    )
 
-    # Check if the canister already exists
-    existing_canister = Canisters[canister_name]
-    if existing_canister:
-        # Update the existing canister record
-        existing_canister.principal = principal_id.to_str()
-        logger.info(f"Updated existing canister '{canister_name}' with new principal.")
-    else:
-        # Create a new canister record
-        Canisters(_id=canister_name, principal=principal_id.to_str())
-        logger.info(f"Created new canister '{canister_name}' with principal.")
+    try:
+        logger.info(
+            f"Setting canister '{canister_name}' to principal: {principal_id.to_str()}"
+        )
 
-    return f"Canister '{canister_name}' principal set to: {principal_id.to_str()}"
+        # Check if the canister already exists
+        existing_canister = Canisters[canister_name]
+        if existing_canister:
+            # Update the existing canister record
+            existing_canister.principal = principal_id.to_str()
+            logger.info(
+                f"Updated existing canister '{canister_name}' with new principal."
+            )
+        else:
+            # Create a new canister record
+            Canisters(_id=canister_name, principal=principal_id.to_str())
+            logger.info(f"Created new canister '{canister_name}' with principal.")
+
+        return True
+    except Exception as e:
+        logger.error(
+            f"Error setting canister '{canister_name}' to principal: {e}\n{traceback.format_exc()}"
+        )
+        return False
 
 
 @update
 def transfer(to: Principal, amount: nat) -> Async[nat]:
+    """
+    Transfers a specified amount of tokens to a given principal.
 
-    principal = Canisters["ckBTC ledger"].principal
-    ledger = ICRCLedger(Principal.from_str(principal))
+    Args:
+        to: The principal ID of the recipient
+        amount: The amount of tokens to transfer
 
-    logger.debug(f"Ledger: {ledger}")
-
-    args: TransferArg = TransferArg(
-        to=Account(owner=to, subaccount=None),
-        amount=amount,
-        fee=None,  # Optional fee, will use default
-        memo=None,  # Optional memo field
-        from_subaccount=None,  # No subaccount specified
-        created_at_time=None,  # System will use current time
-    )
-
-    logger.debug(f"(1) Transferring {amount} tokens to {to.to_str()}")
-    result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
-    logger.debug(f"(2) Transferring {amount} tokens to {to.to_str()}")
-
-    logger.debug(f"result = {result}")
-    logger.debug(f"result type = {type(result)}")
-
-    # Try to access result members carefully for debugging
-    try:
-        logger.debug(f"result.Ok = {result.Ok}")
-    except Exception as e:
-        logger.error(f"Error accessing result.Ok: {e}")
+    Returns:
+        The transaction ID if the transfer was successful, -1 otherwise
+    """
 
     try:
-        logger.debug(f"result.Err = {result.Err}")
-    except Exception as e:
-        logger.error(f"Error accessing result.Err: {e}")
+        logger.info(f"Transferring {amount} tokens to {to.to_str()}")
+        principal = Canisters["ckBTC ledger"].principal
+        ledger = ICRCLedger(Principal.from_str(principal))
 
-    # Return -1 if there's any exception in processing the result
-    try:
+        args: TransferArg = TransferArg(
+            to=Account(owner=to, subaccount=None),
+            amount=amount,
+            fee=None,
+            memo=None,
+            from_subaccount=None,
+            created_at_time=None,
+        )
+
+        result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
+
+        if result.Ok:
+            logger.info(f"Transfer successful: {result.Ok}")
+        else:
+            logger.error(f"Transfer failed: {result.Err}")
+
+        # TODO: review this
         return match(
             result,
             {
                 "Ok": lambda result_variant: match(
                     result_variant,
                     {
-                        "Ok": lambda tx_id: tx_id,  # Return the transaction ID directly
+                        "Ok": lambda tx_id: tx_id,
                         "Err": lambda err: (logger.error(f"Transfer error: {err}"), -1)[
                             1
-                        ],  # Return -1 on transfer error with logging
+                        ],
                     },
                 ),
-                "Err": lambda err: (logger.error(f"Call error: {err}"), -1)[
-                    1
-                ],  # Return -1 on call error with logging
+                "Err": lambda err: (logger.error(f"Call error: {err}"), -1)[1],
             },
         )
     except Exception as e:
-        logger.error(f"Exception in match processing: {e}")
+        logger.error(f"Exception in match processing: {e}\n{traceback.format_exc()}")
         return -1
 
 
 @update
-def update_transaction_history() -> str:
-    # Always start with None (not the last_transaction_id) to get the newest transactions
-    # The indexer API returns transactions BEFORE the given ID, so using the last_transaction_id
-    # would skip newer transactions
-    return _update_transaction_history(
-        ic.id().to_str(),
-        None,  # Use None instead of app_data().last_transaction_id
-        MAX_RESULTS,
-    )
-
-
-def _update_transaction_history(
-    principal_id: str, start_tx_id: nat, max_results: nat
-) -> str:
+def update_transaction_history() -> (
+    str
+):  # TODO: this should return a proper result type
     """
-    Updates the transaction history for a given principal by querying the ICRC indexer
+    Updates the transaction history for the current principal by querying the ICRC indexer
     and storing the transactions in the VaultTransaction database.
-
-    Args:
-        principal_id: The principal ID to update transaction history for
-        start_tx_id: The transaction ID to start from
-        max_results: Maximum number of transactions to return
-
-    Returns:
-        A status message indicating the number of transactions processed
     """
-
     try:
-
-        logger.info(f"Updating transaction history for {principal_id}...")
+        principal_id = ic.id().to_str()
+        logger.debug(f"Updating transaction history for {principal_id}")
 
         # Get the configured indexer canister ID
         indexer_canister = Canisters["ckBTC indexer"]
-        if not indexer_canister:
-            return f"Error: ckBTC indexer canister not configured. Please set it using set_canister() first."
-
         indexer_canister_id = indexer_canister.principal
 
-        # Pagination flow STARTS
-
-        # Initialize collections to store all transactions and track pagination
+        # Initialize variables to store all transactions and track pagination
         all_transactions = []
         has_more = True
-        current_start = start_tx_id  # Use the provided start_tx_id as initial cursor
+        current_start = None
         iterations = 0
-        max_iterations = 5  # Limit pagination to prevent excessive calls
+        max_iterations = (
+            app_data().max_iterations
+        )  # Limit pagination to prevent excessive calls
+        max_results = (
+            app_data().max_results
+        )  # Limit pagination to prevent excessive calls
 
         # Implement cursor-based pagination to fetch all transactions
         while has_more and iterations < max_iterations:

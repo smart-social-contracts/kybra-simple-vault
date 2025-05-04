@@ -10,7 +10,6 @@ from kybra import (
     nat,
     nat64,
     null,
-    service_method,
     service_query,
     service_update,
     text,
@@ -41,6 +40,8 @@ class TransactionRecord(Record):
 class AppDataRecord(Record):
     admin_principal: Opt[text]
     last_transaction_id: Opt[nat]
+    max_results: nat
+    max_iterations: nat
 
 
 class Account(Record):

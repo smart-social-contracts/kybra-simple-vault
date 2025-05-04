@@ -5,6 +5,8 @@ from vault.constants import CANISTER_PRINCIPALS
 
 class ApplicationData(Entity, TimestampedMixin):
     admin_principal = String()
+    max_results = Integer()
+    max_iterations = Integer()
     last_transaction_id = Integer()
 
 
