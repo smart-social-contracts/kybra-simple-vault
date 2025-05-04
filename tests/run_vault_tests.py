@@ -3,11 +3,22 @@
 Main test runner for the vault canister tests.
 """
 
+import os
 import sys
-from tests.utils.colors import GREEN, RED, RESET
-from tests.test_cases.transfer_tests import test_transfer_to_vault, test_transfer_from_vault
+
+# Add the parent directory to the Python path to make imports work
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
 from tests.test_cases.balance_tests import test_balance
-from tests.test_cases.transaction_tests import test_update_transactions, test_get_transactions
+from tests.test_cases.transaction_tests import (
+    test_get_transactions,
+    test_update_transactions,
+)
+from tests.test_cases.transfer_tests import (
+    test_transfer_from_vault,
+    test_transfer_to_vault,
+)
+from tests.utils.colors import GREEN, RED, RESET
 
 
 def main():

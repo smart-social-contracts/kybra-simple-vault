@@ -3,9 +3,17 @@
 Tests for token transfer functionality of the vault canister.
 """
 
+import os
+import sys
 import time
+
+# Add the parent directory to the Python path to make imports work
+sys.path.insert(
+    0, os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+)
+
 from tests.utils.colors import GREEN, RED, RESET
-from tests.utils.command import run_command, get_canister_id
+from tests.utils.command import get_canister_id, run_command
 
 
 def test_transfer_from_vault(amount=100000):

@@ -6,6 +6,7 @@ from kybra import (
     Principal,
     nat,
 )
+from kybra_simple_logging import get_logger
 
 from vault.candid_types import (
     Account,
@@ -13,8 +14,6 @@ from vault.candid_types import (
     GetAccountTransactionsResponse,
     ICRCIndexer,
 )
-
-from kybra_simple_logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -40,7 +39,9 @@ def get_account_transactions(
     """
 
     # start_tx_id = 0 if start_tx_id is None else start_tx_id
-    logger.debug(f"\nQuerying indexer canister for account transactions for {owner_principal} starting from tx id {start_tx_id}...")
+    logger.debug(
+        f"\nQuerying indexer canister for account transactions for {owner_principal} starting from tx id {start_tx_id}..."
+    )
 
     account = Account(
         owner=Principal.from_str(owner_principal),
@@ -108,4 +109,3 @@ def get_account_transactions(
     except Exception as e:
         logger.error(f"Exception occurred: {str(e)}\n{traceback.format_exc()}")
         return default_response
-

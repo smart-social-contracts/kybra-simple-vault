@@ -3,9 +3,16 @@
 Utility functions for running commands and interacting with canisters.
 """
 
+import os
 import subprocess
 import sys
-from tests.utils.colors import GREEN, RED, RESET
+
+# Add the parent directory to the Python path to make imports work
+sys.path.insert(
+    0, os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+)
+
+from tests.utils.colors import RED, RESET
 
 
 def run_command(command):

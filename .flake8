@@ -2,6 +2,12 @@
 # Ignore line length, blank line at end of file, and line break before binary operator
 ignore = E501,W391,W503
 
+# Per-file ignores
+per-file-ignores =
+    # Ignore module level import not at top of file for test files
+    tests/*/*.py: E402
+    tests/*.py: E402
+
 # Other style checks will still be enforced
 exclude = 
     .git,

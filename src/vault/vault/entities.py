@@ -1,4 +1,11 @@
-from kybra_simple_db import Entity, Integer, ManyToMany, OneToMany, String, TimestampedMixin
+from kybra_simple_db import (
+    Entity,
+    Integer,
+    ManyToMany,
+    OneToMany,
+    String,
+    TimestampedMixin,
+)
 
 
 class ApplicationData(Entity, TimestampedMixin):

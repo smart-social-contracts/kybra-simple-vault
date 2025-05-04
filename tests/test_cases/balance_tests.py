@@ -3,6 +3,14 @@
 Tests for balance checking functionality of the vault canister.
 """
 
+import os
+import sys
+
+# Add the parent directory to the Python path to make imports work
+sys.path.insert(
+    0, os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+)
+
 from tests.utils.colors import GREEN, RED, RESET
 from tests.utils.command import run_command
 
