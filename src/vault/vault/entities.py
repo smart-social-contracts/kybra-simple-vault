@@ -1,6 +1,4 @@
-from kybra_simple_db import *
-
-from vault.constants import CANISTER_PRINCIPALS
+from kybra_simple_db import Entity, Integer, ManyToMany, OneToMany, String, TimestampedMixin
 
 
 class ApplicationData(Entity, TimestampedMixin):
@@ -33,7 +31,7 @@ class VaultTransaction(Entity, TimestampedMixin):
 
 class Balance(Entity, TimestampedMixin):
     amount = Integer(default=0)
-    # canister = OneToMany("Canister", "balances")
+    canister = OneToMany("Canister", "balances")
 
 
 def stats():

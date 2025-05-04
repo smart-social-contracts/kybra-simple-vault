@@ -3,20 +3,8 @@ from typing import List, Optional
 
 from kybra import (
     Async,
-    CallResult,
-    Opt,
     Principal,
-    Record,
-    Service,
-    Variant,
-    Vec,
-    ic,
     nat,
-    nat8,
-    nat64,
-    null,
-    service_query,
-    service_update,
 )
 
 from vault.candid_types import (
@@ -25,6 +13,10 @@ from vault.candid_types import (
     GetAccountTransactionsResponse,
     ICRCIndexer,
 )
+
+from kybra_simple_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def get_account_transactions(
@@ -48,9 +40,7 @@ def get_account_transactions(
     """
 
     # start_tx_id = 0 if start_tx_id is None else start_tx_id
-    ic.print(
-        f"\nQuerying indexer canister for account transactions for {owner_principal} starting from tx id {start_tx_id}..."
-    )
+    logger.debug(f"\nQuerying indexer canister for account transactions for {owner_principal} starting from tx id {start_tx_id}...")
 
     account = Account(
         owner=Principal.from_str(owner_principal),
@@ -71,34 +61,31 @@ def get_account_transactions(
     try:
         indexer = ICRCIndexer(Principal.from_str(canister_id))
 
-        ic.print("req = " + str(req))
-
         result = yield indexer.get_account_transactions(req)
 
-        ic.print(f"Got result type: {type(result)}")
-        ic.print(f"Result: {result}")
+        logger.debug(f"Result: {result}")
 
         # Handle the CallResult with Ok/Err fields
         if hasattr(result, "Ok") and result.Ok is not None:
             ok_data = result.Ok
-            ic.print(f"Result.Ok content: {ok_data}")
+            logger.debug(f"Result.Ok content: {ok_data}")
 
             # The actual data is nested inside ok_data['Ok']
             if isinstance(ok_data, dict) and "Ok" in ok_data:
                 transaction_data = ok_data["Ok"]
-                ic.print(f"Transaction data: {transaction_data}")
+                logger.debug(f"Transaction data: {transaction_data}")
 
                 # Extract the balance, transactions and oldest_tx_id from the inner dictionary
                 balance = transaction_data.get("balance", 0)
                 transactions = transaction_data.get("transactions", [])
                 oldest_tx_id = transaction_data.get("oldest_tx_id")
 
-                ic.print(
+                logger.debug(
                     f"Successfully retrieved {len(transactions)} transactions and total principal balance of {balance}"
                 )
-                ic.print(f"Oldest tx id: {oldest_tx_id}")
-                ic.print(f"Transactions: {transactions}")
-                ic.print(f"Balance: {balance}")
+                logger.debug(f"Oldest tx id: {oldest_tx_id}")
+                logger.debug(f"Transactions: {transactions}")
+                logger.debug(f"Balance: {balance}")
 
                 # Build our response object
                 return GetAccountTransactionsResponse(
@@ -107,71 +94,18 @@ def get_account_transactions(
                     oldest_tx_id=oldest_tx_id,
                 )
             else:
-                ic.print(
+                logger.debug(
                     f"Ok data doesn't have the expected 'Ok' nested structure: {ok_data}"
                 )
         elif hasattr(result, "Err") and result.Err is not None:
-            ic.print(f"Error from indexer: {result.Err}")
+            logger.debug(f"Error from indexer: {result.Err}")
         else:
-            ic.print(f"Unexpected result structure: {result}")
+            logger.debug(f"Unexpected result structure: {result}")
 
         # Default response in error cases
-        ic.print("Returning default response in error cases")
+        logger.debug("Returning default response in error cases")
         return default_response
     except Exception as e:
-        ic.print(f"Exception occurred: {str(e)}\n{traceback.format_exc()}")
+        logger.error(f"Exception occurred: {str(e)}\n{traceback.format_exc()}")
         return default_response
 
-
-def get_account_transactions_indexer(
-    canister_id: str,
-    owner_principal: str,
-    subaccount: Optional[List[int]] = None,
-    max_results: int = 10,
-) -> GetAccountTransactionsResponse:
-    """
-    Query the indexer canister for account transactions.
-
-    Args:
-        canister_id: The principal ID of the indexer canister
-        owner_principal: The principal ID of the account owner
-        subaccount: Optional subaccount (as a list of bytes)
-        max_results: Maximum number of transactions to return
-
-    Returns:
-        A GetAccountTransactionsResponse object containing balance and transactions
-    """
-    return get_account_transactions(
-        canister_id=canister_id,
-        owner_principal=owner_principal,
-        subaccount=subaccount,
-        max_results=max_results,
-    )
-
-
-def get_account_transactions_indexer_for_principal(
-    principal_id: str,
-    canister_id: str,
-    owner_principal: str,
-    subaccount: Optional[List[int]] = None,
-    max_results: int = 10,
-) -> GetAccountTransactionsResponse:
-    """
-    Query the indexer canister for account transactions for a specific principal.
-
-    Args:
-        principal_id: The principal ID of the principal
-        canister_id: The principal ID of the indexer canister
-        owner_principal: The principal ID of the account owner
-        subaccount: Optional subaccount (as a list of bytes)
-        max_results: Maximum number of transactions to return
-
-    Returns:
-        A GetAccountTransactionsResponse object containing balance and transactions
-    """
-    return get_account_transactions_indexer(
-        canister_id=canister_id,
-        owner_principal=owner_principal,
-        subaccount=subaccount,
-        max_results=max_results,
-    )
