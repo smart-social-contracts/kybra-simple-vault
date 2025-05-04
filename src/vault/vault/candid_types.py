@@ -1,19 +1,19 @@
 from kybra import (
-    Record,
-    nat,
-    text,
+    Async,
     Opt,
     Principal,
-    blob,
-    nat64,
-    Vec,
-    Variant,
-    null,
+    Record,
     Service,
+    Variant,
+    Vec,
+    blob,
+    nat,
+    nat64,
+    null,
     service_method,
     service_query,
     service_update,
-    Async
+    text,
 )
 
 # Define Candid record types for stats
@@ -41,6 +41,7 @@ class TransactionRecord(Record):
 class AppDataRecord(Record):
     admin_principal: Opt[text]
     last_transaction_id: Opt[nat]
+
 
 class Account(Record):
     owner: Principal
@@ -142,6 +143,8 @@ class StatsRecord(Record):
     balances: Vec[BalanceRecord]
     vault_transactions: Vec[TransactionRecord]
     canisters: Vec[CanisterRecord]
+
+
 class ICRCLedger(Service):
     @service_query
     def icrc1_balance_of(self, account: Account) -> nat: ...
@@ -154,10 +157,10 @@ class ICRCLedger(Service):
 
 
 class Transaction(Record):
-    burn: Opt[Burn]  
+    burn: Opt[Burn]
     kind: str
-    mint: Opt[Mint]  
-    approve: Opt[Approve]  
+    mint: Opt[Mint]
+    approve: Opt[Approve]
     timestamp: nat64
     transfer: Opt[Transfer]
 
@@ -188,5 +191,4 @@ class ICRCIndexer(Service):
     @service_query
     def get_account_transactions(
         self, request: GetAccountTransactionsRequest
-    ) -> Async[GetTransactionsResult]:
-        ...
+    ) -> Async[GetTransactionsResult]: ...

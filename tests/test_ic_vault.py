@@ -7,10 +7,10 @@ This script tests basic functionality of the vault including:
 - Transaction history
 """
 
+import json
 import subprocess
 import sys
 import time
-import json
 
 # ANSI color codes for terminal output
 GREEN = "\033[92m"
@@ -144,7 +144,9 @@ def test_balance(expected_user_balance):
 
     try:
         # Call the get_balance method for the user
-        balance_result = run_command(f"dfx canister call vault get_balance '(\"{principal}\")'")
+        balance_result = run_command(
+            f"dfx canister call vault get_balance '(\"{principal}\")'"
+        )
 
         print(f"{GREEN}✓ User balance check succeeded{RESET}")
         print(f"User balance result: {balance_result}")
@@ -153,10 +155,14 @@ def test_balance(expected_user_balance):
         # Example: "(100 : nat)" -> extract "100"
         user_balance = int(balance_result.strip("()").split(":")[0].strip())
         if user_balance == expected_user_balance:
-            print(f"{GREEN}✓ User balance matches expected value: {expected_user_balance}{RESET}")
+            print(
+                f"{GREEN}✓ User balance matches expected value: {expected_user_balance}{RESET}"
+            )
             return True
         else:
-            print(f"{RED}✗ User balance {user_balance} does not match expected value: {expected_user_balance}{RESET}")
+            print(
+                f"{RED}✗ User balance {user_balance} does not match expected value: {expected_user_balance}{RESET}"
+            )
             return False
 
     except Exception as e:
@@ -176,7 +182,9 @@ def test_update_transactions(expected_count=None):
 
     try:
         # Update transaction history
-        update_result = run_command(f"dfx canister call vault update_transaction_history")
+        update_result = run_command(
+            f"dfx canister call vault update_transaction_history"
+        )
 
         if update_result:
             print(f"{GREEN}✓ Transaction history update succeeded{RESET}")
@@ -210,16 +218,20 @@ def test_get_transactions(expected_amounts=None):
 
     try:
         # Get transaction history
-        tx_result = run_command(f"dfx canister call vault get_transactions '(\"{principal}\")' --output json")
+        tx_result = run_command(
+            f"dfx canister call vault get_transactions '(\"{principal}\")' --output json"
+        )
 
         tx_result = json.loads(tx_result)
-        print('tx_result', tx_result)
+        print("tx_result", tx_result)
 
         for i, tx in enumerate(tx_result):
-            tx_amount = int(tx['amount'])
+            tx_amount = int(tx["amount"])
             expected_amount = int(expected_amounts[i])
             if tx_amount != expected_amount:
-                print(f"{RED}✗ Transaction amount {tx_amount} does not match expected amount {expected_amount}{RESET}")
+                print(
+                    f"{RED}✗ Transaction amount {tx_amount} does not match expected amount {expected_amount}{RESET}"
+                )
                 return False
 
         print(f"{GREEN}✓ All expected transaction amounts were found{RESET}")
@@ -247,16 +259,18 @@ def main():
     update_success = test_update_transactions(2)
 
     # Check balance
-    balance_success = test_balance(1000 - 100)  # balance of vault and user (900 and -100, respectively)
+    balance_success = test_balance(
+        1000 - 100
+    )  # balance of vault and user (900 and -100, respectively)
 
     # Get transaction history
     tx_success = test_get_transactions([100, 1000])
 
-    '''
+    """
     Equivalent commands:
     AMOUNT=1100 dfx canister call ckbtc_ledger icrc1_transfer '(record {
         to = record { owner = principal "'"$VAULT_ID"'"; subaccount = null }; amount = '$AMOUNT'; fee = null; memo = null; from_subaccount = null; created_at_time = null })'
-    '''
+    """
 
     # Print test summary
     print(f"\n{GREEN}=== Test Summary ==={RESET}")
@@ -268,7 +282,13 @@ def main():
     print(f"Transaction History: {'✓' if tx_success else '✗'}")
 
     # Check if all tests passed
-    tests_passed = transfer_to_success and transfer_success and update_success and balance_success and tx_success
+    tests_passed = (
+        transfer_to_success
+        and transfer_success
+        and update_success
+        and balance_success
+        and tx_success
+    )
 
     if tests_passed:
         print(f"{GREEN}All tests passed!{RESET}")

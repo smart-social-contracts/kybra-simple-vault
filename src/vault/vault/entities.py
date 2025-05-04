@@ -7,6 +7,7 @@ class ApplicationData(Entity, TimestampedMixin):
     admin_principal = String()
     last_transaction_id = Integer()
 
+
 class Canisters(Entity, TimestampedMixin):
     principal = String()
 
