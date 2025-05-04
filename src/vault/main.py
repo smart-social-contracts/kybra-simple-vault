@@ -246,7 +246,7 @@ def update_transaction_history() -> (
             # Get the oldest transaction ID to use as the next cursor
             oldest_tx_id = response.get("oldest_tx_id")
             if oldest_tx_id is None:
-                logger.debug(f"No oldest_tx_id in response, pagination complete")
+                logger.debug("No oldest_tx_id in response, pagination complete")
                 has_more = False
                 break
 
@@ -480,9 +480,6 @@ def get_stats() -> StatsRecord:
     """
 
     try:
-
-        logger.debug("Retrieving vault statistics")
-
         # Get app_data with proper typing
         app_data_obj = app_data()
         app_data_record = AppDataRecord(
@@ -531,11 +528,6 @@ def get_stats() -> StatsRecord:
                     principal=canister.principal,
                 )
             )
-
-        ic.print("app_data_record", app_data_record)
-        ic.print("balances", balances)
-        ic.print("transactions", transactions)
-        ic.print("canisters", canisters)
 
         # Return properly typed stats record
         return StatsRecord(
@@ -621,6 +613,9 @@ def get_transactions(principal_id: str) -> Vec[TransactionRecord]:
 
 
 # ##### Import Kybra and the internal function #####
+
+from kybra import Opt, Record, Vec, nat, query  # noqa: E402
+from kybra_simple_logging import get_canister_logs as _get_canister_logs  # noqa: E402
 
 
 # Define the PublicLogEntry class directly in the test canister

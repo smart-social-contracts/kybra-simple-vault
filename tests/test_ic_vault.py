@@ -183,7 +183,7 @@ def test_update_transactions(expected_count=None):
     try:
         # Update transaction history
         update_result = run_command(
-            f"dfx canister call vault update_transaction_history"
+            "dfx canister call vault update_transaction_history"
         )
 
         if update_result:
