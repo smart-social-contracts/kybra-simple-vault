@@ -41,7 +41,7 @@ dfx canister call vault set_canister '("ckBTC indexer", principal "'"$INDEXER_ID
 
 # Run tests against the vault canister
 echo "Running IC integration tests..."
-python -u tests/test_ic_vault.py
+python -u tests/run_vault_tests.py
 
 # Check the exit code of the tests
 if [ $? -ne 0 ]; then
