@@ -19,7 +19,7 @@ from kybra import (
     void,
 )
 from kybra_simple_db import Database
-from kybra_simple_logging import Level, get_logger, set_log_level
+from kybra_simple_logging import get_logger
 
 from vault.candid_types import (
     Account,
@@ -68,14 +68,18 @@ def init_(
         f"Canisters: {[canister.to_dict() for canister in Canisters.instances()]}"
     )
 
-    app_data().admin_principal = (
-        admin_principal.to_str() if admin_principal else ic.caller().to_str()
-    )
-    app_data().max_results = max_results or MAX_RESULTS
-    app_data().max_iterations = max_iterations or MAX_ITERATIONS
-
+    if not app_data().admin_principal:
+        app_data().admin_principal = (
+            admin_principal.to_str() if admin_principal else ic.caller().to_str()
+        )
     logger.info(f"Admin principal: {app_data().admin_principal}")
+
+    app_data().max_results = app_data().max_results or max_results or MAX_RESULTS
     logger.info(f"Max results: {app_data().max_results}")
+
+    app_data().max_iterations = (
+        app_data().max_iterations or max_iterations or MAX_ITERATIONS
+    )
     logger.info(f"Max iterations: {app_data().max_iterations}")
 
     logger.info("Vault initialized.")
@@ -281,8 +285,6 @@ def update_transaction_history() -> (
             response["transactions"] = all_transactions
             if "balance" in response:
                 logger.debug(f"Balance found in response: {response['balance']}")
-
-        # Pagination flow ENDS
 
         logger.debug(f"Response: {response}")
 
