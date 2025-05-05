@@ -30,11 +30,8 @@ class BalanceRecord(Record):
 
 class TransactionRecord(Record):
     _id: text
-    principal_from: text
-    principal_to: text
     amount: nat
     timestamp: nat
-    kind: text
 
 
 class AppDataRecord(Record):
@@ -142,7 +139,6 @@ class Transfer(Record):
 class StatsRecord(Record):
     app_data: AppDataRecord
     balances: Vec[BalanceRecord]
-    vault_transactions: Vec[TransactionRecord]
     canisters: Vec[CanisterRecord]
 
 

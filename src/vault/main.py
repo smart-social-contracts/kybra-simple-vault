@@ -501,14 +501,13 @@ def update_transaction_history() -> (
         raise e
 
 
-@update
-def get_stats() -> StatsRecord:
+@query
+def status() -> StatsRecord:
     """
-    Get statistics about the vault's state including balances, transactions, and canister references.
+    Get statistics about the vault's state including balances and canister references.
 
     Returns:
-        A record containing vault statistics including app_data, balances, transactions,
-        and canister references.
+        A record containing vault statistics including app_data, balances, and canister references.
     """
 
     try:
@@ -531,20 +530,6 @@ def get_stats() -> StatsRecord:
                 )
             )
 
-        # Get transactions with proper typing
-        transactions = []
-        for tx in VaultTransaction.instances():
-            transactions.append(
-                TransactionRecord(
-                    _id=tx._id,
-                    principal_from=tx.principal_from,
-                    principal_to=tx.principal_to,
-                    amount=tx.amount,
-                    timestamp=tx.timestamp,
-                    kind=tx.kind if hasattr(tx, "kind") else "unknown",
-                )
-            )
-
         # Get canisters with proper typing
         canisters = []
         for canister in Canisters.instances():
@@ -559,7 +544,6 @@ def get_stats() -> StatsRecord:
         return StatsRecord(
             app_data=app_data_record,
             balances=balances,
-            vault_transactions=transactions,
             canisters=canisters,
         )
 
@@ -612,21 +596,22 @@ def get_transactions(principal_id: str) -> Vec[TransactionRecord]:
         transactions = []
 
         for tx in VaultTransaction.instances():
-            logger.debug(f"Processing transaction {tx.to_dict()}")
-            # Check if this principal is either the sender or receiver
-            if tx.principal_from == principal_id or tx.principal_to == principal_id:
-                transactions.append(
-                    TransactionRecord(
-                        _id=tx._id,
-                        principal_from=tx.principal_from,
-                        principal_to=tx.principal_to,
-                        amount=tx.amount,
-                        timestamp=tx.timestamp,
-                        kind=tx.kind if hasattr(tx, "kind") else "unknown",
-                    )
+            logger.debug(f"Reading stored data for transaction {tx.to_dict()}")
+
+            amount = tx.amount
+            if tx.principal_to == principal_id:
+                amount = -amount
+
+            transactions.append(
+                TransactionRecord(
+                    _id=tx._id,
+                    amount=amount,
+                    timestamp=tx.timestamp,
                 )
+            )
 
         logger.debug(f"Transactions for principal {principal_id}: {transactions}")
+
         # Sort transactions by timestamp (newest first)
         transactions.sort(key=lambda tx: tx["_id"], reverse=True)
 
