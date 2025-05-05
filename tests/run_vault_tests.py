@@ -40,7 +40,7 @@ def main():
     )  # balance of vault and user (900 and -100, respectively)
 
     # Get transaction history
-    tx_success = test_get_transactions([100, 1000])
+    tx_success = test_get_transactions([-100, 1000])
 
     # Print test summary
     print(f"\n{GREEN}=== Test Summary ==={RESET}")

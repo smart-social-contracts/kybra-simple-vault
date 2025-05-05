@@ -46,8 +46,8 @@ python -u tests/run_vault_tests.py
 # Check the exit code of the tests
 if [ $? -ne 0 ]; then
     echo "❌ IC integration tests failed"
+    sleep 99999
     exit 1
-    
 fi
 
 # Successfully complete the test
