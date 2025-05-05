@@ -54,25 +54,18 @@ $ dfx canister call vault transfer
 git clone https://github.com/smart-social-contracts/kybra-simple-vault.git
 cd kybra-simple-vault
 
-# Deploy to local replica
-dfx start --clean --background
-dfx deploy
-```
+# Recommended setup
+pyenv install 3.10.7
+pyenv local 3.10.7
+python -m venv venv
+source venv/bin/activate
 
-### Usage Examples
+# Install dependencies
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
 
-```bash
-# Check transactions (catches up with the ledger and updates balances according to the transactions processed since the last check)
-dfx canister call vault check_transactions
-
-# Check the total balance of the vault
-dfx canister call vault get_balance
-
-# Check the statistics
-dfx canister call vault status
-
-# Check logs
-dfx canister logs vault
+# Running tests
+./run_linters.sh && ./run_tests.sh && ./run_test_ic.sh
 ```
 
 ## License
