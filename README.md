@@ -1,6 +1,10 @@
 # Kybra Simple Vault
 
-A canister written in Python using Kybra that manages cryptocurrency transactions on the Internet Computer.
+A canister written in Python using Kybra with which:
+- Users can deposit ckBTC
+- The admin can withdraw ckBTC to specific addresses
+- Balance and transaction history can be queried
+
 
 **WARNING: This is not ready for production use yet and funds stored in the vault canister can be lost. Use at your own risk.**
 
@@ -9,13 +13,34 @@ A canister written in Python using Kybra that manages cryptocurrency transaction
 [![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3107/)
 [![License](https://img.shields.io/github/license/smart-social-contracts/kybra-simple-vault.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/blob/main/LICENSE)
 
-## Features
-
-- Receive ckBTC from any principal and track balances
-- Admin can withdraw ckBTC to specific addresses
-- Query balances, transaction history and statistics
 
 ## Getting Started
+
+### Quickstart
+
+
+```bash
+# Deploy a vault ready to be used being your principal the admin.
+$ dfx deploy
+
+# Get an overview of the state of the vault.
+$ dfx canister call vault get_stats 
+
+# Update the transaction history of the vault.
+$ dfx canister call vault update_transaction_history
+
+# Get the balance for a specific principal.
+$ dfx canister call vault get_balance 
+
+# Get all the transactions for a specific principal.
+$ dfx canister call vault get_transactions 
+
+# Send tokens to a specific address
+$ dfx canister call vault transfer 
+
+
+```
+
 
 ### Prerequisites
 
@@ -37,7 +62,6 @@ dfx deploy
 ### Usage Examples
 
 ```bash
-
 # Check transactions (catches up with the ledger and updates balances according to the transactions processed since the last check)
 dfx canister call vault check_transactions
 
