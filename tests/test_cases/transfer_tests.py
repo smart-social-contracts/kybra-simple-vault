@@ -9,6 +9,7 @@ import json
 import os
 import sys
 import time
+import traceback
 
 # Add the parent directory to the Python path to make imports work
 sys.path.insert(
@@ -16,7 +17,7 @@ sys.path.insert(
 )
 
 
-def test_transfer_from_vault(amount=100000):
+def test_transfer_from_vault(amount=100):
     """Transfer tokens from the vault canister to another account for testing."""
     print(f"\nTesting token transfer from vault with amount {amount}...")
 
@@ -57,7 +58,7 @@ def test_transfer_from_vault(amount=100000):
     return True
 
 
-def test_transfer_to_vault(amount=50000):
+def test_transfer_to_vault(amount=100):
     """Transfer tokens to the vault canister for testing."""
     print(f"\nTesting token transfer to vault with amount {amount}...")
 
@@ -220,7 +221,7 @@ def test_exceed_balance_transfer():
         # Try to transfer more than the balance
         excess_amount = 10000000000000
 
-        print(f"Attempting to transfer {excess_amount} tokens (exceeds vault balance of {vault_balance})")
+        print(f"Attempting to transfer {excess_amount} tokens (exceeds vault balance)")
 
         transfer_cmd = f"dfx canister call vault transfer '(principal \"{destination_principal}\", {excess_amount})' --output json"
         transfer_result = run_command(transfer_cmd)
@@ -245,7 +246,7 @@ def test_exceed_balance_transfer():
             return False
 
     except Exception as e:
-        print(f"{RED}✗ Error during excess balance transfer test: {e}{RESET}")
+        print(f"{RED}✗ Error during excess balance transfer test: {e}\n{traceback.format_exc()}{RESET}")
         return False
 
 

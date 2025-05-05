@@ -316,5 +316,5 @@ def test_multiple_updates():
         return success
 
     except Exception as e:
-        print(f"{RED}✗ Error during multiple transaction history updates: {e}{RESET}")
+        print(f"{RED}✗ Error during multiple transaction history updates: {e}\n{traceback.format_exc()}{RESET}")
         return False

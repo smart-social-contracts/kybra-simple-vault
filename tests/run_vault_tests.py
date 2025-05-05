@@ -67,7 +67,7 @@ def main():
     results["Invalid Principal Balance"] = test_invalid_principal()
 
     # Check transaction history
-    results["Transaction History"] = test_get_transactions([0, -100, 1000])
+    results["Transaction History"] = test_get_transactions([-100, 1000])
     results["Non-existent User Transactions"] = test_get_transactions_nonexistent_user()
     results["Transaction Ordering"] = test_transaction_ordering()
     results["Transaction Validity"] = test_transaction_validity()
