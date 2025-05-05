@@ -38,8 +38,8 @@ from vault.ic_util_calls import get_account_transactions
 
 logger = get_logger(__name__)
 
-storage = StableBTreeMap[str, str](memory_id=1, max_key_size=100, max_value_size=1000)
-Database(storage)
+storage = StableBTreeMap[str, str](memory_id=1, max_key_size=100000, max_value_size=1000)
+Database.init(db_storage=storage, audit_enabled=True)
 
 
 @init
@@ -53,33 +53,59 @@ def init_(
 
     if canisters:
         for canister_name, principal_id in canisters:
-            Canisters[canister_name] or Canisters(
-                _id=canister_name, principal=principal_id.to_str()
-            )
 
-    Canisters["ckBTC ledger"] or Canisters(
-        _id="ckBTC ledger", principal=CANISTER_PRINCIPALS["ckBTC"]["ledger"]
-    )
-    Canisters["ckBTC indexer"] or Canisters(
-        _id="ckBTC indexer", principal=CANISTER_PRINCIPALS["ckBTC"]["indexer"]
-    )
+            if not Canisters[canister_name]:
+                logger.info(
+                    f"Creating canister record '{canister_name}' with principal: {principal_id.to_str()}"
+                )
+                Canisters(_id=canister_name, principal=principal_id.to_str())
+            else:
+                logger.warning(
+                    f"Canister record '{canister_name}' already exists with principal: {Canisters[canister_name].principal}"
+                )
+
+    if not Canisters["ckBTC ledger"]:
+        logger.info(
+            f"Creating canister record 'ckBTC ledger' with principal: {CANISTER_PRINCIPALS['ckBTC']['ledger']}"
+        )
+        Canisters(_id="ckBTC ledger", principal=CANISTER_PRINCIPALS['ckBTC']['ledger'])
+    else:
+        logger.info(
+            f"Canister record 'ckBTC ledger' already exists with principal: {Canisters['ckBTC ledger'].principal}"
+        )
+
+    if not Canisters['ckBTC indexer']:
+        logger.info(
+            f"Creating canister record 'ckBTC indexer' with principal: {CANISTER_PRINCIPALS['ckBTC']['indexer']}"
+        )
+        Canisters(_id="ckBTC indexer", principal=CANISTER_PRINCIPALS['ckBTC']['indexer'])
+    else:
+        logger.info(
+            f"Canister record 'ckBTC indexer' already exists with principal: {Canisters['ckBTC indexer'].principal}"
+        )
+
+    if not app_data().admin_principal:
+        new_admin_principal = admin_principal.to_str() if admin_principal else ic.caller().to_str()
+        logger.info(
+            f"Setting admin principal to {new_admin_principal}"
+        )
+        app_data().admin_principal = new_admin_principal
+
+    if not app_data().max_results:
+        new_max_results = max_results or MAX_RESULTS
+        logger.info(f"Setting max results to {new_max_results}")
+        app_data().max_results = new_max_results
+
+    if not app_data().max_iterations:
+        new_max_iterations = max_iterations or MAX_ITERATIONS
+        logger.info(f"Setting max iterations to {new_max_iterations}")
+        app_data().max_iterations = new_max_iterations
 
     logger.info(
         f"Canisters: {[canister.to_dict() for canister in Canisters.instances()]}"
     )
-
-    if not app_data().admin_principal:
-        app_data().admin_principal = (
-            admin_principal.to_str() if admin_principal else ic.caller().to_str()
-        )
     logger.info(f"Admin principal: {app_data().admin_principal}")
-
-    app_data().max_results = app_data().max_results or max_results or MAX_RESULTS
     logger.info(f"Max results: {app_data().max_results}")
-
-    app_data().max_iterations = (
-        app_data().max_iterations or max_iterations or MAX_ITERATIONS
-    )
     logger.info(f"Max iterations: {app_data().max_iterations}")
 
     logger.info("Vault initialized.")
@@ -192,7 +218,7 @@ def update_transaction_history() -> (
         logger.debug(f"Updating transaction history for {principal_id}")
 
         # Get the configured indexer canister ID
-        indexer_canister = Canisters["ckBTC indexer"]
+        indexer_canister = Canisters['ckBTC indexer']
         indexer_canister_id = indexer_canister.principal
 
         # Initialize variables to store all transactions and track pagination
@@ -485,16 +511,10 @@ def get_stats() -> StatsRecord:
         # Get app_data with proper typing
         app_data_obj = app_data()
         app_data_record = AppDataRecord(
-            admin_principal=(
-                app_data_obj.admin_principal
-                if hasattr(app_data_obj, "admin_principal")
-                else None
-            ),
-            last_transaction_id=(
-                app_data_obj.last_transaction_id
-                if hasattr(app_data_obj, "last_transaction_id")
-                else None
-            ),
+            admin_principal=app_data_obj.admin_principal,
+            last_transaction_id=app_data_obj.last_transaction_id,
+            max_results=app_data_obj.max_results,
+            max_iterations=app_data_obj.max_iterations,
         )
 
         # Get balances with proper typing
