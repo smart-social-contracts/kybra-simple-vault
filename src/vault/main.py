@@ -1,5 +1,6 @@
 import traceback
 from pprint import pformat
+from functools import wraps
 
 from kybra import (
     Async,
@@ -19,7 +20,7 @@ from kybra import (
     void,
 )
 from kybra_simple_db import Database
-from kybra_simple_logging import get_logger
+from kybra_simple_logging import get_logger, set_log_level, Level
 
 from vault.candid_types import (
     Account,
@@ -27,8 +28,13 @@ from vault.candid_types import (
     BalanceRecord,
     CanisterRecord,
     ICRCLedger,
+    Response,
+    ResponseData,
     StatsRecord,
+    TransactionIdRecord,
     TransactionRecord,
+    TransactionSummaryRecord,
+    TransactionsListRecord,
     TransferArg,
     TransferResult,
 )
@@ -37,11 +43,14 @@ from vault.entities import Balance, Canisters, VaultTransaction, app_data
 from vault.ic_util_calls import get_account_transactions
 
 logger = get_logger(__name__)
+set_log_level(Level.DEBUG, logger_name=logger.name)
 
 storage = StableBTreeMap[str, str](
     memory_id=1, max_key_size=100000, max_value_size=1000
 )
 Database.init(db_storage=storage, audit_enabled=True)
+
+# TODO: can this be called by anyone? CHECK
 
 
 @init
@@ -115,8 +124,24 @@ def init_(
     logger.info("Vault initialized.")
 
 
+def admin_only(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Check if caller is admin
+        if ic.caller().to_str() != app_data().admin_principal:
+            return Response(
+                success=False,
+                message="Caller is not the admin principal",
+                data=None
+            )
+        # If caller is admin, proceed with the function
+        return func(*args, **kwargs)
+    return wrapper
+
+
 @update
-def set_canister(canister_name: str, principal_id: Principal) -> bool:
+@admin_only
+def set_canister(canister_name: str, principal_id: Principal) -> Response:
     """
     Set or update the principal ID for a specific canister in the Canisters entity.
 
@@ -125,7 +150,7 @@ def set_canister(canister_name: str, principal_id: Principal) -> bool:
         principal_id: The principal ID of the canister
 
     Returns:
-        Status message
+        Response object with success status and message
     """
 
     try:
@@ -141,21 +166,34 @@ def set_canister(canister_name: str, principal_id: Principal) -> bool:
             logger.info(
                 f"Updated existing canister '{canister_name}' with new principal."
             )
+            return Response(
+                success=True,
+                message=f"Updated existing canister '{canister_name}' with new principal.",
+                data=None
+            )
         else:
             # Create a new canister record
             Canisters(_id=canister_name, principal=principal_id.to_str())
             logger.info(f"Created new canister '{canister_name}' with principal.")
-
-        return True
+            return Response(
+                success=True,
+                message=f"Created new canister '{canister_name}' with principal.",
+                data=None
+            )
     except Exception as e:
         logger.error(
             f"Error setting canister '{canister_name}' to principal: {e}\n{traceback.format_exc()}"
         )
-        return False
+        return Response(
+            success=False,
+            message=f"Error setting canister: {str(e)}",
+            data=None
+        )
 
 
 @update
-def transfer(to: Principal, amount: nat) -> Async[nat]:
+@admin_only
+def transfer(to: Principal, amount: nat) -> Async[Response]:
     """
     Transfers a specified amount of tokens to a given principal.
 
@@ -164,10 +202,19 @@ def transfer(to: Principal, amount: nat) -> Async[nat]:
         amount: The amount of tokens to transfer
 
     Returns:
-        The transaction ID if the transfer was successful, -1 otherwise
+        Response object with success status, message, and transaction ID in the data field
     """
 
     try:
+        logger.debug(f"Transfer called by {ic.caller()}")
+        logger.debug(f"Admin principal is {app_data().admin_principal}")
+        if ic.caller().to_str() != app_data().admin_principal:
+            return Response(
+                success=False,
+                message="Caller is not the admin principal",
+                data=None
+            )
+
         logger.info(f"Transferring {amount} tokens to {to.to_str()}")
         principal = Canisters["ckBTC ledger"].principal
         ledger = ICRCLedger(Principal.from_str(principal))
@@ -183,39 +230,48 @@ def transfer(to: Principal, amount: nat) -> Async[nat]:
 
         result: CallResult[TransferResult] = yield ledger.icrc1_transfer(args)
 
-        if result.Ok:
+        # Handle the result
+        if result.Ok is not None:
             logger.info(f"Transfer successful: {result.Ok}")
+            transfer_result = result.Ok
+            if transfer_result.get('Ok') is not None:
+                tx_id = transfer_result['Ok']
+                return Response(
+                    success=True,
+                    message=f"Transfer successful with transaction ID: {tx_id}",
+                    data=ResponseData(TransactionId=TransactionIdRecord(transaction_id=tx_id))
+                )
+            else:
+                error = transfer_result.get('Err')
+                return Response(
+                    success=False,
+                    message=f"Transfer error: {error}",
+                    data=None
+                )
         else:
             logger.error(f"Transfer failed: {result.Err}")
-
-        # TODO: review this
-        return match(
-            result,
-            {
-                "Ok": lambda result_variant: match(
-                    result_variant,
-                    {
-                        "Ok": lambda tx_id: tx_id,
-                        "Err": lambda err: (logger.error(f"Transfer error: {err}"), -1)[
-                            1
-                        ],
-                    },
-                ),
-                "Err": lambda err: (logger.error(f"Call error: {err}"), -1)[1],
-            },
-        )
+            return Response(
+                success=False,
+                message=f"Call error: {result.Err}",
+                data=None
+            )
     except Exception as e:
-        logger.error(f"Exception in match processing: {e}\n{traceback.format_exc()}")
-        return -1
+        logger.error(f"Exception in transfer: {e}\n{traceback.format_exc()}")
+        return Response(
+            success=False,
+            message=f"Exception in transfer: {str(e)}",
+            data=None
+        )
 
 
 @update
-def update_transaction_history() -> (
-    str
-):  # TODO: this should return a proper result type
+def update_transaction_history() -> Async[Response]:
     """
     Updates the transaction history for the current principal by querying the ICRC indexer
     and storing the transactions in the VaultTransaction database.
+
+    Returns:
+        Response object with success status, message, and summary data
     """
     try:
         principal_id = ic.id().to_str()
@@ -322,7 +378,11 @@ def update_transaction_history() -> (
         has_transactions = "transactions" in response and response["transactions"]
 
         if not response or not has_transactions:
-            return f"No transactions found for principal {principal_id}"
+            return Response(
+                success=False,
+                message=f"No transactions found for principal {principal_id}",
+                data=None
+            )
 
         # Track new and updated transactions
         new_count = 0
@@ -494,20 +554,123 @@ def update_transaction_history() -> (
                     f"Error processing transaction {tx_id}: {e}\n {traceback.format_exc()}"
                 )
 
-        result = f"Processed {len(transactions)} transactions: {new_count} new, {updated_count} updated"
-        return result
+        summary_msg = f"Processed {len(transactions)} transactions: {new_count} new, {updated_count} updated"
+        return Response(
+            success=True,
+            message=summary_msg,
+            data=ResponseData(TransactionSummary=TransactionSummaryRecord(
+                total_processed=len(transactions),
+                new_count=new_count,
+                updated_count=updated_count
+            ))
+        )
     except Exception as e:
         logger.error(f"Error processing transactions: {e}\n {traceback.format_exc()}")
-        raise e
+        return Response(
+            success=False,
+            message=f"Error processing transactions: {str(e)}",
+            data=None
+        )
 
 
 @query
-def status() -> StatsRecord:
+def get_balance(principal_id: str) -> Response:
+    """
+    Get the balance for a specific principal.
+
+    Args:
+        principal_id: The principal ID to check balance for
+
+    Returns:
+        Response object with success status, message, and balance data
+    """
+    try:
+        logger.debug(f"Getting balance for principal: {principal_id}")
+
+        # Look up the balance in the database
+        balance = Balance[principal_id]
+
+        # Return the balance amount or 0 if not found
+        amount = balance.amount if balance else 0
+
+        return Response(
+            success=True,
+            message=f"Balance retrieved for principal: {principal_id}",
+            data=ResponseData(Balance=BalanceRecord(
+                _id=principal_id,
+                amount=amount)
+            )
+        )
+    except Exception as e:
+        logger.error(f"Error getting balance for principal {principal_id}: {e}\n{traceback.format_exc()}")
+        return Response(
+            success=False,
+            message=f"Error getting balance: {str(e)}",
+            data=None
+        )
+
+
+@query
+def get_transactions(principal_id: str) -> Response:
+    """
+    Get all transactions associated with a specific principal.
+
+    Args:
+        principal_id: The principal ID to get transactions for
+
+    Returns:
+        Response object with success status, message, and transactions data
+    """
+
+    try:
+        logger.debug(f"Getting transactions for principal: {principal_id}")
+
+        # Collect all transactions where this principal is involved
+        transactions = []
+
+        for tx in VaultTransaction.instances():
+            logger.debug(f"Reading stored data for transaction {tx.to_dict()}")
+
+            amount = tx.amount
+            if tx.principal_to == principal_id:
+                amount = -amount
+
+            transactions.append(
+                TransactionRecord(
+                    _id=tx._id,
+                    amount=amount,
+                    timestamp=tx.timestamp,
+                )
+            )
+
+        logger.debug(f"Transactions for principal {principal_id}: {transactions}")
+
+        # Sort transactions by timestamp (newest first)
+        transactions.sort(key=lambda tx: tx._id, reverse=True)
+
+        return Response(
+            success=True,
+            message=f"Retrieved {len(transactions)} transactions for principal: {principal_id}",
+            data=ResponseData(Transactions=TransactionsListRecord(transactions=transactions))
+        )
+    except Exception as e:
+        logger.error(
+            f"Error getting transactions for principal {principal_id}: {e}\n {traceback.format_exc()}"
+        )
+        return Response(
+            success=False,
+            message=f"Error getting transactions: {str(e)}",
+            data=None
+        )
+
+
+@query
+def status() -> Response:
     """
     Get statistics about the vault's state including balances and canister references.
 
     Returns:
-        A record containing vault statistics including app_data, balances, and canister references.
+        Response object with success status, message, and stats data
     """
 
     try:
@@ -540,90 +703,32 @@ def status() -> StatsRecord:
                 )
             )
 
-        # Return properly typed stats record
-        return StatsRecord(
+        # Create stats record
+        stats = StatsRecord(
             app_data=app_data_record,
             balances=balances,
             canisters=canisters,
+        )
+
+        # Return response with stats
+        return Response(
+            success=True,
+            message="Vault statistics retrieved successfully",
+            data=ResponseData(Stats=stats)
         )
 
     except Exception as e:
         logger.error(
             f"Error retrieving vault statistics: {e}\n{traceback.format_exc()}"
         )
-        raise e
-
-
-@query
-def get_balance(principal_id: str) -> nat:
-    """
-    Get the balance for a specific principal.
-
-    Args:
-        principal_id: The principal ID to check balance for
-
-    Returns:
-        The current balance amount for the specified principal
-    """
-    logger.debug(f"Getting balance for principal: {principal_id}")
-
-    # Look up the balance in the database
-    balance = Balance[principal_id]
-
-    # Return the balance amount or 0 if not found
-    if balance:
-        return balance.amount
-
-    return 0
-
-
-@query
-def get_transactions(principal_id: str) -> Vec[TransactionRecord]:
-    """
-    Get all transactions associated with a specific principal.
-
-    Args:
-        principal_id: The principal ID to get transactions for
-
-    Returns:
-        A list of transactions where the principal is either sender or receiver
-    """
-
-    try:
-        logger.debug(f"Getting transactions for principal: {principal_id}")
-
-        # Collect all transactions where this principal is involved
-        transactions = []
-
-        for tx in VaultTransaction.instances():
-            logger.debug(f"Reading stored data for transaction {tx.to_dict()}")
-
-            amount = tx.amount
-            if tx.principal_to == principal_id:
-                amount = -amount
-
-            transactions.append(
-                TransactionRecord(
-                    _id=tx._id,
-                    amount=amount,
-                    timestamp=tx.timestamp,
-                )
-            )
-
-        logger.debug(f"Transactions for principal {principal_id}: {transactions}")
-
-        # Sort transactions by timestamp (newest first)
-        transactions.sort(key=lambda tx: tx["_id"], reverse=True)
-
-        return transactions
-    except Exception as e:
-        logger.error(
-            f"Error getting transactions for principal {principal_id}: {e}\n {traceback.format_exc()}"
+        return Response(
+            success=False,
+            message=f"Error retrieving vault statistics: {str(e)}",
+            data=None
         )
-        raise e
-
 
 # ##### Import Kybra and the internal function #####
+
 
 from kybra import Opt, Record, Vec, nat, query  # noqa: E402
 from kybra_simple_logging import get_canister_logs as _get_canister_logs  # noqa: E402

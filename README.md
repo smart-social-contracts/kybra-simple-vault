@@ -24,7 +24,7 @@ A canister written in Python using Kybra with which:
 $ dfx deploy
 
 # Get an overview of the state of the vault.
-$ dfx canister call vault get_stats 
+$ dfx canister call vault status 
 
 # Update the transaction history of the vault.
 $ dfx canister call vault update_transaction_history
@@ -69,7 +69,7 @@ dfx canister call vault check_transactions
 dfx canister call vault get_balance
 
 # Check the statistics
-dfx canister call vault get_stats
+dfx canister call vault status
 
 # Check logs
 dfx canister logs vault

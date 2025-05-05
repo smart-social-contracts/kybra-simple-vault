@@ -142,6 +142,38 @@ class StatsRecord(Record):
     canisters: Vec[CanisterRecord]
 
 
+class TransactionIdRecord(Record):
+    transaction_id: nat
+
+
+class TransactionSummaryRecord(Record):
+    total_processed: nat
+    new_count: nat
+    updated_count: nat
+
+
+class TransactionsListRecord(Record):
+    transactions: Vec[TransactionRecord]
+
+
+# Generic response type for API responses
+class ResponseData(Variant, total=False):
+    TransactionId: TransactionIdRecord
+    TransactionSummary: TransactionSummaryRecord  
+    Balance: BalanceRecord
+    Transactions: TransactionsListRecord
+    Stats: StatsRecord
+
+
+class Response(Record):
+    success: bool  # True for success, False for failure
+    message: text  # Success or error message
+    data: Opt[ResponseData]  # Optional data payload for the response
+
+
+# ICRC standard types
+
+
 class ICRCLedger(Service):
     @service_query
     def icrc1_balance_of(self, account: Account) -> nat: ...
