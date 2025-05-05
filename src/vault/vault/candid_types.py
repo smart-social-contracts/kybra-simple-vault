@@ -29,8 +29,8 @@ class BalanceRecord(Record):
 
 
 class TransactionRecord(Record):
-    _id: text
-    amount: nat
+    id: nat
+    amount: int
     timestamp: nat
 
 
@@ -159,9 +159,9 @@ class TransactionsListRecord(Record):
 # Generic response type for API responses
 class ResponseData(Variant, total=False):
     TransactionId: TransactionIdRecord
-    TransactionSummary: TransactionSummaryRecord  
+    TransactionSummary: TransactionSummaryRecord
     Balance: BalanceRecord
-    Transactions: TransactionsListRecord
+    Transactions: Vec[TransactionRecord]
     Stats: StatsRecord
 
 

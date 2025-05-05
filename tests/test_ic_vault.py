@@ -82,21 +82,31 @@ def test_transfer_from_vault(amount=100000):
     print(f"Destination principal: {destination_principal}")
 
     # Transfer tokens from the vault
-    transfer_cmd = f"dfx canister call vault transfer '(principal \"{destination_principal}\", {amount})'"
+    transfer_cmd = f"dfx canister call vault transfer '(principal \"{destination_principal}\", {amount})' --output json"
 
     transfer_result = run_command(transfer_cmd)
     if not transfer_result:
         print(f"{RED}✗ Token transfer failed{RESET}")
         return False
 
-    print(f"{GREEN}✓ Token transfer succeeded{RESET}")
-    print(f"Transfer result: {transfer_result}")
+    try:
+        response = json.loads(transfer_result)
+        print(f"Transfer response: {response}")
+        
+        if not response["success"]:
+            print(f"{RED}✗ Token transfer failed: {response['message']}{RESET}")
+            return False
+            
+        print(f"{GREEN}✓ Token transfer succeeded{RESET}")
 
-    # Wait for the transaction to be processed
-    print("Waiting for the transaction to be processed...")
-    time.sleep(2)
+        # Wait for the transaction to be processed
+        print("Waiting for the transaction to be processed...")
+        time.sleep(2)
 
-    return True
+        return True
+    except Exception as e:
+        print(f"{RED}✗ Error processing transfer result: {e}{RESET}")
+        return False
 
 
 def test_transfer_to_vault(amount=50000):
@@ -115,21 +125,31 @@ def test_transfer_to_vault(amount=50000):
     print(f"Source principal: {source_principal}")
 
     # Transfer tokens to the vault
-    transfer_cmd = f"dfx canister call ckbtc_ledger icrc1_transfer '(record {{ to = record {{ owner = principal \"{vault_id}\"; subaccount = null }}; amount = {amount}; fee = null; memo = null; from_subaccount = null; created_at_time = null }})'"
+    transfer_cmd = f"dfx canister call ckbtc_ledger icrc1_transfer '(record {{ to = record {{ owner = principal \"{vault_id}\"; subaccount = null }}; amount = {amount}; fee = null; memo = null; from_subaccount = null; created_at_time = null }})' --output json"
 
     transfer_result = run_command(transfer_cmd)
     if not transfer_result:
         print(f"{RED}✗ Token transfer to vault failed{RESET}")
         return False
 
-    print(f"{GREEN}✓ Token transfer to vault succeeded{RESET}")
-    print(f"Transfer result: {transfer_result}")
+    try:
+        response = json.loads(transfer_result)
+        print(f"Transfer response: {response}")
+        
+        if not response["success"]:
+            print(f"{RED}✗ Token transfer to vault failed: {response['message']}{RESET}")
+            return False
+            
+        print(f"{GREEN}✓ Token transfer to vault succeeded{RESET}")
 
-    # Wait for the ledger to process the transaction
-    print("Waiting for the transaction to be processed...")
-    time.sleep(2)
+        # Wait for the ledger to process the transaction
+        print("Waiting for the transaction to be processed...")
+        time.sleep(2)
 
-    return True
+        return True
+    except Exception as e:
+        print(f"{RED}✗ Error processing transfer result: {e}{RESET}")
+        return False
 
 
 def test_balance(expected_user_balance):
@@ -145,15 +165,20 @@ def test_balance(expected_user_balance):
     try:
         # Call the get_balance method for the user
         balance_result = run_command(
-            f"dfx canister call vault get_balance '(\"{principal}\")'"
+            f"dfx canister call vault get_balance '(\"{principal}\")' --output json"
         )
 
-        print(f"{GREEN}✓ User balance check succeeded{RESET}")
-        print(f"User balance result: {balance_result}")
+        response = json.loads(balance_result)
+        print(f"Balance response: {response}")
 
-        # Extract the balance value from the result
-        # Example: "(100 : nat)" -> extract "100"
-        user_balance = int(balance_result.strip("()").split(":")[0].strip())
+        # Check if the call was successful
+        if not response["success"]:
+            print(f"{RED}✗ Failed to get balance: {response['message']}{RESET}")
+            return False
+
+        # Extract the balance value from the response
+        user_balance = int(response["data"]["Balance"]["amount"])
+        
         if user_balance == expected_user_balance:
             print(
                 f"{GREEN}✓ User balance matches expected value: {expected_user_balance}{RESET}"
@@ -183,8 +208,16 @@ def test_update_transactions(expected_count=None):
     try:
         # Update transaction history
         update_result = run_command(
-            "dfx canister call vault update_transaction_history"
+            "dfx canister call vault update_transaction_history --output json"
         )
+
+        response = json.loads(update_result)
+        print(f"Update response: {response}")
+
+        # Check if the call was successful
+        if not response["success"]:
+            print(f"{RED}✗ Transaction history update failed: {response['message']}{RESET}")
+            return False
 
         if update_result:
             print(f"{GREEN}✓ Transaction history update succeeded{RESET}")
@@ -222,19 +255,38 @@ def test_get_transactions(expected_amounts=None):
             f"dfx canister call vault get_transactions '(\"{principal}\")' --output json"
         )
 
-        tx_result = json.loads(tx_result)
-        print("tx_result", tx_result)
+        response = json.loads(tx_result)
+        print("Response:", response)
 
-        for i, tx in enumerate(tx_result):
-            tx_amount = int(tx["amount"])
-            expected_amount = int(expected_amounts[i])
-            if tx_amount != expected_amount:
+        # Check if the call was successful
+        if not response["success"]:
+            print(f"{RED}✗ Failed to get transactions: {response['message']}{RESET}")
+            return False
+
+        # Extract transactions from the response data structure
+        transactions = response["data"]["Transactions"]["transactions"]
+        print("Transactions:", transactions)
+
+        if expected_amounts is not None:
+            if len(transactions) != len(expected_amounts):
                 print(
-                    f"{RED}✗ Transaction amount {tx_amount} does not match expected amount {expected_amount}{RESET}"
+                    f"{RED}✗ Expected {len(expected_amounts)} transactions, but found {len(transactions)}{RESET}"
                 )
                 return False
 
-        print(f"{GREEN}✓ All expected transaction amounts were found{RESET}")
+            for i, tx in enumerate(transactions):
+                tx_amount = int(tx["amount"])
+                expected_amount = int(expected_amounts[i])
+                if tx_amount != expected_amount:
+                    print(
+                        f"{RED}✗ Transaction amount {tx_amount} does not match expected amount {expected_amount}{RESET}"
+                    )
+                    return False
+
+            print(f"{GREEN}✓ All expected transaction amounts were found{RESET}")
+        else:
+            print(f"{GREEN}✓ Received {len(transactions)} transactions{RESET}")
+        
         return True
 
     except Exception as e:

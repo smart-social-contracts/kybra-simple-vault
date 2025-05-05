@@ -597,7 +597,7 @@ def get_balance(principal_id: str) -> Response:
             success=True,
             message=f"Balance retrieved for principal: {principal_id}",
             data=ResponseData(Balance=BalanceRecord(
-                _id=principal_id,
+                principal_id=principal_id,
                 amount=amount)
             )
         )
@@ -623,35 +623,49 @@ def get_transactions(principal_id: str) -> Response:
     """
 
     try:
-        logger.debug(f"Getting transactions for principal: {principal_id}")
+        logger.info(f"Getting transactions for principal: {principal_id}")
 
         # Collect all transactions where this principal is involved
-        transactions = []
+        txs = []
 
         for tx in VaultTransaction.instances():
             logger.debug(f"Reading stored data for transaction {tx.to_dict()}")
 
-            amount = tx.amount
+            # Skip transactions not related to this principal
+            if tx.principal_from != principal_id and tx.principal_to != principal_id:
+                continue
+
+            amount = int(tx.amount)
             if tx.principal_to == principal_id:
                 amount = -amount
 
-            transactions.append(
-                TransactionRecord(
-                    _id=tx._id,
+            try:
+                tx_record = TransactionRecord(
+                    id=int(tx._id),
                     amount=amount,
-                    timestamp=tx.timestamp,
+                    timestamp=int(tx.timestamp),
                 )
-            )
+                txs.append(tx_record)
+                logger.debug(f"Added transaction record: {tx_record}")
+            except Exception as e:
+                logger.error(f"Error creating transaction record: {e}")
+                # Continue with the next transaction
 
-        logger.debug(f"Transactions for principal {principal_id}: {transactions}")
+        logger.info(f"Collected {len(txs)} transactions for principal {principal_id}")
 
         # Sort transactions by timestamp (newest first)
-        transactions.sort(key=lambda tx: tx._id, reverse=True)
+        if txs:
+            try:
+                txs.sort(key=lambda tx: tx['id'], reverse=True)
+                logger.debug("Successfully sorted transactions")
+            except Exception as e:
+                logger.error(f"Error sorting transactions: {e}")
+                # Continue without sorting if there's an error
 
         return Response(
             success=True,
-            message=f"Retrieved {len(transactions)} transactions for principal: {principal_id}",
-            data=ResponseData(Transactions=TransactionsListRecord(transactions=transactions))
+            message=f"Retrieved {len(txs)} transactions for principal: {principal_id}",
+            data=ResponseData(Transactions=txs)
         )
     except Exception as e:
         logger.error(
