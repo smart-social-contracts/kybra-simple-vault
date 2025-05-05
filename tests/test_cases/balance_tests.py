@@ -35,23 +35,25 @@ def test_balance(expected_user_balance):
         if not balance_result:
             print(f"{RED}✗ Balance check failed{RESET}")
             return False
-            
+
         # Parse the JSON response
         balance_json = json.loads(balance_result)
-        
+
         print(f"{GREEN}✓ User balance check succeeded{RESET}")
         print(f"User balance result: {balance_json}")
 
         # Check if the call was successful
         if not balance_json.get("success", False):
-            print(f"{RED}✗ Balance check failed: {balance_json.get('message', 'Unknown error')}{RESET}")
+            print(
+                f"{RED}✗ Balance check failed: {balance_json.get('message', 'Unknown error')}{RESET}"
+            )
             return False
-            
+
         # Extract the balance value from the result
         # The response structure is: {"success": true, "message": "...", "data": {"Balance": {"_id": "...", "amount": 100}}}
         balance_data = balance_json["data"][0]["Balance"]
         user_balance = int(balance_data.get("amount", 0))
-        
+
         if user_balance == expected_user_balance:
             print(
                 f"{GREEN}✓ User balance matches expected value: {expected_user_balance}{RESET}"

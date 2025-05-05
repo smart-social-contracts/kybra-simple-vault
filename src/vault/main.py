@@ -1,6 +1,6 @@
 import traceback
-from pprint import pformat
 from functools import wraps
+from pprint import pformat
 
 from kybra import (
     Async,
@@ -20,7 +20,7 @@ from kybra import (
     void,
 )
 from kybra_simple_db import Database
-from kybra_simple_logging import get_logger, set_log_level, Level
+from kybra_simple_logging import Level, get_logger, set_log_level
 
 from vault.candid_types import (
     Account,
@@ -33,8 +33,8 @@ from vault.candid_types import (
     StatsRecord,
     TransactionIdRecord,
     TransactionRecord,
-    TransactionSummaryRecord,
     TransactionsListRecord,
+    TransactionSummaryRecord,
     TransferArg,
     TransferResult,
 )
@@ -130,12 +130,11 @@ def admin_only(func):
         # Check if caller is admin
         if ic.caller().to_str() != app_data().admin_principal:
             return Response(
-                success=False,
-                message="Caller is not the admin principal",
-                data=None
+                success=False, message="Caller is not the admin principal", data=None
             )
         # If caller is admin, proceed with the function
         return func(*args, **kwargs)
+
     return wrapper
 
 
@@ -169,7 +168,7 @@ def set_canister(canister_name: str, principal_id: Principal) -> Response:
             return Response(
                 success=True,
                 message=f"Updated existing canister '{canister_name}' with new principal.",
-                data=None
+                data=None,
             )
         else:
             # Create a new canister record
@@ -178,16 +177,14 @@ def set_canister(canister_name: str, principal_id: Principal) -> Response:
             return Response(
                 success=True,
                 message=f"Created new canister '{canister_name}' with principal.",
-                data=None
+                data=None,
             )
     except Exception as e:
         logger.error(
             f"Error setting canister '{canister_name}' to principal: {e}\n{traceback.format_exc()}"
         )
         return Response(
-            success=False,
-            message=f"Error setting canister: {str(e)}",
-            data=None
+            success=False, message=f"Error setting canister: {str(e)}", data=None
         )
 
 
@@ -210,9 +207,7 @@ def transfer(to: Principal, amount: nat) -> Async[Response]:
         logger.debug(f"Admin principal is {app_data().admin_principal}")
         if ic.caller().to_str() != app_data().admin_principal:
             return Response(
-                success=False,
-                message="Caller is not the admin principal",
-                data=None
+                success=False, message="Caller is not the admin principal", data=None
             )
 
         logger.info(f"Transferring {amount} tokens to {to.to_str()}")
@@ -234,33 +229,29 @@ def transfer(to: Principal, amount: nat) -> Async[Response]:
         if result.Ok is not None:
             logger.info(f"Transfer successful: {result.Ok}")
             transfer_result = result.Ok
-            if transfer_result.get('Ok') is not None:
-                tx_id = transfer_result['Ok']
+            if transfer_result.get("Ok") is not None:
+                tx_id = transfer_result["Ok"]
                 return Response(
                     success=True,
                     message=f"Transfer successful with transaction ID: {tx_id}",
-                    data=ResponseData(TransactionId=TransactionIdRecord(transaction_id=tx_id))
+                    data=ResponseData(
+                        TransactionId=TransactionIdRecord(transaction_id=tx_id)
+                    ),
                 )
             else:
-                error = transfer_result.get('Err')
+                error = transfer_result.get("Err")
                 return Response(
-                    success=False,
-                    message=f"Transfer error: {error}",
-                    data=None
+                    success=False, message=f"Transfer error: {error}", data=None
                 )
         else:
             logger.error(f"Transfer failed: {result.Err}")
             return Response(
-                success=False,
-                message=f"Call error: {result.Err}",
-                data=None
+                success=False, message=f"Call error: {result.Err}", data=None
             )
     except Exception as e:
         logger.error(f"Exception in transfer: {e}\n{traceback.format_exc()}")
         return Response(
-            success=False,
-            message=f"Exception in transfer: {str(e)}",
-            data=None
+            success=False, message=f"Exception in transfer: {str(e)}", data=None
         )
 
 
@@ -381,7 +372,7 @@ def update_transaction_history() -> Async[Response]:
             return Response(
                 success=False,
                 message=f"No transactions found for principal {principal_id}",
-                data=None
+                data=None,
             )
 
         # Track new and updated transactions
@@ -558,18 +549,18 @@ def update_transaction_history() -> Async[Response]:
         return Response(
             success=True,
             message=summary_msg,
-            data=ResponseData(TransactionSummary=TransactionSummaryRecord(
-                total_processed=len(transactions),
-                new_count=new_count,
-                updated_count=updated_count
-            ))
+            data=ResponseData(
+                TransactionSummary=TransactionSummaryRecord(
+                    total_processed=len(transactions),
+                    new_count=new_count,
+                    updated_count=updated_count,
+                )
+            ),
         )
     except Exception as e:
         logger.error(f"Error processing transactions: {e}\n {traceback.format_exc()}")
         return Response(
-            success=False,
-            message=f"Error processing transactions: {str(e)}",
-            data=None
+            success=False, message=f"Error processing transactions: {str(e)}", data=None
         )
 
 
@@ -596,17 +587,16 @@ def get_balance(principal_id: str) -> Response:
         return Response(
             success=True,
             message=f"Balance retrieved for principal: {principal_id}",
-            data=ResponseData(Balance=BalanceRecord(
-                principal_id=principal_id,
-                amount=amount)
-            )
+            data=ResponseData(
+                Balance=BalanceRecord(principal_id=principal_id, amount=amount)
+            ),
         )
     except Exception as e:
-        logger.error(f"Error getting balance for principal {principal_id}: {e}\n{traceback.format_exc()}")
+        logger.error(
+            f"Error getting balance for principal {principal_id}: {e}\n{traceback.format_exc()}"
+        )
         return Response(
-            success=False,
-            message=f"Error getting balance: {str(e)}",
-            data=None
+            success=False, message=f"Error getting balance: {str(e)}", data=None
         )
 
 
@@ -656,7 +646,7 @@ def get_transactions(principal_id: str) -> Response:
         # Sort transactions by timestamp (newest first)
         if txs:
             try:
-                txs.sort(key=lambda tx: tx['id'], reverse=True)
+                txs.sort(key=lambda tx: tx["id"], reverse=True)
                 logger.debug("Successfully sorted transactions")
             except Exception as e:
                 logger.error(f"Error sorting transactions: {e}")
@@ -665,16 +655,14 @@ def get_transactions(principal_id: str) -> Response:
         return Response(
             success=True,
             message=f"Retrieved {len(txs)} transactions for principal: {principal_id}",
-            data=ResponseData(Transactions=txs)
+            data=ResponseData(Transactions=txs),
         )
     except Exception as e:
         logger.error(
             f"Error getting transactions for principal {principal_id}: {e}\n {traceback.format_exc()}"
         )
         return Response(
-            success=False,
-            message=f"Error getting transactions: {str(e)}",
-            data=None
+            success=False, message=f"Error getting transactions: {str(e)}", data=None
         )
 
 
@@ -728,7 +716,7 @@ def status() -> Response:
         return Response(
             success=True,
             message="Vault statistics retrieved successfully",
-            data=ResponseData(Stats=stats)
+            data=ResponseData(Stats=stats),
         )
 
     except Exception as e:
@@ -738,8 +726,9 @@ def status() -> Response:
         return Response(
             success=False,
             message=f"Error retrieving vault statistics: {str(e)}",
-            data=None
+            data=None,
         )
+
 
 # ##### Import Kybra and the internal function #####
 

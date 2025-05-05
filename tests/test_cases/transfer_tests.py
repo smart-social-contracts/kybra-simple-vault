@@ -43,11 +43,11 @@ def test_transfer_from_vault(amount=100000):
     result_json = json.loads(transfer_result)
     success = result_json.get("success", False)
     message = result_json.get("message", "Unknown")
-    
+
     if not success:
         print(f"{RED}✗ Token transfer failed: {message}{RESET}")
         return False
-        
+
     print(f"{GREEN}✓ Token transfer succeeded{RESET}")
     print(f"Transfer result: {result_json}")
 
@@ -80,14 +80,16 @@ def test_transfer_to_vault(amount=50000):
     if not transfer_result:
         print(f"{RED}✗ Token transfer to vault failed{RESET}")
         return False
-    
+
     # Parse JSON result
     try:
         result_json = json.loads(transfer_result)
         print(f"{GREEN}✓ Token transfer to vault succeeded{RESET}")
         print(f"Transfer result: {result_json}")
     except json.JSONDecodeError:
-        print(f"{GREEN}✓ Token transfer to vault succeeded, but result was not JSON{RESET}")
+        print(
+            f"{GREEN}✓ Token transfer to vault succeeded, but result was not JSON{RESET}"
+        )
         print(f"Transfer result: {transfer_result}")
 
     # Wait for the ledger to process the transaction

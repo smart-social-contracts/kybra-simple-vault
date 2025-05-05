@@ -77,25 +77,29 @@ def test_get_transactions(expected_amounts=None):
         # Extract transactions from the response
         # The response structure is: {"success": true, "message": "...", "data": {"Transactions": {"transactions": [...]}}}
         if not tx_result.get("success", False):
-            print(f"{RED}✗ Transaction retrieval failed: {tx_result.get('message', 'Unknown error')}{RESET}")
+            print(
+                f"{RED}✗ Transaction retrieval failed: {tx_result.get('message', 'Unknown error')}{RESET}"
+            )
             return False
-            
+
         transactions = tx_result["data"][0]["Transactions"]
-        
+
         if not transactions:
             print(f"{RED}✗ No transactions found{RESET}")
             if expected_amounts and len(expected_amounts) > 0:
                 return False
             return True
-            
+
         print(f"Found {len(transactions)} transactions")
-        
+
         # Verify each transaction if expected amounts are provided
         if expected_amounts:
             if len(transactions) != len(expected_amounts):
-                print(f"{RED}✗ Expected {len(expected_amounts)} transactions but found {len(transactions)}{RESET}")
+                print(
+                    f"{RED}✗ Expected {len(expected_amounts)} transactions but found {len(transactions)}{RESET}"
+                )
                 return False
-                
+
             for i, tx in enumerate(transactions):
                 tx_amount = int(tx["amount"])
                 expected_amount = int(expected_amounts[i])
@@ -108,9 +112,11 @@ def test_get_transactions(expected_amounts=None):
             print(f"{GREEN}✓ All expected transaction amounts were found{RESET}")
         else:
             print(f"{GREEN}✓ Transactions retrieved successfully{RESET}")
-            
+
         return True
 
     except Exception as e:
-        print(f"{RED}✗ Error retrieving transaction history: {e}\n{traceback.format_exc()}{RESET}")
+        print(
+            f"{RED}✗ Error retrieving transaction history: {e}\n{traceback.format_exc()}{RESET}"
+        )
         return False
