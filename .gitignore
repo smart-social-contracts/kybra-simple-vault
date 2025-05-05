@@ -41,6 +41,7 @@ kybra_simple_logging/
 *.swp
 *.swo
 *.wasm
+*.did
 *deleteme*
 
 # Release artifacts

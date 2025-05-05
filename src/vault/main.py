@@ -114,6 +114,11 @@ def init_(
         logger.info(f"Setting max iterations to {new_max_iterations}")
         app_data().max_iterations = new_max_iterations
 
+    canister_id = ic.id().to_str()
+    if not Balance[canister_id]:
+        logger.info("Creating vault balance record")
+        Balance(_id=canister_id, amount=0)
+
     logger.info(
         f"Canisters: {[canister.to_dict() for canister in Canisters.instances()]}"
     )
@@ -210,6 +215,10 @@ def transfer(to: Principal, amount: nat) -> Async[Response]:
                 success=False, message="Caller is not the admin principal", data=None
             )
 
+        if amount <= 0:
+            return Response(
+                success=False, message="Amount must be positive", data=None
+            )
         logger.info(f"Transferring {amount} tokens to {to.to_str()}")
         principal = Canisters["ckBTC ledger"].principal
         ledger = ICRCLedger(Principal.from_str(principal))
@@ -265,8 +274,8 @@ def update_transaction_history() -> Async[Response]:
         Response object with success status, message, and summary data
     """
     try:
-        principal_id = ic.id().to_str()
-        logger.debug(f"Updating transaction history for {principal_id}")
+        canister_id = ic.id().to_str()
+        logger.debug(f"Updating transaction history for {canister_id}")
 
         # Get the configured indexer canister ID
         indexer_canister = Canisters["ckBTC indexer"]
@@ -294,7 +303,7 @@ def update_transaction_history() -> Async[Response]:
             # Query the indexer for transactions using the current cursor position
             response = yield get_account_transactions(
                 canister_id=indexer_canister_id,
-                owner_principal=principal_id,
+                owner_principal=canister_id,
                 start_tx_id=current_start,
                 max_results=max_results,
             )
@@ -401,7 +410,7 @@ def update_transaction_history() -> Async[Response]:
                 # Handle different transaction types
                 if kind == "mint":
                     # For mint transactions, the recipient is this principal
-                    principal_to = principal_id
+                    principal_to = canister_id
                     principal_from = "mint"
 
                     if transaction.get("mint"):
@@ -413,7 +422,7 @@ def update_transaction_history() -> Async[Response]:
 
                 elif kind == "burn":
                     # For burn transactions, the sender is this principal
-                    principal_from = principal_id
+                    principal_from = canister_id
                     principal_to = "burn"
 
                     if transaction.get("burn"):
@@ -511,7 +520,7 @@ def update_transaction_history() -> Async[Response]:
                         vault transfers to user => balance of user decreases
                         """
 
-                        if principal_id == principal_to:
+                        if canister_id == principal_to:
                             balance_from = Balance[principal_from] or Balance(
                                 _id=principal_from, amount=0
                             )
@@ -521,7 +530,10 @@ def update_transaction_history() -> Async[Response]:
                                 f"Updated balance for {principal_from} to {balance_from.amount}"
                             )
 
-                        if principal_id == principal_from:
+                            vault_balance = Balance[canister_id]
+                            vault_balance.amount = vault_balance.amount + amount
+
+                        if canister_id == principal_from:
                             balance_to = Balance[principal_to] or Balance(
                                 _id=principal_to, amount=0
                             )
@@ -530,6 +542,9 @@ def update_transaction_history() -> Async[Response]:
                             logger.debug(
                                 f"Updated balance for {principal_to} to {balance_to.amount}"
                             )
+
+                            vault_balance = Balance[canister_id]
+                            vault_balance.amount = vault_balance.amount - amount
 
                     logger.debug(f"Setting last_transaction_id to {tx_id}")
                     app_data().last_transaction_id = tx_id
@@ -581,14 +596,18 @@ def get_balance(principal_id: str) -> Response:
         # Look up the balance in the database
         balance = Balance[principal_id]
 
-        # Return the balance amount or 0 if not found
-        amount = balance.amount if balance else 0
+        if not balance:
+            return Response(
+                success=False,
+                message=f"Balance not found for principal: {principal_id}",
+                data=None,
+            )
 
         return Response(
             success=True,
             message=f"Balance retrieved for principal: {principal_id}",
             data=ResponseData(
-                Balance=BalanceRecord(principal_id=principal_id, amount=amount)
+                Balance=BalanceRecord(principal_id=principal_id, amount=balance.amount)
             ),
         )
     except Exception as e:
