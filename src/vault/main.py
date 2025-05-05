@@ -38,7 +38,9 @@ from vault.ic_util_calls import get_account_transactions
 
 logger = get_logger(__name__)
 
-storage = StableBTreeMap[str, str](memory_id=1, max_key_size=100000, max_value_size=1000)
+storage = StableBTreeMap[str, str](
+    memory_id=1, max_key_size=100000, max_value_size=1000
+)
 Database.init(db_storage=storage, audit_enabled=True)
 
 
@@ -68,27 +70,29 @@ def init_(
         logger.info(
             f"Creating canister record 'ckBTC ledger' with principal: {CANISTER_PRINCIPALS['ckBTC']['ledger']}"
         )
-        Canisters(_id="ckBTC ledger", principal=CANISTER_PRINCIPALS['ckBTC']['ledger'])
+        Canisters(_id="ckBTC ledger", principal=CANISTER_PRINCIPALS["ckBTC"]["ledger"])
     else:
         logger.info(
             f"Canister record 'ckBTC ledger' already exists with principal: {Canisters['ckBTC ledger'].principal}"
         )
 
-    if not Canisters['ckBTC indexer']:
+    if not Canisters["ckBTC indexer"]:
         logger.info(
             f"Creating canister record 'ckBTC indexer' with principal: {CANISTER_PRINCIPALS['ckBTC']['indexer']}"
         )
-        Canisters(_id="ckBTC indexer", principal=CANISTER_PRINCIPALS['ckBTC']['indexer'])
+        Canisters(
+            _id="ckBTC indexer", principal=CANISTER_PRINCIPALS["ckBTC"]["indexer"]
+        )
     else:
         logger.info(
             f"Canister record 'ckBTC indexer' already exists with principal: {Canisters['ckBTC indexer'].principal}"
         )
 
     if not app_data().admin_principal:
-        new_admin_principal = admin_principal.to_str() if admin_principal else ic.caller().to_str()
-        logger.info(
-            f"Setting admin principal to {new_admin_principal}"
+        new_admin_principal = (
+            admin_principal.to_str() if admin_principal else ic.caller().to_str()
         )
+        logger.info(f"Setting admin principal to {new_admin_principal}")
         app_data().admin_principal = new_admin_principal
 
     if not app_data().max_results:
@@ -218,7 +222,7 @@ def update_transaction_history() -> (
         logger.debug(f"Updating transaction history for {principal_id}")
 
         # Get the configured indexer canister ID
-        indexer_canister = Canisters['ckBTC indexer']
+        indexer_canister = Canisters["ckBTC indexer"]
         indexer_canister_id = indexer_canister.principal
 
         # Initialize variables to store all transactions and track pagination
