@@ -4,7 +4,7 @@ Tests for deploying the vault canister with specific parameters.
 """
 
 from tests.utils.command import get_canister_id, get_current_principal, run_command, run_command_expects_response_obj
-from tests.utils.colors import GREEN, RED, RESET
+from tests.utils.colors import GREEN, RED, RESET, print_ok, print_error
 from src.vault.vault.constants import CANISTER_PRINCIPALS, MAX_ITERATIONS, MAX_RESULTS
 import json
 import os
@@ -30,12 +30,12 @@ def get_and_check_status(admin_principal, ledger_id, indexer_id, max_iterations,
         print(f"Comparing status result with params {admin_principal, ledger_id, indexer_id, max_iterations, max_results} against: {status_result}")
 
         if not status_result:
-            print(f"{RED}✗ Failed to check vault status{RESET}")
+            print_error("Failed to check vault status")
             return False
 
         status_json = json.loads(status_result)
         if not status_json.get("success", False):
-            print(f"{RED}✗ Vault status check failed{RESET}")
+            print_error("Vault status check failed")
             return False
 
         stats_data = status_json["data"][0]["Stats"]
@@ -52,7 +52,7 @@ def get_and_check_status(admin_principal, ledger_id, indexer_id, max_iterations,
         assert all(t in {(item["_id"], item["principal"]) for item in stats_data['canisters']} for t in tuples_to_check)
 
     except AssertionError as e:
-        print(f"{RED}✗ Error while checking vault status: {e}\n{traceback.format_exc()}{RESET}")
+        print_error(f"Error while checking vault status: {e}\n{traceback.format_exc()}")
         return False
 
     return True
@@ -106,11 +106,103 @@ def test_deploy_vault_without_params():
 
 
 def test_upgrade():
-    # TODO
-    # - stores current status, balances and transaction history
-    # - redeploys the vault canister (--mode upgrade)
-    # - checks update transactions and transfer
-    pass
+    """Test upgrading the vault canister while preserving state."""
+    print("\nTesting vault canister upgrade...")
+    
+    # Step 1: Store current state before upgrade
+    
+    # Get current principal for testing
+    current_principal = get_current_principal()
+    
+    # Get current status
+    status_cmd = "dfx canister call vault status --output json"
+    pre_status = run_command(status_cmd)
+    if not pre_status:
+        print_error("Failed to get vault status before upgrade")
+        return False
+    
+    # Get current balance
+    balance_cmd = f"dfx canister call vault get_balance '(\"{current_principal}\")' --output json"
+    pre_balance = run_command_expects_response_obj(balance_cmd)
+    if not pre_balance:
+        print_error("Failed to get balance before upgrade")
+        return False
+    
+    # Get existing transactions
+    transactions_cmd = f"dfx canister call vault get_transactions '(\"{current_principal}\")' --output json"
+    pre_transactions = run_command_expects_response_obj(transactions_cmd)
+    if not pre_transactions:
+        print_error("Failed to get transactions before upgrade")
+        return False
+    
+    pre_tx_count = len(pre_transactions.get("data", []))
+    print(f"Pre-upgrade transaction count: {pre_tx_count}")
+    
+    # Step 2: Perform the upgrade
+    print_ok("Upgrading vault canister...")
+    upgrade_cmd = "dfx deploy vault --mode upgrade"
+    upgrade_result = run_command(upgrade_cmd)
+    if not upgrade_result:
+        print_error("Failed to upgrade vault canister")
+        return False
+    
+    # Step 3: Verify state is preserved
+    
+    # Check status after upgrade
+    post_status = run_command(status_cmd)
+    if not post_status:
+        print_error("Failed to get vault status after upgrade")
+        return False
+    
+    # Check balance is preserved
+    post_balance = run_command_expects_response_obj(balance_cmd)
+    if not post_balance:
+        print_error("Failed to get balance after upgrade")
+        return False
+    
+    # Compare balance amounts
+    pre_balance_amount = pre_balance.get("data", [{}])[0].get("amount", "0")
+    post_balance_amount = post_balance.get("data", [{}])[0].get("amount", "0")
+    if pre_balance_amount != post_balance_amount:
+        print_error(f"Balance not preserved after upgrade: before={pre_balance_amount}, after={post_balance_amount}")
+        return False
+    
+    # Check transactions are preserved
+    post_transactions = run_command_expects_response_obj(transactions_cmd)
+    if not post_transactions:
+        print_error("Failed to get transactions after upgrade")
+        return False
+    
+    post_tx_count = len(post_transactions.get("data", []))
+    if post_tx_count < pre_tx_count:
+        print_error(f"Transactions not preserved after upgrade: before={pre_tx_count}, after={post_tx_count}")
+        return False
+    
+    # Test that transfer functionality still works
+    print_ok("Testing transfer functionality after upgrade...")
+    post_transfer_cmd = f"dfx canister call vault transfer '(principal \"{current_principal}\", 25)' --output json"
+    post_transfer_result = run_command_expects_response_obj(post_transfer_cmd)
+    if not post_transfer_result:
+        print_error("Failed to perform transfer after upgrade")
+        return False
+    
+    # Update transaction history
+    update_tx_cmd = "dfx canister call vault update_transaction_history --output json"
+    run_command_expects_response_obj(update_tx_cmd)
+    
+    # Verify new transaction was added
+    final_transactions = run_command_expects_response_obj(transactions_cmd)
+    if not final_transactions:
+        print_error("Failed to get final transactions")
+        return False
+    
+    final_tx_count = len(final_transactions.get("data", []))
+    if final_tx_count <= post_tx_count:
+        print_error("New transaction was not recorded after upgrade")
+        return False
+    
+    print_ok("Vault canister upgraded successfully with state preserved")
+    return True
 
 
 def test_set_canisters():
@@ -134,7 +226,7 @@ def test_set_canisters():
 
 
 if __name__ == "__main__":
-    test_deploy_vault_with_params()
+    test_deploy_vault_with_params(MAX_ITERATIONS, MAX_RESULTS)
     test_deploy_vault_without_params()
     test_upgrade()
     test_set_canisters()

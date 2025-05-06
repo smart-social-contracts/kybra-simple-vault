@@ -14,11 +14,12 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 # isort: on
 
 
-from tests.utils.colors import GREEN, RED, RESET
+from tests.utils.colors import print_ok, print_error
 from tests.test_cases.deployment_tests import (
     test_deploy_vault_with_params,
     test_deploy_vault_without_params,
-    test_set_canisters
+    test_set_canisters,
+    test_upgrade
 )
 from tests.test_cases.transfer_tests import (
     test_exceed_balance_transfer,
@@ -52,7 +53,7 @@ from tests.utils.command import (
 def main():
     try:
         """Run the vault canister tests."""
-        print(f"{GREEN}=== Starting Vault IC Tests ==={RESET}")
+        print("=== Starting Vault IC Tests ===")
 
         # Deploy ck canisters
         deploy_ckbtc_ledger()
@@ -66,67 +67,68 @@ def main():
         results["Set canisters"] = test_set_canisters()
         results["Deploy Vault With Params"] = test_deploy_vault_with_params(max_results=2, max_iterations=2)
 
-        # # Transfer tokens to the vault
-        # results["Transfer To Vault"] = test_transfer_to_vault(1000)
+        # Transfer tokens to the vault
+        results["Transfer To Vault"] = test_transfer_to_vault(1000)
 
-        # # Test sequence of transfers
-        # results["Multiple Transfers"] = test_multiple_transfers_sequence([10, 10, 10])
+        # Test sequence of transfers
+        results["Multiple Transfers"] = test_multiple_transfers_sequence([10, 10, 10])
 
-        # # Transfer tokens from the vault
-        # results["Transfer From Vault"] = test_transfer_from_vault(100)
+        # Transfer tokens from the vault
+        results["Transfer From Vault"] = test_transfer_from_vault(100)
 
-        # # Edge cases for transfers
-        # results["Zero Amount Transfer"] = test_zero_amount_transfer()
-        # results["Negative Amount Transfer"] = test_negative_amount_transfer()
-        # results["Invalid Principal Transfer"] = test_invalid_principal_transfer()
-        # results["Exceed Balance Transfer"] = test_exceed_balance_transfer()
+        # Edge cases for transfers
+        results["Zero Amount Transfer"] = test_zero_amount_transfer()
+        results["Negative Amount Transfer"] = test_negative_amount_transfer()
+        results["Invalid Principal Transfer"] = test_invalid_principal_transfer()
+        results["Exceed Balance Transfer"] = test_exceed_balance_transfer()
 
-        # # Update transaction history
-        # results["Transaction Update"] = test_update_transactions(2)
-        # results["Multiple Updates"] = test_multiple_updates()
+        # Update transaction history
+        results["Transaction Update"] = test_update_transactions(2)
+        results["Multiple Updates"] = test_multiple_updates()
 
-        # # Check balances
-        # results["Regular User and Vault Balance"] = test_balance(
-        #     870, 870
-        # )  # Expected 1000 - 100 - 10 - 10 - 10
-        # results["Non-existent User Balance"] = test_nonexistent_user_balance()
-        # results["Invalid Principal Balance"] = test_invalid_principal()
+        # Check balances
+        results["Regular User and Vault Balance"] = test_balance(
+            870, 870
+        )  # Expected 1000 - 100 - 10 - 10 - 10
+        results["Non-existent User Balance"] = test_nonexistent_user_balance()
+        results["Invalid Principal Balance"] = test_invalid_principal()
 
-        # # Check transaction history
-        # results["Transaction History"] = test_get_transactions([-100, -10, -10, -10, 1000])
-        # results["Non-existent User Transactions"] = test_get_transactions_nonexistent_user()
-        # results["Transaction Ordering"] = test_transaction_ordering()
-        # results["Transaction Validity"] = test_transaction_validity()
-        # results["Transaction Pagination"] = test_transaction_pagination()
+        # Check transaction history
+        results["Transaction History"] = test_get_transactions([-100, -10, -10, -10, 1000])
+        results["Non-existent User Transactions"] = test_get_transactions_nonexistent_user()
+        results["Transaction Ordering"] = test_transaction_ordering()
+        results["Transaction Validity"] = test_transaction_validity()
+        results["Transaction Pagination"] = test_transaction_pagination()
 
-        # # Re-install vault canister
-        # results["Re-install Vault"] = test_upgrade()
+        # Re-install vault canister
+        results["Re-install Vault"] = test_upgrade()
 
         # Print test summary
-        print(f"\n{GREEN}=== Test Summary ==={RESET}")
+        print("\n=== Test Summary ===")
         for test_name, passed in results.items():
-            print(f"{test_name}: {'✓' if passed else '✗'}")
+            if passed:
+                print_ok(test_name)
+            else:
+                print_error(test_name)
 
         # Count passed tests
         passed_count = sum(1 for passed in results.values() if passed)
         total_count = len(results)
 
-        print(
-            f"\n{GREEN}Passed {passed_count} of {total_count} tests ({passed_count/total_count*100:.1f}%){RESET}"
+        print_ok(
+            f"\nPassed {passed_count} of {total_count} tests ({passed_count/total_count*100:.1f}%)"
         )
 
         # Check if all tests passed
         if all(results.values()):
-            print(f"{GREEN}All tests passed!{RESET}")
+            print_ok("All tests passed!")
             return 0
         else:
-            print(f"{RED}Some tests failed!{RESET}")
+            print_error("Some tests failed!")
             return 1
     except Exception as e:
-        print(f"{RED}✗ Error running tests: {e}\n{traceback.format_exc()}{RESET}")
-        return 1
-    
-    return 0
+        print_error(f"Error running tests: {e}\n{traceback.format_exc()}")
+
 
 
 if __name__ == "__main__":

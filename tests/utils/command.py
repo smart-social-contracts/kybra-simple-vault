@@ -3,7 +3,7 @@
 Utility functions for running commands and interacting with canisters.
 """
 
-from tests.utils.colors import GREEN, RED, RESET
+from tests.utils.colors import print_ok, print_error
 import os
 import subprocess
 import sys
@@ -20,8 +20,8 @@ def run_command(command):
     print(f"Running: {command}")
     process = subprocess.run(command, shell=True, capture_output=True, text=True)
     if process.returncode != 0:
-        print(f"{RED}Error executing command: {command}{RESET}")
-        print(f"Error: {process.stderr}")
+        print_error(f"Error executing command: {command}")
+        print_error(f"Error: {process.stderr}")
         return None
     return process.stdout.strip()
 
@@ -30,7 +30,7 @@ def run_command_expects_response_obj(command):
     """Run a shell command and return its output as a JSON object."""
     result = run_command(command)
     if not result:
-        print(f"{RED}✗ Failed to run command `{command}`{RESET}")
+        print_error(f"✗ Failed to run command `{command}`")
         return False
 
     result_json = json.loads(result)
@@ -38,7 +38,7 @@ def run_command_expects_response_obj(command):
 
     if not success:
         message = result_json.get("message", "Unknown error")
-        print(f"{RED}✗ Failed to run command `{command}`: {message}{RESET}")
+        print_error(f"✗ Failed to run command `{command}`: {message}")
         return False
 
     return result_json
@@ -71,7 +71,7 @@ def deploy_ckbtc_ledger(initial_balance=1_000_000_000, transfer_fee=10):
     Returns:
         str: Canister ID of the deployed ledger, or None if deployment failed
     """
-    print(f"{GREEN}Deploying ckbtc_ledger canister...{RESET}")
+    print(f"Deploying ckbtc_ledger canister...")
 
     # Get current principal for controller and initial balance
     current_principal = get_current_principal()
@@ -119,7 +119,7 @@ def deploy_ckbtc_ledger(initial_balance=1_000_000_000, transfer_fee=10):
     # Get the ledger canister ID
     ledger_id = get_canister_id("ckbtc_ledger")
     if ledger_id:
-        print(f"{GREEN}✓ ckbtc_ledger canister deployed with ID: {ledger_id}{RESET}")
+        print_ok(f"✓ ckbtc_ledger canister deployed with ID: {ledger_id}")
 
     return ledger_id
 
@@ -135,13 +135,13 @@ def deploy_ckbtc_indexer(ledger_id=None, interval_seconds=1):
     Returns:
         str: Canister ID of the deployed indexer, or None if deployment failed
     """
-    print(f"{GREEN}Deploying ckbtc_indexer canister...{RESET}")
+    print("Deploying ckbtc_indexer canister...")
 
     # If ledger_id not provided, try to get it
     if not ledger_id:
         ledger_id = get_canister_id("ckbtc_ledger")
         if not ledger_id:
-            print(f"{RED}✗ Cannot deploy indexer: ckbtc_ledger canister ID not found{RESET}")
+            print_error("Cannot deploy indexer: ckbtc_ledger canister ID not found")
             return None
 
     # Construct the deploy command
@@ -158,6 +158,6 @@ def deploy_ckbtc_indexer(ledger_id=None, interval_seconds=1):
     # Get the indexer canister ID
     indexer_id = get_canister_id("ckbtc_indexer")
     if indexer_id:
-        print(f"{GREEN}✓ ckbtc_indexer canister deployed with ID: {indexer_id}{RESET}")
+        print_ok(f"ckbtc_indexer canister deployed with ID: {indexer_id}")
 
     return indexer_id
