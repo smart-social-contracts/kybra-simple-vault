@@ -62,8 +62,8 @@ def main():
 
     # Check balances
     results["Regular User and Vault Balance"] = test_balance(
-        900, 900
-    )  # Expected 1000 - 100
+        870, 870
+    )  # Expected 1000 - 100 - 10 - 10 - 10
     results["Non-existent User Balance"] = test_nonexistent_user_balance()
     results["Invalid Principal Balance"] = test_invalid_principal()
 
