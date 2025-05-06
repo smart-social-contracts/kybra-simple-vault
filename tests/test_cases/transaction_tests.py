@@ -6,16 +6,16 @@ Tests for transaction history functionality of the vault canister.
 import json
 import os
 import sys
-import traceback
 import time
+import traceback
 
 # Add the parent directory to the Python path to make imports work
 sys.path.insert(
     0, os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 )
 
-from tests.utils.command import run_command, get_canister_id
 from tests.utils.colors import GREEN, RED, RESET
+from tests.utils.command import get_canister_id, run_command
 
 
 def test_update_transactions(expected_count=None):
@@ -128,7 +128,9 @@ def test_get_transactions_nonexistent_user():
     print("\nTesting transaction history retrieval for non-existent user...")
 
     # Use a non-existent principal
-    non_existent_principal = "2vxsx-fae"  # This is a valid principal format but likely not registered
+    non_existent_principal = (
+        "2vxsx-fae"  # This is a valid principal format but likely not registered
+    )
 
     try:
         # Get transaction history
@@ -148,21 +150,29 @@ def test_get_transactions_nonexistent_user():
             try:
                 transactions = tx_result["data"][0]["Transactions"]
                 if not transactions or len(transactions) == 0:
-                    print(f"{GREEN}✓ Non-existent user has no transactions as expected{RESET}")
+                    print(
+                        f"{GREEN}✓ Non-existent user has no transactions as expected{RESET}"
+                    )
                     return True
                 else:
-                    print(f"{RED}✗ Non-existent user unexpectedly has {len(transactions)} transactions{RESET}")
+                    print(
+                        f"{RED}✗ Non-existent user unexpectedly has {len(transactions)} transactions{RESET}"
+                    )
                     return False
             except (KeyError, IndexError):
                 print(f"{RED}✗ Unexpected response format{RESET}")
                 return False
         else:
             # If an error was returned, this might be expected behavior too
-            print(f"{GREEN}✓ Non-existent user properly handled with error: {tx_result.get('message', 'Unknown')}{RESET}")
+            print(
+                f"{GREEN}✓ Non-existent user properly handled with error: {tx_result.get('message', 'Unknown')}{RESET}"
+            )
             return True
 
     except Exception as e:
-        print(f"{RED}✗ Error retrieving transaction history for non-existent user: {e}{RESET}")
+        print(
+            f"{RED}✗ Error retrieving transaction history for non-existent user: {e}{RESET}"
+        )
         return False
 
 
@@ -195,7 +205,9 @@ def test_transaction_ordering():
         transactions = tx_result["data"][0]["Transactions"]
 
         if not transactions or len(transactions) < 2:
-            print(f"{RED}✗ Not enough transactions to verify ordering (need at least 2){RESET}")
+            print(
+                f"{RED}✗ Not enough transactions to verify ordering (need at least 2){RESET}"
+            )
             return False
 
         # Check if timestamps are in descending order (newest first)
@@ -262,7 +274,9 @@ def test_transaction_validity():
             # Check for required fields
             for field in required_fields:
                 if field not in tx:
-                    print(f"{RED}✗ Transaction {i} is missing required field: {field}{RESET}")
+                    print(
+                        f"{RED}✗ Transaction {i} is missing required field: {field}{RESET}"
+                    )
                     all_valid = False
 
         if all_valid:
@@ -299,7 +313,9 @@ def test_multiple_updates():
             # Parse JSON result
             update_json = json.loads(update_result)
             if not update_json.get("success", False):
-                print(f"{RED}✗ Transaction history update {i+1} failed: {update_json.get('message', 'Unknown error')}{RESET}")
+                print(
+                    f"{RED}✗ Transaction history update {i+1} failed: {update_json.get('message', 'Unknown error')}{RESET}"
+                )
                 success = False
                 break
 
@@ -309,12 +325,16 @@ def test_multiple_updates():
             time.sleep(1)
 
         if success:
-            print(f"{GREEN}✓ Multiple transaction history updates completed successfully{RESET}")
+            print(
+                f"{GREEN}✓ Multiple transaction history updates completed successfully{RESET}"
+            )
         else:
             print(f"{RED}✗ Multiple transaction history updates failed{RESET}")
 
         return success
 
     except Exception as e:
-        print(f"{RED}✗ Error during multiple transaction history updates: {e}\n{traceback.format_exc()}{RESET}")
+        print(
+            f"{RED}✗ Error during multiple transaction history updates: {e}\n{traceback.format_exc()}{RESET}"
+        )
         return False

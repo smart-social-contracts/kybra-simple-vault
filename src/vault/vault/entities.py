@@ -36,14 +36,16 @@ class VaultTransaction(Entity, TimestampedMixin):
     categories = ManyToMany("Category", "transactions")
 
 
-'''
+"""
 Stores the number of tokens deposited into the vault for each user.
 Vault balance is updated when:
 - user deposits in the vault
 - vault transfers to user
 
 However, note that Balance["vault"] is the total number of token deposit in the vault.
-'''
+"""
+
+
 class Balance(Entity, TimestampedMixin):
     amount = Integer(default=0)
     canister = OneToMany("Canister", "balances")

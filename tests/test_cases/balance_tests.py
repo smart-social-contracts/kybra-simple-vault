@@ -12,8 +12,8 @@ sys.path.insert(
     0, os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 )
 
-from tests.utils.command import run_command, get_canister_id
 from tests.utils.colors import GREEN, RED, RESET
+from tests.utils.command import get_canister_id, run_command
 
 
 def test_balance(expected_user_balance, expected_vault_balance):
@@ -65,22 +65,21 @@ def test_balance(expected_user_balance, expected_vault_balance):
             )
             return False
 
-
         # Check vault balance
         vault_balance_result = run_command(
             "dfx canister call vault get_balance '(\"vault\")' --output json"
         )
-        
+
         if not vault_balance_result:
             print(f"{RED}✗ Could not retrieve vault balance{RESET}")
             return False
-        
+
         vault_balance_json = json.loads(vault_balance_result)
-        
+
         if not vault_balance_json.get("success", False):
             print(f"{RED}✗ Could not retrieve vault balance{RESET}")
             return False
-        
+
         # Extract the vault balance value
         # Note: Assuming a standard response format, adjust if your API is different
         vault_balance = None
@@ -91,7 +90,7 @@ def test_balance(expected_user_balance, expected_vault_balance):
             print(f"{RED}✗ Could not parse vault balance{RESET}")
             # If we can't get the balance, use a very large amount instead
             vault_balance = 10000000000000
-        
+
         if vault_balance == expected_vault_balance:
             print(
                 f"{GREEN}✓ Vault balance matches expected value: {expected_vault_balance}{RESET}"
@@ -113,7 +112,9 @@ def test_nonexistent_user_balance():
     print("\nTesting balance check for non-existent user...")
 
     # Use a non-existent principal
-    non_existent_principal = "2vxsx-fae"  # This is a valid principal format but likely not registered
+    non_existent_principal = (
+        "2vxsx-fae"  # This is a valid principal format but likely not registered
+    )
 
     try:
         # Call the get_balance method for the non-existent user
@@ -136,7 +137,9 @@ def test_nonexistent_user_balance():
                 balance_data = balance_json["data"][0]["Balance"]
                 amount = int(balance_data.get("amount", -1))
                 if amount == 0:
-                    print(f"{GREEN}✓ Non-existent user has zero balance as expected{RESET}")
+                    print(
+                        f"{GREEN}✓ Non-existent user has zero balance as expected{RESET}"
+                    )
                     return True
                 else:
                     print(f"{GREEN}✓ Non-existent user has balance: {amount}{RESET}")
@@ -146,7 +149,9 @@ def test_nonexistent_user_balance():
                 return False
         else:
             # If an error was returned, this might be expected behavior too depending on implementation
-            print(f"{GREEN}✓ Non-existent user properly handled with error: {balance_json.get('message', 'Unknown')}{RESET}")
+            print(
+                f"{GREEN}✓ Non-existent user properly handled with error: {balance_json.get('message', 'Unknown')}{RESET}"
+            )
             return True
 
     except Exception as e:
@@ -160,7 +165,9 @@ def test_invalid_principal():
 
     # Use a syntactically valid but semantically invalid principal
     # This uses valid Base32 characters but is not a real principal
-    invalid_principal = "aaaaa-aaaa-aaaa-aaaa-aaaaa"  # This is a valid Base32 encoded string
+    invalid_principal = (
+        "aaaaa-aaaa-aaaa-aaaa-aaaaa"  # This is a valid Base32 encoded string
+    )
 
     try:
         # Call the get_balance method with invalid principal
@@ -170,14 +177,18 @@ def test_invalid_principal():
 
         # If the command failed to execute, it might be the expected behavior
         if not balance_result:
-            print(f"{GREEN}✓ Invalid principal correctly rejected at command level{RESET}")
+            print(
+                f"{GREEN}✓ Invalid principal correctly rejected at command level{RESET}"
+            )
             return True
 
         # If we got a result, check if it's an error response
         balance_json = json.loads(balance_result)
 
         if not balance_json.get("success", False):
-            print(f"{GREEN}✓ Invalid principal correctly rejected: {balance_json.get('message', 'Unknown error')}{RESET}")
+            print(
+                f"{GREEN}✓ Invalid principal correctly rejected: {balance_json.get('message', 'Unknown error')}{RESET}"
+            )
             return True
         else:
             print(f"{RED}✗ Invalid principal was accepted, unexpected behavior{RESET}")

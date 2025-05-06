@@ -216,9 +216,7 @@ def transfer(to: Principal, amount: nat) -> Async[Response]:
             )
 
         if amount <= 0:
-            return Response(
-                success=False, message="Amount must be positive", data=None
-            )
+            return Response(success=False, message="Amount must be positive", data=None)
         logger.info(f"Transferring {amount} tokens to {to.to_str()}")
         principal = Canisters["ckBTC ledger"].principal
         ledger = ICRCLedger(Principal.from_str(principal))
@@ -380,7 +378,7 @@ def update_transaction_history() -> Async[Response]:
         if not response or not has_transactions:
             return Response(
                 success=False,
-                message=f"No transactions found for principal {principal_id}",
+                message=f"No transactions found for principal {canister_id}",
                 data=None,
             )
 

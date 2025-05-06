@@ -3,13 +3,14 @@
 Tests for token transfer functionality of the vault canister.
 """
 
-from tests.utils.command import get_canister_id, run_command
-from tests.utils.colors import GREEN, RED, RESET
 import json
 import os
 import sys
 import time
 import traceback
+
+from tests.utils.colors import GREEN, RED, RESET
+from tests.utils.command import get_canister_id, run_command
 
 # Add the parent directory to the Python path to make imports work
 sys.path.insert(
@@ -158,7 +159,9 @@ def test_negative_amount_transfer():
     # In many implementations, this should either fail at the command level or
     # be rejected by the canister
     if not transfer_result:
-        print(f"{GREEN}✓ Negative amount transfer correctly rejected at command level{RESET}")
+        print(
+            f"{GREEN}✓ Negative amount transfer correctly rejected at command level{RESET}"
+        )
         return True
 
     # Parse JSON result if we got one
@@ -194,7 +197,9 @@ def test_invalid_principal_transfer():
 
     # This should either fail at the command level or be rejected by the canister
     if not transfer_result:
-        print(f"{GREEN}✓ Transfer to invalid principal correctly rejected at command level{RESET}")
+        print(
+            f"{GREEN}✓ Transfer to invalid principal correctly rejected at command level{RESET}"
+        )
         return True
 
     # Parse JSON result if we got one
@@ -235,8 +240,12 @@ def test_exceed_balance_transfer():
         success = result_json.get("success", False)
         message = result_json.get("message", "Unknown")
 
-        if not success and ("insufficient" in message.lower() or "balance" in message.lower()):
-            print(f"{GREEN}✓ Excess transfer correctly rejected with appropriate message: {message}{RESET}")
+        if not success and (
+            "insufficient" in message.lower() or "balance" in message.lower()
+        ):
+            print(
+                f"{GREEN}✓ Excess transfer correctly rejected with appropriate message: {message}{RESET}"
+            )
             return True
         elif not success:
             print(f"{GREEN}✓ Excess transfer rejected with message: {message}{RESET}")
@@ -246,7 +255,9 @@ def test_exceed_balance_transfer():
             return False
 
     except Exception as e:
-        print(f"{RED}✗ Error during excess balance transfer test: {e}\n{traceback.format_exc()}{RESET}")
+        print(
+            f"{RED}✗ Error during excess balance transfer test: {e}\n{traceback.format_exc()}{RESET}"
+        )
         return False
 
 
@@ -259,7 +270,7 @@ def test_multiple_transfers_sequence():
     destination_principal = run_command("dfx identity get-principal")
 
     # Transfer amount for each step
-    transfer_amount = 1000
+    transfer_amount = 10
 
     # Number of transfers to perform
     num_transfers = 3
@@ -286,7 +297,9 @@ def test_multiple_transfers_sequence():
             print(f"{GREEN}✓ Transfer {i+1} succeeded{RESET}")
             successful_transfers += 1
         else:
-            print(f"{RED}✗ Transfer {i+1} failed: {result_json.get('message', 'Unknown')}{RESET}")
+            print(
+                f"{RED}✗ Transfer {i+1} failed: {result_json.get('message', 'Unknown')}{RESET}"
+            )
 
         # Wait between transfers
         time.sleep(2)

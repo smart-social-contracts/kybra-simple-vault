@@ -6,33 +6,34 @@ Main test runner for the vault canister tests.
 import os
 import sys
 
+from tests.test_cases.balance_tests import (
+    test_balance,
+    test_invalid_principal,
+    test_nonexistent_user_balance,
+)
+from tests.test_cases.transaction_tests import (
+    test_get_transactions,
+    test_get_transactions_nonexistent_user,
+    test_multiple_updates,
+    test_transaction_ordering,
+    test_transaction_validity,
+    test_update_transactions,
+)
+from tests.test_cases.transfer_tests import (
+    test_exceed_balance_transfer,
+    test_invalid_principal_transfer,
+    test_multiple_transfers_sequence,
+    test_negative_amount_transfer,
+    test_transfer_from_vault,
+    test_transfer_to_vault,
+    test_zero_amount_transfer,
+)
+from tests.utils.colors import GREEN, RED, RESET
+
 # Add the parent directory to the Python path to make imports work
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
 # Now that we've added the parent directory to the path, we can import from the tests package
-from tests.utils.colors import GREEN, RED, RESET
-from tests.test_cases.transfer_tests import (
-    test_transfer_from_vault,
-    test_transfer_to_vault,
-    test_zero_amount_transfer,
-    test_negative_amount_transfer,
-    test_invalid_principal_transfer,
-    test_exceed_balance_transfer,
-    test_multiple_transfers_sequence,
-)
-from tests.test_cases.transaction_tests import (
-    test_get_transactions,
-    test_update_transactions,
-    test_get_transactions_nonexistent_user,
-    test_transaction_ordering,
-    test_transaction_validity,
-    test_multiple_updates,
-)
-from tests.test_cases.balance_tests import (
-    test_balance,
-    test_nonexistent_user_balance,
-    test_invalid_principal,
-)
 
 
 def main():
@@ -62,12 +63,14 @@ def main():
     results["Multiple Updates"] = test_multiple_updates()
 
     # Check balances
-    results["Regular User and Vault Balance"] = test_balance(900, 900)  # Expected 1000 - 100
+    results["Regular User and Vault Balance"] = test_balance(
+        900, 900
+    )  # Expected 1000 - 100
     results["Non-existent User Balance"] = test_nonexistent_user_balance()
     results["Invalid Principal Balance"] = test_invalid_principal()
 
     # Check transaction history
-    results["Transaction History"] = test_get_transactions([-100, 1000])
+    results["Transaction History"] = test_get_transactions([-100, -10, -10, -10, 1000])
     results["Non-existent User Transactions"] = test_get_transactions_nonexistent_user()
     results["Transaction Ordering"] = test_transaction_ordering()
     results["Transaction Validity"] = test_transaction_validity()
@@ -81,7 +84,9 @@ def main():
     passed_count = sum(1 for passed in results.values() if passed)
     total_count = len(results)
 
-    print(f"\n{GREEN}Passed {passed_count} of {total_count} tests ({passed_count/total_count*100:.1f}%){RESET}")
+    print(
+        f"\n{GREEN}Passed {passed_count} of {total_count} tests ({passed_count/total_count*100:.1f}%){RESET}"
+    )
 
     # Check if all tests passed
     if all(results.values()):
