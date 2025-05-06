@@ -29,27 +29,33 @@ def check_balance(principal_id, expected_amount=None):
 
     try:
         balance_json = json.loads(balance_result)
-        
+
         if not balance_json.get("success", False):
             message = balance_json.get("message", "Unknown error")
             print(f"{RED}✗ Balance check failed: {message}{RESET}")
             return None, (message, False)
-        
+
         balance_data = balance_json["data"][0]["Balance"]
         amount = int(balance_data.get("amount", 0))
-        
+
         if expected_amount is not None:
             if amount == expected_amount:
-                print(f"{GREEN}✓ {principal_id} balance matches expected value: {expected_amount}{RESET}")
+                print(
+                    f"{GREEN}✓ {principal_id} balance matches expected value: {expected_amount}{RESET}"
+                )
                 return amount, True
             else:
-                print(f"{RED}✗ {principal_id} balance {amount} does not match expected value: {expected_amount}{RESET}")
+                print(
+                    f"{RED}✗ {principal_id} balance {amount} does not match expected value: {expected_amount}{RESET}"
+                )
                 return amount, False
-        
+
         return amount, True
-        
+
     except Exception as e:
-        print(f"{RED}✗ Error parsing balance response: {e}\n{traceback.format_exc()}{RESET}")
+        print(
+            f"{RED}✗ Error parsing balance response: {e}\n{traceback.format_exc()}{RESET}"
+        )
         return None, False
 
 
@@ -61,17 +67,17 @@ def test_balance(expected_user_balance, expected_vault_balance):
     principal = get_current_principal()
     if not principal:
         return False
-    
+
     # Check user balance
     user_amount, user_success = check_balance(principal, expected_user_balance)
     if not user_success:
         return False
-    
+
     # Check vault balance
     vault_amount, vault_success = check_balance("vault", expected_vault_balance)
     if not vault_success:
         return False
-    
+
     return True
 
 
@@ -81,14 +87,16 @@ def test_nonexistent_user_balance():
 
     # Use a non-existent principal
     non_existent_principal = "2vxsx-fae"  # Valid format but not registered
-    
+
     amount, result = check_balance(non_existent_principal)
-    
+
     # If we got a successful response but with 0 balance, that's expected
     if isinstance(result, tuple):
         # This means we got an error message, which is acceptable for non-existent users
         error_message, _ = result
-        print(f"{GREEN}✓ Non-existent user properly handled with error: {error_message}{RESET}")
+        print(
+            f"{GREEN}✓ Non-existent user properly handled with error: {error_message}{RESET}"
+        )
         return True
     elif amount == 0:
         print(f"{GREEN}✓ Non-existent user has zero balance as expected{RESET}")
@@ -103,15 +111,19 @@ def test_invalid_principal():
     print("\nTesting balance check with invalid principal format...")
 
     # Use a syntactically valid but semantically invalid principal
-    invalid_principal = "aaaaa-aaaa-aaaa-aaaa-aaaaa"  # Valid Base32 but likely invalid principal
-    
+    invalid_principal = (
+        "aaaaa-aaaa-aaaa-aaaa-aaaaa"  # Valid Base32 but likely invalid principal
+    )
+
     try:
         amount, result = check_balance(invalid_principal)
-        
+
         if isinstance(result, tuple):
             # This means we got an error message
             error_message, _ = result
-            print(f"{GREEN}✓ Invalid principal correctly rejected: {error_message}{RESET}")
+            print(
+                f"{GREEN}✓ Invalid principal correctly rejected: {error_message}{RESET}"
+            )
             return True
         elif amount is None:
             print(f"{GREEN}✓ Invalid principal correctly rejected{RESET}")

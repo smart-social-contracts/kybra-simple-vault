@@ -12,7 +12,7 @@ sys.path.insert(
     0, os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 )
 
-from tests.utils.colors import RED, RESET
+from tests.utils.colors import GREEN, RED, RESET
 
 
 def run_command(command):
@@ -41,3 +41,106 @@ def get_current_principal():
         print(f"{RED}✗ Failed to get principal{RESET}")
         return None
     return principal
+
+
+def deploy_ckbtc_ledger(initial_balance=1_000_000_000, transfer_fee=10):
+    """
+    Deploy the ckBTC ledger canister with specified parameters.
+
+    Args:
+        initial_balance: Initial token balance for the current principal
+        transfer_fee: Fee for token transfers
+
+    Returns:
+        str: Canister ID of the deployed ledger, or None if deployment failed
+    """
+    print(f"{GREEN}Deploying ckbtc_ledger canister...{RESET}")
+
+    # Get current principal for controller and initial balance
+    current_principal = get_current_principal()
+    if not current_principal:
+        return None
+
+    # Fixed minting principal for test environment
+    minting_principal = "aaaaa-aa"
+
+    # Construct the deploy command with all parameters
+    deploy_cmd = f"""dfx deploy --no-wallet ckbtc_ledger --argument="(variant {{ 
+      Init = record {{ 
+        minting_account = record {{ 
+          owner = principal \\"{minting_principal}\\"; 
+          subaccount = null 
+        }}; 
+        transfer_fee = {transfer_fee}; 
+        token_symbol = \\"ckBTC\\"; 
+        token_name = \\"ckBTC Test\\"; 
+        decimals = opt 8; 
+        metadata = vec {{}}; 
+        initial_balances = vec {{ 
+          record {{ 
+            record {{ 
+              owner = principal \\"{current_principal}\\"; 
+              subaccount = null 
+            }}; 
+            {initial_balance} 
+          }} 
+        }}; 
+        feature_flags = opt record {{ 
+          icrc2 = true 
+        }}; 
+        archive_options = record {{ 
+          num_blocks_to_archive = 1000; 
+          trigger_threshold = 2000; 
+          controller_id = principal \\"{current_principal}\\" 
+        }} 
+      }} 
+    }})" """
+
+    # Execute the deploy command
+    run_command(deploy_cmd)
+
+    # Get the ledger canister ID
+    ledger_id = get_canister_id("ckbtc_ledger")
+    if ledger_id:
+        print(f"{GREEN}✓ ckbtc_ledger canister deployed with ID: {ledger_id}{RESET}")
+
+    return ledger_id
+
+
+def deploy_ckbtc_indexer(ledger_id=None, interval_seconds=1):
+    """
+    Deploy the ckBTC indexer canister with specified parameters.
+
+    Args:
+        ledger_id: Principal ID of the ckBTC ledger canister
+        interval_seconds: Interval in seconds for retrieving blocks from ledger
+
+    Returns:
+        str: Canister ID of the deployed indexer, or None if deployment failed
+    """
+    print(f"{GREEN}Deploying ckbtc_indexer canister...{RESET}")
+
+    # If ledger_id not provided, try to get it
+    if not ledger_id:
+        ledger_id = get_canister_id("ckbtc_ledger")
+        if not ledger_id:
+            print(f"{RED}✗ Cannot deploy indexer: ckbtc_ledger canister ID not found{RESET}")
+            return None
+
+    # Construct the deploy command
+    deploy_cmd = f"""dfx deploy --no-wallet ckbtc_indexer --argument="(opt variant {{ 
+      Init = record {{ 
+        ledger_id = principal \\"{ledger_id}\\"; 
+        retrieve_blocks_from_ledger_interval_seconds = opt {interval_seconds} 
+      }} 
+    }})" """
+
+    # Execute the deploy command
+    run_command(deploy_cmd)
+
+    # Get the indexer canister ID
+    indexer_id = get_canister_id("ckbtc_indexer")
+    if indexer_id:
+        print(f"{GREEN}✓ ckbtc_indexer canister deployed with ID: {indexer_id}{RESET}")
+
+    return indexer_id
