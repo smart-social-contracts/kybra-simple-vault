@@ -6,6 +6,9 @@ Main test runner for the vault canister tests.
 import os
 import sys
 
+# Add the parent directory to the Python path to make imports work
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
 from tests.test_cases.balance_tests import (
     test_balance,
     test_invalid_principal,
@@ -30,11 +33,6 @@ from tests.test_cases.transfer_tests import (
 )
 from tests.utils.colors import GREEN, RED, RESET
 
-# Add the parent directory to the Python path to make imports work
-sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
-
-# Now that we've added the parent directory to the path, we can import from the tests package
-
 
 def main():
     """Run the vault canister tests."""
@@ -47,7 +45,7 @@ def main():
     results["Transfer To Vault"] = test_transfer_to_vault(1000)
 
     # Test sequence of transfers
-    results["Multiple Transfers"] = test_multiple_transfers_sequence()
+    results["Multiple Transfers"] = test_multiple_transfers_sequence([10, 10 , 10])
 
     # Transfer tokens from the vault
     results["Transfer From Vault"] = test_transfer_from_vault(100)

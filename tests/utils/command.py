@@ -32,3 +32,12 @@ def get_canister_id(canister_name):
     if not result:
         sys.exit(1)
     return result
+
+
+def get_current_principal():
+    """Get the principal ID of the current identity."""
+    principal = run_command("dfx identity get-principal")
+    if not principal:
+        print(f"{RED}✗ Failed to get principal{RESET}")
+        return None
+    return principal

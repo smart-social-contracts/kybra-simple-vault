@@ -6,6 +6,7 @@ Tests for balance checking functionality of the vault canister.
 import json
 import os
 import sys
+import traceback
 
 # Add the parent directory to the Python path to make imports work
 sys.path.insert(
@@ -13,187 +14,111 @@ sys.path.insert(
 )
 
 from tests.utils.colors import GREEN, RED, RESET
-from tests.utils.command import get_canister_id, run_command
+from tests.utils.command import get_current_principal, run_command
+
+
+def check_balance(principal_id, expected_amount=None):
+    """Helper function to check balance for a principal."""
+    balance_result = run_command(
+        f"dfx canister call vault get_balance '(\"{principal_id}\")' --output json"
+    )
+
+    if not balance_result:
+        print(f"{RED}✗ Balance check failed for {principal_id}{RESET}")
+        return None, False
+
+    try:
+        balance_json = json.loads(balance_result)
+        
+        if not balance_json.get("success", False):
+            message = balance_json.get("message", "Unknown error")
+            print(f"{RED}✗ Balance check failed: {message}{RESET}")
+            return None, (message, False)
+        
+        balance_data = balance_json["data"][0]["Balance"]
+        amount = int(balance_data.get("amount", 0))
+        
+        if expected_amount is not None:
+            if amount == expected_amount:
+                print(f"{GREEN}✓ {principal_id} balance matches expected value: {expected_amount}{RESET}")
+                return amount, True
+            else:
+                print(f"{RED}✗ {principal_id} balance {amount} does not match expected value: {expected_amount}{RESET}")
+                return amount, False
+        
+        return amount, True
+        
+    except Exception as e:
+        print(f"{RED}✗ Error parsing balance response: {e}\n{traceback.format_exc()}{RESET}")
+        return None, False
 
 
 def test_balance(expected_user_balance, expected_vault_balance):
-    """Test checking the vault canister's balance."""
-    print("\nTesting vault balance functionality...")
+    """Test checking both user and vault balances."""
+    print("\nTesting balance functionality...")
 
-    # Get the principal of the current identity
-    principal = run_command("dfx identity get-principal")
+    # Get current user principal
+    principal = get_current_principal()
     if not principal:
-        print(f"{RED}✗ Failed to get principal{RESET}")
         return False
-
-    try:
-        # Call the get_balance method for the user
-        balance_result = run_command(
-            f"dfx canister call vault get_balance '(\"{principal}\")' --output json"
-        )
-
-        if not balance_result:
-            print(f"{RED}✗ Balance check failed{RESET}")
-            return False
-
-        # Parse the JSON response
-        balance_json = json.loads(balance_result)
-
-        print(f"{GREEN}✓ User balance check succeeded{RESET}")
-        print(f"User balance result: {balance_json}")
-
-        # Check if the call was successful
-        if not balance_json.get("success", False):
-            print(
-                f"{RED}✗ Balance check failed: {balance_json.get('message', 'Unknown error')}{RESET}"
-            )
-            return False
-
-        # Extract the balance value from the result
-        # The response structure is: {"success": true, "message": "...", "data": {"Balance": {"_id": "...", "amount": 100}}}
-        balance_data = balance_json["data"][0]["Balance"]
-        user_balance = int(balance_data.get("amount", 0))
-
-        if user_balance == expected_user_balance:
-            print(
-                f"{GREEN}✓ User balance matches expected value: {expected_user_balance}{RESET}"
-            )
-            return True
-        else:
-            print(
-                f"{RED}✗ User balance {user_balance} does not match expected value: {expected_user_balance}{RESET}"
-            )
-            return False
-
-        # Check vault balance
-        vault_balance_result = run_command(
-            "dfx canister call vault get_balance '(\"vault\")' --output json"
-        )
-
-        if not vault_balance_result:
-            print(f"{RED}✗ Could not retrieve vault balance{RESET}")
-            return False
-
-        vault_balance_json = json.loads(vault_balance_result)
-
-        if not vault_balance_json.get("success", False):
-            print(f"{RED}✗ Could not retrieve vault balance{RESET}")
-            return False
-
-        # Extract the vault balance value
-        # Note: Assuming a standard response format, adjust if your API is different
-        vault_balance = None
-        try:
-            vault_balance = int(vault_balance_json["data"][0]["Balance"]["amount"])
-            print(f"Current vault balance: {vault_balance}")
-        except (KeyError, IndexError, TypeError):
-            print(f"{RED}✗ Could not parse vault balance{RESET}")
-            # If we can't get the balance, use a very large amount instead
-            vault_balance = 10000000000000
-
-        if vault_balance == expected_vault_balance:
-            print(
-                f"{GREEN}✓ Vault balance matches expected value: {expected_vault_balance}{RESET}"
-            )
-            return True
-        else:
-            print(
-                f"{RED}✗ Vault balance {vault_balance} does not match expected value: {expected_vault_balance}{RESET}"
-            )
-            return False
-
-    except Exception as e:
-        print(f"{RED}✗ Error checking balance: {e}{RESET}")
+    
+    # Check user balance
+    user_amount, user_success = check_balance(principal, expected_user_balance)
+    if not user_success:
         return False
+    
+    # Check vault balance
+    vault_amount, vault_success = check_balance("vault", expected_vault_balance)
+    if not vault_success:
+        return False
+    
+    return True
 
 
 def test_nonexistent_user_balance():
-    """Test checking balance for a non-existent user."""
+    """Test balance checking for a non-existent user."""
     print("\nTesting balance check for non-existent user...")
 
     # Use a non-existent principal
-    non_existent_principal = (
-        "2vxsx-fae"  # This is a valid principal format but likely not registered
-    )
-
-    try:
-        # Call the get_balance method for the non-existent user
-        balance_result = run_command(
-            f"dfx canister call vault get_balance '(\"{non_existent_principal}\")' --output json"
-        )
-
-        if not balance_result:
-            print(f"{RED}✗ Non-existent user balance check failed{RESET}")
-            return False
-
-        # Parse the JSON response
-        balance_json = json.loads(balance_result)
-
-        print(f"Non-existent user balance result: {balance_json}")
-
-        # Check if the result indicates zero balance or appropriate error
-        if balance_json.get("success", False):
-            try:
-                balance_data = balance_json["data"][0]["Balance"]
-                amount = int(balance_data.get("amount", -1))
-                if amount == 0:
-                    print(
-                        f"{GREEN}✓ Non-existent user has zero balance as expected{RESET}"
-                    )
-                    return True
-                else:
-                    print(f"{GREEN}✓ Non-existent user has balance: {amount}{RESET}")
-                    return True
-            except (KeyError, IndexError):
-                print(f"{RED}✗ Unexpected response format{RESET}")
-                return False
-        else:
-            # If an error was returned, this might be expected behavior too depending on implementation
-            print(
-                f"{GREEN}✓ Non-existent user properly handled with error: {balance_json.get('message', 'Unknown')}{RESET}"
-            )
-            return True
-
-    except Exception as e:
-        print(f"{RED}✗ Error checking non-existent user balance: {e}{RESET}")
-        return False
+    non_existent_principal = "2vxsx-fae"  # Valid format but not registered
+    
+    amount, result = check_balance(non_existent_principal)
+    
+    # If we got a successful response but with 0 balance, that's expected
+    if isinstance(result, tuple):
+        # This means we got an error message, which is acceptable for non-existent users
+        error_message, _ = result
+        print(f"{GREEN}✓ Non-existent user properly handled with error: {error_message}{RESET}")
+        return True
+    elif amount == 0:
+        print(f"{GREEN}✓ Non-existent user has zero balance as expected{RESET}")
+        return True
+    else:
+        print(f"{GREEN}✓ Non-existent user has balance: {amount}{RESET}")
+        return True
 
 
 def test_invalid_principal():
-    """Test checking balance with an invalid principal format."""
+    """Test balance checking with an invalid principal format."""
     print("\nTesting balance check with invalid principal format...")
 
     # Use a syntactically valid but semantically invalid principal
-    # This uses valid Base32 characters but is not a real principal
-    invalid_principal = (
-        "aaaaa-aaaa-aaaa-aaaa-aaaaa"  # This is a valid Base32 encoded string
-    )
-
+    invalid_principal = "aaaaa-aaaa-aaaa-aaaa-aaaaa"  # Valid Base32 but likely invalid principal
+    
     try:
-        # Call the get_balance method with invalid principal
-        balance_result = run_command(
-            f"dfx canister call vault get_balance '(\"{invalid_principal}\")' --output json"
-        )
-
-        # If the command failed to execute, it might be the expected behavior
-        if not balance_result:
-            print(
-                f"{GREEN}✓ Invalid principal correctly rejected at command level{RESET}"
-            )
+        amount, result = check_balance(invalid_principal)
+        
+        if isinstance(result, tuple):
+            # This means we got an error message
+            error_message, _ = result
+            print(f"{GREEN}✓ Invalid principal correctly rejected: {error_message}{RESET}")
             return True
-
-        # If we got a result, check if it's an error response
-        balance_json = json.loads(balance_result)
-
-        if not balance_json.get("success", False):
-            print(
-                f"{GREEN}✓ Invalid principal correctly rejected: {balance_json.get('message', 'Unknown error')}{RESET}"
-            )
+        elif amount is None:
+            print(f"{GREEN}✓ Invalid principal correctly rejected{RESET}")
             return True
         else:
             print(f"{RED}✗ Invalid principal was accepted, unexpected behavior{RESET}")
             return False
-
     except Exception as e:
         # If the execution failed with an exception, this might be expected behavior
         print(f"{GREEN}✓ Invalid principal correctly caused exception: {e}{RESET}")

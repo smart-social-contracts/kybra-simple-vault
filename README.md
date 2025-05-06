@@ -21,7 +21,7 @@ A canister written in Python using Kybra with which:
 
 ```bash
 # Deploy a vault ready to be used being your principal the admin.
-$ dfx deploy
+$ dfx deploy vault
 
 # Get an overview of the state of the vault.
 $ dfx canister call vault status 
