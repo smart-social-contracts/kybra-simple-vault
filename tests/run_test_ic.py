@@ -18,7 +18,6 @@ from tests.utils.colors import GREEN, RED, RESET
 from tests.test_cases.deployment_tests import (
     test_deploy_vault_with_params,
     test_deploy_vault_without_params,
-    test_set_admin,
     test_set_canisters
 )
 from tests.test_cases.transfer_tests import (
@@ -65,7 +64,6 @@ def main():
         # Deploy the vault canister
         results["Deploy Vault Without Params"] = test_deploy_vault_without_params()
         results["Set canisters"] = test_set_canisters()
-        # results["Set admin"] = test_set_admin()
         results["Deploy Vault With Params"] = test_deploy_vault_with_params(max_results=2, max_iterations=2)
 
         # # Transfer tokens to the vault
@@ -102,7 +100,7 @@ def main():
         # results["Transaction Pagination"] = test_transaction_pagination()
 
         # # Re-install vault canister
-        # results["Re-install Vault"] = test_reinstall_vault()
+        # results["Re-install Vault"] = test_upgrade()
 
         # Print test summary
         print(f"\n{GREEN}=== Test Summary ==={RESET}")

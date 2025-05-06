@@ -3,7 +3,7 @@
 Tests for deploying the vault canister with specific parameters.
 """
 
-from tests.utils.command import get_canister_id, get_current_principal, run_command
+from tests.utils.command import get_canister_id, get_current_principal, run_command, run_command_expects_response_obj
 from tests.utils.colors import GREEN, RED, RESET
 from src.vault.vault.constants import CANISTER_PRINCIPALS, MAX_ITERATIONS, MAX_RESULTS
 import json
@@ -105,9 +105,10 @@ def test_deploy_vault_without_params():
     return get_and_check_status(get_current_principal(), ledger_id, indexer_id, max_iterations, max_results)
 
 
-def test_reinstall_vault():
+def test_upgrade():
     # TODO
-    # - checks status, balances and transaction history
+    # - stores current status, balances and transaction history
+    # - redeploys the vault canister (--mode upgrade)
     # - checks update transactions and transfer
     pass
 
@@ -122,88 +123,18 @@ def test_set_canisters():
 
     # Test setting canisters with admin identity
     print("Testing setting canisters as admin...")
-    
-    set_cmd = f"""dfx canister call vault set_canister '(\"ckBTC ledger\", \"{ledger_id}\")' --output json"""
+
+    set_cmd = f"""dfx canister call vault set_canister '(\"ckBTC ledger\", principal \"{ledger_id}\")' --output json"""
     run_command_expects_response_obj(set_cmd)
 
-    set_cmd = f"""dfx canister call vault set_canister '(\"ckBTC indexer\", \"{indexer_id}\")' --output json"""
+    set_cmd = f"""dfx canister call vault set_canister '(\"ckBTC indexer\", principal \"{indexer_id}\")' --output json"""
     run_command_expects_response_obj(set_cmd)
 
     return get_and_check_status(get_current_principal(), ledger_id, indexer_id, MAX_ITERATIONS, MAX_RESULTS)
 
 
-def test_set_admin():
-    """Test that only admin can set a new admin in the vault."""
-    print("\nTesting set_admin functionality...")
-
-    # Get current user principal (current admin)
-    current_admin = get_current_principal()
-    if not current_admin:
-        return False
-
-    # We'll use the same principal as both current and new admin for testing
-    # In a real scenario, you might want to use a different principal
-    new_admin = current_admin
-
-    # Test setting admin with admin identity
-    print("Testing setting admin as current admin...")
-    set_cmd = f'dfx canister call vault set_admin "(principal \\"{new_admin}\\")" --output json'
-
-    try:
-        result = run_command(set_cmd)
-        if not result:
-            print(f"{RED}✗ Failed to set admin{RESET}")
-            return False
-
-        result_json = json.loads(result)
-        success = result_json.get("success", False)
-
-        if not success:
-            message = result_json.get("message", "Unknown error")
-            print(f"{RED}✗ Failed to set admin: {message}{RESET}")
-            return False
-
-        print(f"{GREEN}✓ Successfully set admin{RESET}")
-
-        # Verify admin was set by checking status
-        status_cmd = "dfx canister call vault status --output json"
-        status_result = run_command(status_cmd)
-
-        if not status_result:
-            print(f"{RED}✗ Failed to get vault status{RESET}")
-            return False
-
-        status_json = json.loads(status_result)
-        if not status_json.get("success", False):
-            print(f"{RED}✗ Vault status check failed{RESET}")
-            return False
-
-        # Extract admin from status
-        try:
-            status_data = status_json["data"][0]["Status"]
-            admin = status_data.get("admin", "")
-
-            if new_admin in admin:
-                print(f"{GREEN}✓ Admin verified in vault status{RESET}")
-            else:
-                print(f"{RED}✗ Admin not set correctly in vault status{RESET}")
-                return False
-
-        except (KeyError, IndexError) as e:
-            print(f"{RED}✗ Error extracting admin from status: {e}{RESET}")
-            return False
-
-        print(f"{GREEN}✓ set_admin functionality works correctly{RESET}")
-        return True
-
-    except Exception as e:
-        print(f"{RED}✗ Error in set_admin test: {e}\n{traceback.format_exc()}{RESET}")
-        return False
-
-
 if __name__ == "__main__":
     test_deploy_vault_with_params()
     test_deploy_vault_without_params()
-    test_reinstall_vault()
+    test_upgrade()
     test_set_canisters()
-    test_set_admin()

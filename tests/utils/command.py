@@ -7,6 +7,7 @@ from tests.utils.colors import GREEN, RED, RESET
 import os
 import subprocess
 import sys
+import json
 
 # Add the parent directory to the Python path to make imports work
 sys.path.insert(
