@@ -174,7 +174,9 @@ def update_transaction_history_until_no_more_transactions():
             print_error("Failed to update transaction history")
             return False
 
-        if response_json.get("data")[0].get("TransactionSummary").get("new_count") == 0:
+        new_count = int(response_json.get("data")[0].get("TransactionSummary").get("new_count"))
+        print(f"New count: {new_count}")
+        if new_count == 0:
             return True
     
-    return False
+    raise Exception("Failed to update transaction history completely after max iterations")

@@ -39,17 +39,10 @@ def update_transaction_history():
         return None, False
 
 
-def get_transactions(principal_id, max_results=None, max_iterations=None):
+def get_transactions(principal_id):
     """Get transactions for a principal and return parsed result."""
     try:
-        # Build the command based on available parameters
-        if max_results is not None and max_iterations is not None:
-            cmd = f"dfx canister call vault get_transactions '(\"{principal_id}\", opt {max_results}, opt {max_iterations})' --output json"
-        elif max_results is not None:
-            cmd = f"dfx canister call vault get_transactions '(\"{principal_id}\", opt {max_results})' --output json"
-        else:
-            cmd = f"dfx canister call vault get_transactions '(\"{principal_id}\")' --output json"
-            
+        cmd = f"dfx canister call vault get_transactions '(\"{principal_id}\")' --output json"
         tx_result = run_command(cmd)
 
         if not tx_result:
