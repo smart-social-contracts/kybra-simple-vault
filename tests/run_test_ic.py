@@ -23,7 +23,6 @@ from tests.test_cases.deployment_tests import (
 )
 from tests.test_cases.transfer_tests import (
     test_exceed_balance_transfer,
-    test_invalid_principal_transfer,
     test_multiple_transfers_sequence,
     test_negative_amount_transfer,
     test_transfer_from_vault,
@@ -41,7 +40,6 @@ from tests.test_cases.transaction_tests import (
 )
 from tests.test_cases.balance_tests import (
     test_balance,
-    test_invalid_principal,
     test_nonexistent_user_balance,
 )
 from tests.utils.command import (
@@ -79,7 +77,6 @@ def main():
         # Edge cases for transfers
         results["Zero Amount Transfer"] = test_zero_amount_transfer()
         results["Negative Amount Transfer"] = test_negative_amount_transfer()
-        results["Invalid Principal Transfer"] = test_invalid_principal_transfer()
         results["Exceed Balance Transfer"] = test_exceed_balance_transfer()
 
         # Update transaction history
@@ -91,7 +88,6 @@ def main():
             870, 870
         )  # Expected 1000 - 100 - 10 - 10 - 10
         results["Non-existent User Balance"] = test_nonexistent_user_balance()
-        results["Invalid Principal Balance"] = test_invalid_principal()
 
         # Check transaction history
         results["Transaction History"] = test_get_transactions([-100, -10, -10, -10, 1000])

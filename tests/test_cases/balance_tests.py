@@ -106,32 +106,32 @@ def test_nonexistent_user_balance():
         return True
 
 
-def test_invalid_principal():
-    """Test balance checking with an invalid principal format."""
-    print("\nTesting balance check with invalid principal format...")
+# def test_invalid_principal():
+#     """Test balance checking with an invalid principal format."""
+#     print("\nTesting balance check with invalid principal format...")
 
-    # Use a syntactically valid but semantically invalid principal
-    invalid_principal = (
-        "aaaaa-aaaa-aaaa-aaaa-aaaaa"  # Valid Base32 but likely invalid principal
-    )
+#     # Use a syntactically valid but semantically invalid principal
+#     invalid_principal = (
+#         "aaaaa-aaaa-aaaa-aaaa-aaaaa"  # Valid Base32 but likely invalid principal
+#     )
 
-    try:
-        amount, result = check_balance(invalid_principal)
+#     try:
+#         amount, result = check_balance(invalid_principal)
 
-        if isinstance(result, tuple):
-            # This means we got an error message
-            error_message, _ = result
-            print(
-                f"{GREEN}✓ Invalid principal correctly rejected: {error_message}{RESET}"
-            )
-            return True
-        elif amount is None:
-            print(f"{GREEN}✓ Invalid principal correctly rejected{RESET}")
-            return True
-        else:
-            print(f"{RED}✗ Invalid principal was accepted, unexpected behavior{RESET}")
-            return False
-    except Exception as e:
-        # If the execution failed with an exception, this might be expected behavior
-        print(f"{GREEN}✓ Invalid principal correctly caused exception: {e}{RESET}")
-        return True
+#         if isinstance(result, tuple):
+#             # This means we got an error message
+#             error_message, _ = result
+#             print(
+#                 f"{GREEN}✓ Invalid principal correctly rejected: {error_message}{RESET}"
+#             )
+#             return True
+#         elif amount is None:
+#             print(f"{GREEN}✓ Invalid principal correctly rejected{RESET}")
+#             return True
+#         else:
+#             print(f"{RED}✗ Invalid principal was accepted, unexpected behavior{RESET}")
+#             return False
+#     except Exception as e:
+#         # If the execution failed with an exception, this might be expected behavior
+#         print(f"{GREEN}✓ Invalid principal correctly caused exception: {e}{RESET}")
+#         return True

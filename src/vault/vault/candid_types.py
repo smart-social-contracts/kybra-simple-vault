@@ -25,7 +25,7 @@ class CanisterRecord(Record):
 
 class BalanceRecord(Record):
     principal_id: text
-    amount: nat
+    amount: int
 
 
 class TransactionRecord(Record):

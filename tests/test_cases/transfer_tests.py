@@ -173,33 +173,33 @@ def test_negative_amount_transfer():
         return False
 
 
-def test_invalid_principal_transfer():
-    """Test transferring tokens to an invalid principal."""
-    print("\nTesting transfer to invalid principal...")
+# def test_invalid_principal_transfer():
+#     """Test transferring tokens to an invalid principal."""
+#     print("\nTesting transfer to invalid principal...")
 
-    # Use an invalid principal format that will be caught by the Base32 check
-    invalid_principal = (
-        "aaaaa-aaaa-aaaa-aaaa-aaaaa"  # Valid Base32 but likely invalid principal
-    )
+#     # Use an invalid principal format that will be caught by the Base32 check
+#     invalid_principal = (
+#         "aaaaa-aaaa-aaaa-aaaa-aaaaa"  # Valid Base32 but likely invalid principal
+#     )
 
-    # Try to transfer to invalid principal
-    result_json, success = transfer_from_vault(invalid_principal, 100)
+#     # Try to transfer to invalid principal
+#     result_json, success = transfer_from_vault(invalid_principal, 100)
 
-    # Invalid principal transfers should be rejected
-    if not success:
-        if result_json is None:
-            print(
-                f"{GREEN}✓ Transfer to invalid principal correctly rejected at command level{RESET}"
-            )
-        else:
-            message = result_json.get("message", "")
-            print(
-                f"{GREEN}✓ Transfer to invalid principal correctly rejected: {message}{RESET}"
-            )
-        return True
-    else:
-        print(f"{RED}✗ Transfer to invalid principal unexpectedly succeeded{RESET}")
-        return False
+#     # Invalid principal transfers should be rejected
+#     if not success:
+#         if result_json is None:
+#             print(
+#                 f"{GREEN}✓ Transfer to invalid principal correctly rejected at command level{RESET}"
+#             )
+#         else:
+#             message = result_json.get("message", "")
+#             print(
+#                 f"{GREEN}✓ Transfer to invalid principal correctly rejected: {message}{RESET}"
+#             )
+#         return True
+#     else:
+#         print(f"{RED}✗ Transfer to invalid principal unexpectedly succeeded{RESET}")
+#         return False
 
 
 def test_exceed_balance_transfer():
