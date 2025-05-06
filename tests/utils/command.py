@@ -3,6 +3,7 @@
 Utility functions for running commands and interacting with canisters.
 """
 
+from tests.utils.colors import GREEN, RED, RESET
 import os
 import subprocess
 import sys
@@ -11,8 +12,6 @@ import sys
 sys.path.insert(
     0, os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 )
-
-from tests.utils.colors import GREEN, RED, RESET
 
 
 def run_command(command):
@@ -26,11 +25,29 @@ def run_command(command):
     return process.stdout.strip()
 
 
+def run_command_expects_response_obj(command):
+    """Run a shell command and return its output as a JSON object."""
+    result = run_command(command)
+    if not result:
+        print(f"{RED}✗ Failed to run command `{command}`{RESET}")
+        return False
+
+    result_json = json.loads(result)
+    success = result_json.get("success", False)
+
+    if not success:
+        message = result_json.get("message", "Unknown error")
+        print(f"{RED}✗ Failed to run command `{command}`: {message}{RESET}")
+        return False
+
+    return result_json
+
+
 def get_canister_id(canister_name):
     """Get the canister ID for the given canister name."""
     result = run_command(f"dfx canister id {canister_name}")
     if not result:
-        sys.exit(1)
+        raise Exception(f"Failed to get ID of canister {canister_name}")
     return result
 
 
@@ -38,8 +55,7 @@ def get_current_principal():
     """Get the principal ID of the current identity."""
     principal = run_command("dfx identity get-principal")
     if not principal:
-        print(f"{RED}✗ Failed to get principal{RESET}")
-        return None
+        raise Exception("Failed to get principal")
     return principal
 
 

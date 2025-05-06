@@ -75,7 +75,7 @@ fi
 
 # Run tests against the vault canister
 echo "Running IC integration tests..."
-python -u tests/run_vault_tests.py
+python -u tests/run_test_ic.py
 
 # Check the exit code of the tests
 if [ $? -ne 0 ]; then
