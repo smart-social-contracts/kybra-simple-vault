@@ -3,7 +3,13 @@
 Tests for deploying the vault canister with specific parameters.
 """
 
-from tests.utils.command import get_canister_id, get_current_principal, run_command, run_command_expects_response_obj
+from tests.utils.command import (
+    get_canister_id,
+    get_current_principal,
+    run_command,
+    run_command_expects_response_obj,
+    update_transaction_history_until_no_more_transactions
+)
 from tests.utils.colors import GREEN, RED, RESET, print_ok, print_error
 from src.vault.vault.constants import CANISTER_PRINCIPALS, MAX_ITERATIONS, MAX_RESULTS
 import json
@@ -108,6 +114,8 @@ def test_deploy_vault_without_params():
 def test_upgrade():
     """Test upgrading the vault canister while preserving state."""
     print("\nTesting vault canister upgrade...")
+
+    update_transaction_history_until_no_more_transactions()
     
     # Step 1: Store current state before upgrade
     
@@ -173,7 +181,7 @@ def test_upgrade():
         print_error("Failed to get transactions after upgrade")
         return False
     
-    post_tx_count = len(post_transactions.get("data", []))
+    post_tx_count = len(post_transactions["data"][0]["Transactions"])
     if post_tx_count < pre_tx_count:
         print_error(f"Transactions not preserved after upgrade: before={pre_tx_count}, after={post_tx_count}")
         return False
@@ -196,8 +204,8 @@ def test_upgrade():
         print_error("Failed to get final transactions")
         return False
     
-    final_tx_count = len(final_transactions.get("data", []))
-    if final_tx_count <= post_tx_count:
+    final_tx_count = len(final_transactions["data"][0]["Transactions"])
+    if final_tx_count != post_tx_count + 1:
         print_error("New transaction was not recorded after upgrade")
         return False
     

@@ -161,3 +161,20 @@ def deploy_ckbtc_indexer(ledger_id=None, interval_seconds=1):
         print_ok(f"ckbtc_indexer canister deployed with ID: {indexer_id}")
 
     return indexer_id
+
+
+def update_transaction_history_until_no_more_transactions():
+    loop_count = 0
+    while loop_count < 20:
+        loop_count += 1
+        response = run_command("dfx canister call vault update_transaction_history --output json")
+        response_json = json.loads(response)
+        success = response_json.get("success", False)
+        if not success:
+            print_error("Failed to update transaction history")
+            return False
+
+        if response_json.get("data")[0].get("TransactionSummary").get("new_count") == 0:
+            return True
+    
+    return False

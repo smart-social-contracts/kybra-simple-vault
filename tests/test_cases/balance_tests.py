@@ -14,7 +14,7 @@ sys.path.insert(
 )
 
 from tests.utils.colors import GREEN, RED, RESET
-from tests.utils.command import get_current_principal, run_command
+from tests.utils.command import get_current_principal, run_command, update_transaction_history_until_no_more_transactions
 
 
 def check_balance(principal_id, expected_amount=None):
@@ -61,6 +61,9 @@ def check_balance(principal_id, expected_amount=None):
 
 def test_balance(expected_user_balance, expected_vault_balance):
     """Test checking both user and vault balances."""
+
+    update_transaction_history_until_no_more_transactions()
+
     print("\nTesting balance functionality...")
 
     # Get current user principal

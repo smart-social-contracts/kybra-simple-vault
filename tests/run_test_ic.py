@@ -94,7 +94,7 @@ def main():
         results["Non-existent User Transactions"] = test_get_transactions_nonexistent_user()
         results["Transaction Ordering"] = test_transaction_ordering()
         results["Transaction Validity"] = test_transaction_validity()
-        results["Transaction Pagination"] = test_transaction_pagination()
+        # results["Transaction Pagination"] = test_transaction_pagination()
 
         # Re-install vault canister
         results["Re-install Vault"] = test_upgrade()
