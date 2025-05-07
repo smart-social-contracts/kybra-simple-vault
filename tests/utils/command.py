@@ -179,4 +179,4 @@ def update_transaction_history_until_no_more_transactions():
         if new_count == 0:
             return True
     
-    raise Exception("Failed to update transaction history completely after max iterations")
+    raise Exception("Failed to update transaction history completely after max iteration_count")

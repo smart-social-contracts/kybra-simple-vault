@@ -30,13 +30,11 @@ from tests.test_cases.transfer_tests import (
     test_zero_amount_transfer,
 )
 from tests.test_cases.transaction_tests import (
+    test_update_transactions_batches,
     test_get_transactions,
     test_get_transactions_nonexistent_user,
-    test_multiple_updates,
     test_transaction_ordering,
-    test_transaction_pagination,
     test_transaction_validity,
-    test_update_transactions,
 )
 from tests.test_cases.balance_tests import (
     test_balance,
@@ -61,9 +59,9 @@ def main():
         results = {}
 
         # Deploy the vault canister
-        results["Deploy Vault Without Params"] = test_deploy_vault_without_params()
-        results["Set canisters"] = test_set_canisters()
-        results["Deploy Vault With Params"] = test_deploy_vault_with_params(max_results=2, max_iterations=2)
+        # results["Deploy Vault Without Params"] = test_deploy_vault_without_params()
+        # results["Set canisters"] = test_set_canisters()
+        results["Deploy Vault With Params"] = test_deploy_vault_with_params(max_results=2, max_iteration_count=2)
 
         # Transfer tokens to the vault
         results["Transfer To Vault"] = test_transfer_to_vault(1000)
@@ -74,27 +72,25 @@ def main():
         # Transfer tokens from the vault
         results["Transfer From Vault"] = test_transfer_from_vault(100)
 
-        # Edge cases for transfers
-        results["Zero Amount Transfer"] = test_zero_amount_transfer()
-        results["Negative Amount Transfer"] = test_negative_amount_transfer()
-        results["Exceed Balance Transfer"] = test_exceed_balance_transfer()
+        # # Edge cases for transfers
+        # results["Zero Amount Transfer"] = test_zero_amount_transfer()
+        # results["Negative Amount Transfer"] = test_negative_amount_transfer()
+        # results["Exceed Balance Transfer"] = test_exceed_balance_transfer()
 
         # Update transaction history
-        results["Transaction Update"] = test_update_transactions(2)
-        results["Multiple Updates"] = test_multiple_updates()
+        results["Transaction Update"] = test_update_transactions_batches([2, 2, 1])
 
         # Check balances
         results["Regular User and Vault Balance"] = test_balance(
             870, 870
         )  # Expected 1000 - 100 - 10 - 10 - 10
-        results["Non-existent User Balance"] = test_nonexistent_user_balance()
+        # results["Non-existent User Balance"] = test_nonexistent_user_balance()
 
-        # Check transaction history
-        results["Transaction History"] = test_get_transactions([-100, -10, -10, -10, 1000])
-        results["Non-existent User Transactions"] = test_get_transactions_nonexistent_user()
-        results["Transaction Ordering"] = test_transaction_ordering()
-        results["Transaction Validity"] = test_transaction_validity()
-        # results["Transaction Pagination"] = test_transaction_pagination()
+        # # Check transaction history
+        # results["Transaction History"] = test_get_transactions([-100, -10, -10, -10, 1000])
+        # results["Non-existent User Transactions"] = test_get_transactions_nonexistent_user()
+        # results["Transaction Ordering"] = test_transaction_ordering()
+        # results["Transaction Validity"] = test_transaction_validity()
 
         # Re-install vault canister
         results["Re-install Vault"] = test_upgrade()

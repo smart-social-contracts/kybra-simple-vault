@@ -36,9 +36,11 @@ class TransactionRecord(Record):
 
 class AppDataRecord(Record):
     admin_principal: Opt[text]
-    last_transaction_id: Opt[nat]
     max_results: nat
-    max_iterations: nat
+    max_iteration_count: nat
+    scan_end_tx_id: Opt[nat]
+    scan_start_tx_id: Opt[nat]
+    scan_oldest_tx_id: Opt[nat]
 
 
 class Account(Record):
@@ -147,9 +149,7 @@ class TransactionIdRecord(Record):
 
 
 class TransactionSummaryRecord(Record):
-    total_processed: nat
-    new_count: nat
-    updated_count: nat
+    new_txs_count: nat
 
 
 class TransactionsListRecord(Record):

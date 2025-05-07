@@ -11,8 +11,32 @@ from kybra_simple_db import (
 class ApplicationData(Entity, TimestampedMixin):
     admin_principal = String()
     max_results = Integer()
-    max_iterations = Integer()
-    last_transaction_id = Integer()
+    max_iteration_count = Integer()
+
+    scan_end_tx_id = Integer()
+    scan_start_tx_id = Integer()
+    scan_oldest_tx_id = Integer()
+
+
+'''
+
+
+recent_history_end_tx_id
+recent_history_start_tx_id => needs to catch up to history_end_tx_id
+...
+
+old_history_end_tx_id
+old_history_start_tx_id => needs to catch up to oldest_tx_id
+
+
+Algorithm:
+query with start_tx_id = None
+the query returns transacions, get the batch_oldest_tx_id
+
+if batch_oldest_tx_id == oldest_tx_id:
+    exit
+
+'''
 
 
 class Canisters(Entity, TimestampedMixin):

@@ -6,4 +6,4 @@ CANISTER_PRINCIPALS = {
 }
 
 MAX_RESULTS = 20
-MAX_ITERATIONS = 5
+MAX_iteration_count = 5

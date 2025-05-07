@@ -11,7 +11,7 @@ from tests.utils.command import (
     update_transaction_history_until_no_more_transactions
 )
 from tests.utils.colors import GREEN, RED, RESET, print_ok, print_error
-from src.vault.vault.constants import CANISTER_PRINCIPALS, MAX_ITERATIONS, MAX_RESULTS
+from src.vault.vault.constants import CANISTER_PRINCIPALS, MAX_iteration_count, MAX_RESULTS
 import json
 import os
 import subprocess
@@ -24,7 +24,7 @@ sys.path.insert(
 )
 
 
-def get_and_check_status(admin_principal, ledger_id, indexer_id, max_iterations, max_results):
+def get_and_check_status(admin_principal, ledger_id, indexer_id, max_iteration_count, max_results):
     # run: dfx canister call vault status --output json
     # compare the result with the given params:
 
@@ -33,7 +33,7 @@ def get_and_check_status(admin_principal, ledger_id, indexer_id, max_iterations,
         status_cmd = "dfx canister call vault status --output json"
         status_result = run_command(status_cmd)
 
-        print(f"Comparing status result with params {admin_principal, ledger_id, indexer_id, max_iterations, max_results} against: {status_result}")
+        print(f"Comparing status result with params {admin_principal, ledger_id, indexer_id, max_iteration_count, max_results} against: {status_result}")
 
         if not status_result:
             print_error("Failed to check vault status")
@@ -47,7 +47,7 @@ def get_and_check_status(admin_principal, ledger_id, indexer_id, max_iterations,
         stats_data = status_json["data"][0]["Stats"]
 
         assert stats_data['app_data']['admin_principal'][0] == admin_principal
-        assert stats_data['app_data']['max_iterations'] == str(max_iterations)
+        assert stats_data['app_data']['max_iteration_count'] == str(max_iteration_count)
         assert stats_data['app_data']['max_results'] == str(max_results)
 
         tuples_to_check = [
@@ -64,7 +64,7 @@ def get_and_check_status(admin_principal, ledger_id, indexer_id, max_iterations,
     return True
 
 
-def test_deploy_vault_with_params(max_iterations, max_results):
+def test_deploy_vault_with_params(max_iteration_count, max_results):
     """Test deploying the vault canister with specific initialization parameters."""
     print("\nTesting vault deployment with initialization parameters...")
 
@@ -81,12 +81,12 @@ def test_deploy_vault_with_params(max_iterations, max_results):
         record {{ \\"ckBTC indexer\\"; principal \\"{indexer_id}\\" }}
       }},
       opt principal \\"{get_current_principal()}\\",
-      opt {max_iterations},
+      opt {max_iteration_count},
       opt {max_results}
     )" """
     run_command(deploy_cmd)
 
-    return get_and_check_status(get_current_principal(), ledger_id, indexer_id, max_iterations, max_results)
+    return get_and_check_status(get_current_principal(), ledger_id, indexer_id, max_iteration_count, max_results)
 
 
 def test_deploy_vault_without_params():
@@ -98,17 +98,17 @@ def test_deploy_vault_without_params():
     # Default values
     ledger_id = CANISTER_PRINCIPALS['ckBTC']['ledger']
     indexer_id = CANISTER_PRINCIPALS['ckBTC']['indexer']
-    max_iterations = MAX_ITERATIONS
+    max_iteration_count = MAX_iteration_count
     max_results = MAX_RESULTS
 
-    print('Default values:\nledger_id: ', ledger_id, '\nindexer_id: ', indexer_id, '\nmax_iterations: ', max_iterations, '\nmax_results: ', max_results)
+    print('Default values:\nledger_id: ', ledger_id, '\nindexer_id: ', indexer_id, '\nmax_iteration_count: ', max_iteration_count, '\nmax_results: ', max_results)
 
     # Deploy the vault without any arguments (relying on default values)
     deploy_cmd = "dfx deploy vault"
 
     run_command(deploy_cmd)
 
-    return get_and_check_status(get_current_principal(), ledger_id, indexer_id, max_iterations, max_results)
+    return get_and_check_status(get_current_principal(), ledger_id, indexer_id, max_iteration_count, max_results)
 
 
 def test_upgrade():
@@ -230,11 +230,11 @@ def test_set_canisters():
     set_cmd = f"""dfx canister call vault set_canister '(\"ckBTC indexer\", principal \"{indexer_id}\")' --output json"""
     run_command_expects_response_obj(set_cmd)
 
-    return get_and_check_status(get_current_principal(), ledger_id, indexer_id, MAX_ITERATIONS, MAX_RESULTS)
+    return get_and_check_status(get_current_principal(), ledger_id, indexer_id, MAX_iteration_count, MAX_RESULTS)
 
 
 if __name__ == "__main__":
-    test_deploy_vault_with_params(MAX_ITERATIONS, MAX_RESULTS)
+    test_deploy_vault_with_params(MAX_iteration_count, MAX_RESULTS)
     test_deploy_vault_without_params()
     test_upgrade()
     test_set_canisters()
