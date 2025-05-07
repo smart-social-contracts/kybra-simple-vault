@@ -286,12 +286,11 @@ def update_transaction_history() -> Async[Response]:
         scan_start_tx_id = app_data().scan_start_tx_id
         scan_oldest_tx_id = app_data().scan_oldest_tx_id
 
-        do_not_iterate_next = True
         batch_iteration_count = 0
         new_txs_count = 0
 
         # Implement cursor-based pagination to fetch all transactions
-        while do_not_iterate_next and batch_iteration_count < batch_max_iteration_count:
+        while batch_iteration_count < batch_max_iteration_count:
             batch_iteration_count += 1
             logger.debug(f"batch_iteration_count: {batch_iteration_count}/{batch_max_iteration_count}")
 
@@ -325,22 +324,26 @@ def update_transaction_history() -> Async[Response]:
             #     do_not_iterate_next = False
 
             response_txs.sort(key=lambda x: x["id"], reverse=True)  # sort by id descending
-            highest_tx_id = response_txs[0]["id"]
-            if scan_oldest_tx_id is not None and scan_oldest_tx_id == scan_start_tx_id and highest_tx_id <= scan_end_tx_id:
-                logger.info("No new transactions to be scanned. We are in sync.")
-                break
 
-            (processed_batch_oldest_tx_id, processed_batch_newest_tx_id, processed_txs_count) = _process_batch_txs(canister_id, response_txs)
-            if not processed_txs_count:
+            # highest_tx_id = response_txs[0]["id"]
+            # if scan_oldest_tx_id is not None and scan_oldest_tx_id == scan_start_tx_id and highest_tx_id <= scan_end_tx_id:
+            #     logger.info("No new transactions to be scanned. We are in sync.")
+            #     break
+
+            (processed_batch_oldest_tx_id, processed_batch_newest_tx_id, processed_tx_ids, inserted_new_txs_ids) = _process_batch_txs(canister_id, response_txs)
+            logger.debug(f"Processed {len(processed_tx_ids)} transactions in batch")
+            logger.debug(f"Processed batch oldest tx id: {processed_batch_oldest_tx_id}")
+            logger.debug(f"Processed batch newest tx id: {processed_batch_newest_tx_id}")
+            if not len(processed_tx_ids):
                 logger.debug("No transactions processed in batch")
                 break
 
-            new_txs_count += processed_txs_count
+            new_txs_count += len(inserted_new_txs_ids)
 
             if not scan_end_tx_id or scan_end_tx_id < processed_batch_newest_tx_id:
                 scan_end_tx_id = processed_batch_newest_tx_id
                 app_data().scan_end_tx_id = processed_batch_newest_tx_id
-            if not scan_start_tx_id or scan_start_tx_id > processed_batch_oldest_tx_id:
+            if not scan_start_tx_id or scan_start_tx_id > processed_batch_oldest_tx_id or start_tx_id is None:
                 scan_start_tx_id = processed_batch_oldest_tx_id
                 app_data().scan_start_tx_id = processed_batch_oldest_tx_id
 
@@ -379,7 +382,8 @@ def _process_batch_txs(canister_id, txs):
 
     processed_batch_oldest_tx_id = None
     processed_batch_newest_tx_id = None
-    processed_txs_count = 0
+    processed_tx_ids = []
+    inserted_new_txs_ids = []
 
     logger.debug(f"Processing batch of {len(txs)} transactions")
 
@@ -460,21 +464,19 @@ def _process_batch_txs(canister_id, txs):
             # Create or update the VaultTransaction
             existing_tx = VaultTransaction[tx_id]
             if existing_tx:
-                # TODO: probably we just want to warn here too, as we should never enter here anyways
-                # Update existing transaction if needed
-                # if (
-                #     existing_tx.principal_from != principal_from
-                #     or existing_tx.principal_to != principal_to
-                #     or existing_tx.amount != amount
-                #     or existing_tx.timestamp != timestamp
-                #     or existing_tx.kind != kind
-                # ):
-                #     existing_tx.principal_from = principal_from
-                #     existing_tx.principal_to = principal_to
-                #     existing_tx.amount = amount
-                #     existing_tx.timestamp = timestamp
-                #     existing_tx.kind = kind
-                pass
+                if (
+                    existing_tx.principal_from != principal_from
+                    or existing_tx.principal_to != principal_to
+                    or existing_tx.amount != amount
+                    or existing_tx.timestamp != timestamp
+                    or existing_tx.kind != kind
+                ):
+                    existing_tx.principal_from = principal_from
+                    existing_tx.principal_to = principal_to
+                    existing_tx.amount = amount
+                    existing_tx.timestamp = timestamp
+                    existing_tx.kind = kind
+
 
             else:
                 # Create new transaction
@@ -536,19 +538,21 @@ def _process_batch_txs(canister_id, txs):
                         vault_balance = Balance[canister_id]
                         vault_balance.amount = vault_balance.amount - amount
 
-                if not processed_batch_oldest_tx_id or processed_batch_oldest_tx_id > tx_id:
-                    processed_batch_oldest_tx_id = tx_id
-                if not processed_batch_newest_tx_id or processed_batch_newest_tx_id < tx_id:
-                    processed_batch_newest_tx_id = tx_id
-                processed_txs_count += 1
+                inserted_new_txs_ids.append(tx_id)
+
+            if not processed_batch_oldest_tx_id or processed_batch_oldest_tx_id > tx_id:
+                processed_batch_oldest_tx_id = tx_id
+            if not processed_batch_newest_tx_id or processed_batch_newest_tx_id < tx_id:
+                processed_batch_newest_tx_id = tx_id
+            processed_tx_ids.append(tx_id)
 
         except Exception as e:
             logger.error(
                 f"Error processing transaction {tx_id}: {e}\n {traceback.format_exc()}"
             )
     
-    logger.debug(f"Processed {processed_txs_count} transactions, from id {processed_batch_oldest_tx_id} to id {processed_batch_newest_tx_id}")
-    return processed_batch_oldest_tx_id, processed_batch_newest_tx_id, processed_txs_count
+    logger.debug(f"Processed {len(processed_tx_ids)} transactions, from id {processed_batch_oldest_tx_id} to id {processed_batch_newest_tx_id}")
+    return processed_batch_oldest_tx_id, processed_batch_newest_tx_id, processed_tx_ids, inserted_new_txs_ids
 
 
 
