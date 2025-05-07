@@ -77,7 +77,8 @@ def test_balance(expected_user_balance, expected_vault_balance):
         return False
 
     # Check vault balance
-    vault_amount, vault_success = check_balance("vault", expected_vault_balance)
+    vault_id = get_canister_id("vault")
+    vault_amount, vault_success = check_balance(vault_id, expected_vault_balance)
     if not vault_success:
         return False
 

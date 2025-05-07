@@ -60,13 +60,16 @@ def get_current_principal():
     return principal
 
 
-def deploy_ckbtc_ledger(initial_balance=1_000_000_000, transfer_fee=10):
+def deploy_ckbtc_ledger(initial_balance=1_000_000_000, transfer_fee=10, identities=None, identity_balances=None):
     """
     Deploy the ckBTC ledger canister with specified parameters.
 
     Args:
         initial_balance: Initial token balance for the current principal
         transfer_fee: Fee for token transfers
+        identities: Optional dict mapping identity names to principals (from create_test_identities)
+        identity_balances: Optional dict mapping identity names to their initial balances
+                          If not provided, identities will have zero balance
 
     Returns:
         str: Canister ID of the deployed ledger, or None if deployment failed
@@ -80,7 +83,35 @@ def deploy_ckbtc_ledger(initial_balance=1_000_000_000, transfer_fee=10):
 
     # Fixed minting principal for test environment
     minting_principal = "aaaaa-aa"
-
+    
+    # Build the initial balances section
+    balance_entries = []
+    
+    # Add current principal balance first
+    balance_entries.append(f"""record {{ 
+            record {{ 
+              owner = principal \\"{current_principal}\\"; 
+              subaccount = null 
+            }}; 
+            {initial_balance} 
+          }}""")
+    
+    # Add balances for identities if provided
+    if identities and identity_balances:
+        for name, principal_id in identities.items():
+            if name in identity_balances:
+                balance = identity_balances[name]
+                balance_entries.append(f"""record {{ 
+            record {{ 
+              owner = principal \\"{principal_id}\\"; 
+              subaccount = null 
+            }}; 
+            {balance} 
+          }}""")
+    
+    # Join the entries with semicolons (Candid syntax) to avoid trailing commas
+    initial_balances_vec = "; ".join(balance_entries)
+    
     # Construct the deploy command with all parameters
     deploy_cmd = f"""dfx deploy --no-wallet ckbtc_ledger --argument="(variant {{ 
       Init = record {{ 
@@ -94,13 +125,7 @@ def deploy_ckbtc_ledger(initial_balance=1_000_000_000, transfer_fee=10):
         decimals = opt 8; 
         metadata = vec {{}}; 
         initial_balances = vec {{ 
-          record {{ 
-            record {{ 
-              owner = principal \\"{current_principal}\\"; 
-              subaccount = null 
-            }}; 
-            {initial_balance} 
-          }} 
+          {initial_balances_vec}
         }}; 
         feature_flags = opt record {{ 
           icrc2 = true 
@@ -174,9 +199,193 @@ def update_transaction_history_until_no_more_transactions():
             print_error("Failed to update transaction history")
             return False
 
-        new_count = int(response_json.get("data")[0].get("TransactionSummary").get("new_count"))
+        new_count = int(response_json.get("data")[0].get("TransactionSummary").get("new_txs_count"))
         print(f"New count: {new_count}")
         if new_count == 0:
             return True
     
     raise Exception("Failed to update transaction history completely after max iteration_count")
+
+
+def generate_transaction_commands(transactions):
+    """
+    Generate dfx commands for a list of transaction data.
+    
+    Args:
+        transactions: List of dictionaries containing transaction data.
+                     Each transaction should have at minimum:
+                     - 'type': 'to_vault' or 'from_vault'
+                     - 'principal': Principal ID for the transaction
+                     - 'amount': Amount to transfer
+                     
+                     Optional fields:
+                     - 'memo': Memo for the transaction (only for to_vault)
+                     - 'subaccount': Subaccount (only for to_vault)
+                     - 'fee': Fee for the transaction (only for to_vault)
+    
+    Returns:
+        List of strings, each containing a dfx command ready to be executed.
+    """
+    commands = []
+    
+    for tx in transactions:
+        # Validate required fields
+        if 'type' not in tx or 'principal' not in tx or 'amount' not in tx:
+            print_error(f"Transaction missing required fields: {tx}")
+            continue
+            
+        if tx['type'] == 'from_vault':
+            # Transfer from vault to a principal
+            cmd = f"dfx canister call vault transfer '(principal \"{tx['principal']}\", {tx['amount']})' --output json"
+            commands.append(cmd)
+            
+        elif tx['type'] == 'to_vault':
+            # Transfer from a principal to the vault
+            # Get the vault canister ID
+            vault_id = get_canister_id("vault")
+            if not vault_id:
+                print_error("Failed to get vault canister ID")
+                continue
+                
+            # Build the subaccount part
+            subaccount_part = f"subaccount = {tx.get('subaccount', 'null')}"
+            
+            # Build the fee part
+            fee_part = f"fee = {tx.get('fee', 'null')}"
+            
+            # Build the memo part
+            memo_part = f"memo = {tx.get('memo', 'null')}"
+            
+            # Build the from_subaccount part
+            from_subaccount_part = f"from_subaccount = {tx.get('from_subaccount', 'null')}"
+            
+            # Build the created_at_time part
+            created_at_time_part = f"created_at_time = {tx.get('created_at_time', 'null')}"
+            
+            # Construct the full command
+            cmd = f"dfx canister call ckbtc_ledger icrc1_transfer '(record {{ to = record {{ owner = principal \"{vault_id}\"; {subaccount_part} }}; amount = {tx['amount']}; {fee_part}; {memo_part}; {from_subaccount_part}; {created_at_time_part} }})' --output json"
+            commands.append(cmd)
+            
+        elif tx['type'] == 'update_history':
+            # Command to update transaction history
+            cmd = f"dfx canister call vault update_transaction_history --output json"
+            commands.append(cmd)
+            
+        elif tx['type'] == 'get_transactions':
+            # Command to get transactions for a principal
+            cmd = f"dfx canister call vault get_transactions '(\"{tx['principal']}\")' --output json"
+            commands.append(cmd)
+            
+        elif tx['type'] == 'get_balance':
+            # Command to get balance for a principal
+            cmd = f"dfx canister call vault get_balance '(\"{tx['principal']}\")' --output json"
+            commands.append(cmd)
+            
+        else:
+            print_error(f"Unknown transaction type: {tx['type']}")
+            
+    return commands
+
+
+def execute_transactions(transaction_pairs, identities=None, start_amount=101, initial_balances=None):
+    """
+    Execute transactions with balance tracking.
+    
+    Args:
+        transaction_pairs: Pairs of [from, to] with 'vault', identity names, or 'principal'
+        identities: Dict of identity names to principals (from create_test_identities)
+        start_amount: Starting amount (increments by 1 for each transaction)
+        initial_balances: Optional starting balances for accounts
+    
+    Returns:
+        (success, final_balances)
+    """
+    amount = start_amount
+    success = True
+    
+    # Set up principals map
+    principals = {'principal': get_current_principal()}
+    if identities:
+        principals.update(identities)
+    
+    # Initialize balances
+    balances = {} if initial_balances is None else initial_balances.copy()
+    for user in list(principals.keys()) + ['vault']:
+        if user not in balances:
+            balances[user] = 0
+    
+    # Process each transaction
+    for sender, receiver in transaction_pairs:
+        if sender == 'update_history':
+            run_command("dfx canister call vault update_transaction_history --output json")
+            continue
+        
+        # Resolve principals
+        sender_id = principals.get(sender, sender)
+        receiver_id = principals.get(receiver, receiver)
+            
+        if sender == 'vault':
+            # Vault -> User
+            cmd = f"dfx canister call vault transfer '(principal \"{receiver_id}\", {amount})' --output json"
+            print(f"{sender} → {receiver} ({amount})")
+            if run_command(cmd):
+                balances['vault'] -= amount
+                balances[receiver] += amount
+            else:
+                success = False
+                
+        elif receiver == 'vault':
+            # User -> Vault
+            vault_id = get_canister_id("vault")
+            if not vault_id:
+                success = False
+                continue
+                
+            cmd = f"dfx canister call ckbtc_ledger icrc1_transfer '(record {{ to = record {{ owner = principal \"{vault_id}\"; subaccount = null }}; amount = {amount}; fee = null; memo = null; from_subaccount = null; created_at_time = null }})' --output json"
+            print(f"{sender} → {receiver} ({amount})")
+            if run_command(cmd):
+                balances[sender] -= amount
+                balances['vault'] += amount
+            else:
+                success = False
+        
+        amount += 1
+    
+    # Print final balances
+    for account, balance in balances.items():
+        print(f"{account}: {balance}")
+    
+    return success, balances
+
+
+def create_test_identities(identity_names):
+    """
+    Create test dfx identities.
+    
+    Args:
+        identity_names: List of identity names to create (e.g. ['alice', 'bob'])
+    
+    Returns:
+        Dictionary mapping identity names to their principal IDs
+    """
+    identities = {}
+    current_identity = run_command("dfx identity whoami")
+    
+    try:
+        for name in identity_names:
+            # Create identity if needed
+            existing = run_command("dfx identity list")
+            if name not in existing.split():
+                run_command(f"dfx identity new --disable-encryption {name}")
+                
+            # Get principal ID
+            run_command(f"dfx identity use {name}")
+            principal = get_current_principal()
+            
+            if principal:
+                identities[name] = principal
+                print(f"{name}: {principal}")
+    finally:
+        run_command(f"dfx identity use {current_identity}")
+    
+    return identities

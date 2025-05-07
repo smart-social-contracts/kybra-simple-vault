@@ -8,6 +8,7 @@ Main test runner for the vault canister tests.
 import traceback
 import os
 import sys
+import json
 
 # Add the parent directory to the Python path to make imports work
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
@@ -39,10 +40,15 @@ from tests.test_cases.transaction_tests import (
 from tests.test_cases.balance_tests import (
     test_balance,
     test_nonexistent_user_balance,
+    check_balance
 )
 from tests.utils.command import (
     deploy_ckbtc_ledger,
-    deploy_ckbtc_indexer
+    deploy_ckbtc_indexer,
+    create_test_identities,
+    execute_transactions,
+    get_canister_id,
+    run_command
 )
 
 
@@ -51,50 +57,85 @@ def main():
         """Run the vault canister tests."""
         print("=== Starting Vault IC Tests ===")
 
-        # Deploy ck canisters
-        deploy_ckbtc_ledger()
+        # Create test identities
+        print("\nCreating test identities...")
+        identities = create_test_identities(['alice', 'bob', 'charlie'])
+        print(f"Created identities: {', '.join(identities.keys())}")
+        
+        # Set initial balances for identities
+        identity_balances = {
+            'alice': 500_000_000,
+            'bob': 300_000_000,
+            'charlie': 100_000_000
+        }
+        
+        # Deploy ck canisters with initial balances for identities
+        print("\nDeploying ckBTC ledger with initial balances...")
+        deploy_ckbtc_ledger(
+            initial_balance=1_000_000_000,  # Current principal gets 1B tokens
+            transfer_fee=10,
+            identities=identities,
+            identity_balances=identity_balances
+        )
         deploy_ckbtc_indexer()
 
         # Test results
         results = {}
 
         # Deploy the vault canister
-        # results["Deploy Vault Without Params"] = test_deploy_vault_without_params()
-        # results["Set canisters"] = test_set_canisters()
         results["Deploy Vault With Params"] = test_deploy_vault_with_params(max_results=2, max_iteration_count=2)
-
-        # Transfer tokens to the vault
-        results["Transfer To Vault"] = test_transfer_to_vault(1000)
-
-        # Test sequence of transfers
-        results["Multiple Transfers"] = test_multiple_transfers_sequence([10, 10, 10])
-
-        # Transfer tokens from the vault
-        results["Transfer From Vault"] = test_transfer_from_vault(100)
-
-        # # Edge cases for transfers
-        # results["Zero Amount Transfer"] = test_zero_amount_transfer()
-        # results["Negative Amount Transfer"] = test_negative_amount_transfer()
-        # results["Exceed Balance Transfer"] = test_exceed_balance_transfer()
-
-        # Update transaction history
-        results["Transaction Update"] = test_update_transactions_batches([2, 2, 1])
-
-        # Check balances
-        results["Regular User and Vault Balance"] = test_balance(
-            870, 870
-        )  # Expected 1000 - 100 - 10 - 10 - 10
-        # results["Non-existent User Balance"] = test_nonexistent_user_balance()
-
-        # # Check transaction history
-        # results["Transaction History"] = test_get_transactions([-100, -10, -10, -10, 1000])
-        # results["Non-existent User Transactions"] = test_get_transactions_nonexistent_user()
-        # results["Transaction Ordering"] = test_transaction_ordering()
-        # results["Transaction Validity"] = test_transaction_validity()
-
+        
+        # Define transaction sequence
+        print("\nExecuting transaction sequence...")
+        transactions = [
+            # Transfers to vault
+            ['alice', 'vault'],      # Alice sends to vault
+            ['bob', 'vault'],        # Bob sends to vault
+            ['charlie', 'vault'],    # Charlie sends to vault
+            
+            # Transfers from vault
+            ['vault', 'alice'],      # Vault sends to Alice
+            ['vault', 'bob'],        # Vault sends to Bob
+            
+            # Update transaction history
+            ['update_history', ''],
+            
+            # More transactions
+            ['alice', 'vault'],      # Alice sends more to vault
+            ['vault', 'charlie']     # Vault sends to Charlie
+        ]
+        
+        # Execute transactions with auto-incrementing amounts (start at 101)
+        success, expected_balances = execute_transactions(
+            transaction_pairs=transactions,
+            identities=identities,
+            start_amount=101
+        )
+        
+        results["Transaction Sequence"] = success
+        
+        print("\nExpected Balances After Transactions:")
+        for account, balance in expected_balances.items():
+            if account != 'vault':  # Skip vault in this loop
+                print(f"  {account}: {balance}")
+        
+        # Verify balances
+        print("\nVerifying balances...")
+        balance_verification_success = True
+        
+        # Check all balances (vault + identities)
+        to_check = {'vault': get_canister_id("vault")}
+        to_check.update({name: pid for name, pid in identities.items() if name in expected_balances})
+        
+        for name, principal_id in to_check.items():
+            _, success = check_balance(principal_id, expected_balances.get(name, 0))
+            balance_verification_success = balance_verification_success and success
+        
+        results["Balance Verification"] = balance_verification_success
+        
         # Re-install vault canister
         results["Re-install Vault"] = test_upgrade()
-
+        
         # Print test summary
         print("\n=== Test Summary ===")
         for test_name, passed in results.items():
