@@ -326,8 +326,8 @@ def update_transaction_history() -> Async[Response]:
 
             response_txs.sort(key=lambda x: x["id"], reverse=True)  # sort by id descending
             highest_tx_id = response_txs[0]["id"]
-            if scan_start_tx_id is not None and highest_tx_id <= scan_start_tx_id:
-                logger.debug("No new transactions found. We are still in sync.")
+            if scan_oldest_tx_id is not None and scan_oldest_tx_id == scan_start_tx_id and highest_tx_id <= scan_end_tx_id:
+                logger.info("No new transactions to be scanned. We are in sync.")
                 break
 
             (processed_batch_oldest_tx_id, processed_batch_newest_tx_id, processed_txs_count) = _process_batch_txs(canister_id, response_txs)
@@ -362,7 +362,7 @@ def update_transaction_history() -> Async[Response]:
             success=False, message=f"Error processing transactions: {str(e)}", data=None
         )
 
-    summary_msg = f"Processed {new_txs_count} new transactions"
+    summary_msg = f"Processed a total of {new_txs_count} new transactions"
     logger.info(summary_msg)
     return Response(
         success=True,
