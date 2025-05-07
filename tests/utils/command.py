@@ -309,10 +309,17 @@ def execute_transactions(transaction_pairs, identities=None, start_amount=101, i
         principals.update(identities)
     
     # Initialize balances
-    balances = {} if initial_balances is None else initial_balances.copy()
-    for user in list(principals.keys()) + ['vault']:
-        if user not in balances:
-            balances[user] = 0
+    # For regular token balances (outside vault)
+    token_balances = {} 
+    if initial_balances:
+        token_balances = initial_balances.copy()
+    
+    # For vault balances (net deposits)
+    vault_balances = {'vault': 0}
+    for user in list(principals.keys()):
+        if user not in token_balances:
+            token_balances[user] = 0
+        vault_balances[user] = 0  # Initialize vault balance to 0
     
     # Process each transaction
     for sender, receiver in transaction_pairs:
@@ -320,42 +327,106 @@ def execute_transactions(transaction_pairs, identities=None, start_amount=101, i
             run_command("dfx canister call vault update_transaction_history --output json")
             continue
         
-        # Resolve principals
-        sender_id = principals.get(sender, sender)
-        receiver_id = principals.get(receiver, receiver)
-            
+        # Get sender and receiver principals/identities
+        sender_principal = principals.get(sender, sender) if sender != 'vault' else 'vault'
+        receiver_principal = principals.get(receiver, receiver) if receiver != 'vault' else 'vault'
+        
+        print(f"Transaction: {sender} -> {receiver}, amount: {amount}")
+        
+        # Track token balances (outside the vault)
+        if sender != 'vault' and sender in token_balances:
+            token_balances[sender] -= amount
+        if receiver != 'vault' and receiver in token_balances:
+            token_balances[receiver] += amount
+        
+        # Track vault balances (net deposits)
+        if sender == 'vault' and receiver in vault_balances:
+            # Vault is sending to user (withdrawal)
+            vault_balances[receiver] -= amount
+        elif receiver == 'vault' and sender in vault_balances:
+            # User is sending to vault (deposit)
+            vault_balances[sender] += amount
+        
+        # Execute transfer
+        sender_id = 'vault' if sender == 'vault' else principals.get(sender, sender)
+        receiver_id = 'vault' if receiver == 'vault' else principals.get(receiver, receiver)
+        
         if sender == 'vault':
-            # Vault -> User
-            cmd = f"dfx canister call vault transfer '(principal \"{receiver_id}\", {amount})' --output json"
-            print(f"{sender} → {receiver} ({amount})")
-            if run_command(cmd):
-                balances['vault'] -= amount
-                balances[receiver] += amount
-            else:
-                success = False
-                
+            cmd = f"""dfx canister call vault transfer '(
+                principal "{receiver_id}",
+                {amount}
+            )' --output json"""
+            
         elif receiver == 'vault':
-            # User -> Vault
+            # User sending to vault - need to transfer via ledger
+            identity_arg = f"--identity {sender}" if sender in identities else ""
+            
+            # Get vault canister ID
             vault_id = get_canister_id("vault")
             if not vault_id:
+                print_error(f"Failed to get vault canister ID")
                 success = False
                 continue
                 
-            cmd = f"dfx canister call ckbtc_ledger icrc1_transfer '(record {{ to = record {{ owner = principal \"{vault_id}\"; subaccount = null }}; amount = {amount}; fee = null; memo = null; from_subaccount = null; created_at_time = null }})' --output json"
-            print(f"{sender} → {receiver} ({amount})")
-            if run_command(cmd):
-                balances[sender] -= amount
-                balances['vault'] += amount
-            else:
+            # Transfer tokens to the vault via ledger
+            transfer_cmd = f"""dfx {identity_arg} canister call ckbtc_ledger icrc1_transfer '(
+                record {{ 
+                    to = record {{ 
+                        owner = principal "{vault_id}"; 
+                        subaccount = null 
+                    }}; 
+                    amount = {amount}; 
+                    fee = null; 
+                    memo = null; 
+                    from_subaccount = null; 
+                    created_at_time = null 
+                }}
+            )' --output json"""
+            
+            print(f"Transferring {amount} tokens from {sender} to vault via ledger...")
+            transfer_result = run_command(transfer_cmd)
+            if not transfer_result:
+                print_error(f"Failed to transfer tokens from {sender} to vault")
                 success = False
-        
+                continue
+                
+            transfer_json = json.loads(transfer_result)
+            if "Err" in transfer_json:
+                print_error(f"Transfer error: {transfer_json['Err']}")
+                success = False
+                continue
+                
+            print(f"Transfer successful: {transfer_json}")
+                
+            # Now tell the vault to update transaction history
+            update_cmd = "dfx canister call vault update_transaction_history --output json"
+            update_result = run_command(update_cmd)
+            if not update_result:
+                print_error("Failed to update transaction history")
+            
+            cmd = transfer_cmd  # For logging
+            
+        else:
+            # Get current identity's principal
+            current_principal = get_current_principal()
+            
+            # If sender is not the current principal, we need to switch identities
+            identity_arg = f"--identity {sender}" if sender in identities else ""
+            
+            cmd = f"""dfx {identity_arg} canister call vault send '(
+                principal "{receiver_id}",
+                {amount}
+            )' --output json"""
+            
+            # Run the transaction command
+            tx_result = run_command(cmd)
+            if not tx_result or not json.loads(tx_result).get("success", False):
+                print_error(f"Transaction failed: {sender} -> {receiver}")
+                success = False
+            
         amount += 1
     
-    # Print final balances
-    for account, balance in balances.items():
-        print(f"{account}: {balance}")
-    
-    return success, balances
+    return success, vault_balances
 
 
 def create_test_identities(identity_names):
