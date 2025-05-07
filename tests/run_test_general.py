@@ -49,6 +49,7 @@ from tests.utils.command import (
     deploy_ckbtc_indexer,
     deploy_ckbtc_ledger,
     run_command,
+    update_transaction_history_until_no_more_transactions,
 )
 
 
@@ -86,23 +87,16 @@ def main():
         results["Non-existent User Transactions"] = (
             test_get_transactions_nonexistent_user()
         )
+
+        update_transaction_history_until_no_more_transactions()
+
+        # Check transaction ordering and validity
         results["Transaction Ordering"] = test_transaction_ordering()
         results["Transaction Validity"] = test_transaction_validity()
 
-        # Re-install vault canister
-        print("\nTesting vault canister upgrade...")
+        # Upgrade the vault canister
+        results["Upgrade Vault"] = test_upgrade()
 
-        # Skip the balance check before/after upgrade since we just verified balances
-        results["Re-install Vault"] = True
-
-        # Run a simple upgrade test that doesn't try to verify balances
-        upgrade_success = run_command("dfx canister install vault --mode=upgrade --yes")
-
-        if upgrade_success:
-            print_ok("Vault canister upgraded successfully")
-        else:
-            print_error("Failed to upgrade vault canister")
-            results["Re-install Vault"] = False
 
         # Print test summary
         print("\n=== Test Summary ===")

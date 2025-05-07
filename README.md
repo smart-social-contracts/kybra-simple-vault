@@ -35,7 +35,7 @@ $ dfx canister call vault get_balance
 # Get all the transactions for a specific principal.
 $ dfx canister call vault get_transactions 
 
-# Send tokens to a specific address
+# Send tokens to a specific address (only the admin can do this operation).
 $ dfx canister call vault transfer 
 
 
