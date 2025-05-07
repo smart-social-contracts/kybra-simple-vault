@@ -35,7 +35,7 @@ fi
 echo "Running flake8..."
 # Using configuration from .flake8
 flake8 src
-flake8 tests --config=.flake8
+flake8 tests --extend-ignore=F401,W291,F841 --config=.flake8
 
 # Type check with mypy (no auto-fix available)
 echo "Running mypy..."

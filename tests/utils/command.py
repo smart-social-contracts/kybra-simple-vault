@@ -80,7 +80,7 @@ def deploy_ckbtc_ledger(
     Returns:
         str: Canister ID of the deployed ledger, or None if deployment failed
     """
-    print(f"Deploying ckbtc_ledger canister...")
+    print("Deploying ckbtc_ledger canister...")
 
     # Get current principal for controller and initial balance
     current_principal = get_current_principal()
@@ -288,12 +288,12 @@ def generate_transaction_commands(transactions):
 
         elif tx["type"] == "update_history":
             # Command to update transaction history
-            cmd = f"dfx canister call vault update_transaction_history --output json"
+            cmd = "dfx canister call vault update_transaction_history --output json"
             commands.append(cmd)
 
         elif tx["type"] == "get_transactions":
             # Command to get transactions for a principal
-            cmd = f"dfx canister call vault get_transactions '(\"{tx['principal']}\")' --output json"
+            cmd = "dfx canister call vault get_transactions '(\"{tx['principal']}\")' --output json"
             commands.append(cmd)
 
         elif tx["type"] == "get_balance":
@@ -377,7 +377,7 @@ def execute_transactions(
                 )
 
                 if not balance_success:
-                    print_error(f"Balance verification failed for vault")
+                    print_error("Balance verification failed for vault")
                     success = False
             else:
                 print_error(f"Unknown identity for balance check: {receiver}")
@@ -427,7 +427,7 @@ def execute_transactions(
             # Get vault canister ID
             vault_id = get_canister_id("vault")
             if not vault_id:
-                print_error(f"Failed to get vault canister ID")
+                print_error("Failed to get vault canister ID")
                 success = False
                 continue
 

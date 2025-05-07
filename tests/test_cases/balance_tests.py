@@ -8,6 +8,8 @@ import os
 import sys
 import traceback
 
+from tests.utils.command import get_canister_id
+
 # Add the parent directory to the Python path to make imports work
 sys.path.insert(
     0, os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))

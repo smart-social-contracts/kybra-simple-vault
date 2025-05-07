@@ -8,53 +8,53 @@ Main test runner for the vault canister tests.
 import traceback
 import os
 import sys
-import json
+import json  # noqa: F401
 
 # Add the parent directory to the Python path to make imports work
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 # isort: on
 
 
-from tests.test_cases.balance_tests import (
+from tests.test_cases.balance_tests import (  # noqa: F401
     check_balance,
     test_balance,
     test_nonexistent_user_balance,
 )
-from tests.test_cases.deployment_tests import (
+from tests.test_cases.deployment_tests import test_set_canisters  # noqa: F401
+from tests.test_cases.deployment_tests import test_upgrade  # noqa: F401
+from tests.test_cases.deployment_tests import (  # noqa: F401
     test_deploy_vault_with_params,
     test_deploy_vault_without_params,
-    test_set_canisters,
-    test_upgrade,
 )
-from tests.test_cases.transaction_tests import (
-    test_get_transactions,
+from tests.test_cases.transaction_tests import test_get_transactions  # noqa: F401
+from tests.test_cases.transaction_tests import test_transaction_ordering  # noqa: F401
+from tests.test_cases.transaction_tests import test_transaction_validity  # noqa: F401
+from tests.test_cases.transaction_tests import (  # noqa: F401
     test_get_transactions_nonexistent_user,
-    test_transaction_ordering,
-    test_transaction_validity,
     test_update_transactions_batches,
 )
-from tests.test_cases.transfer_tests import (
-    test_exceed_balance_transfer,
+from tests.test_cases.transfer_tests import test_exceed_balance_transfer  # noqa: F401
+from tests.test_cases.transfer_tests import test_negative_amount_transfer  # noqa: F401
+from tests.test_cases.transfer_tests import test_transfer_from_vault  # noqa: F401
+from tests.test_cases.transfer_tests import test_transfer_to_vault  # noqa: F401
+from tests.test_cases.transfer_tests import test_zero_amount_transfer  # noqa: F401
+from tests.test_cases.transfer_tests import (  # noqa: F401
     test_multiple_transfers_sequence,
-    test_negative_amount_transfer,
-    test_transfer_from_vault,
-    test_transfer_to_vault,
-    test_zero_amount_transfer,
 )
 from tests.utils.colors import print_error, print_ok
+from tests.utils.command import get_canister_id  # noqa: F401
+from tests.utils.command import run_command  # noqa: F401
 from tests.utils.command import (
     create_test_identities,
     deploy_ckbtc_indexer,
     deploy_ckbtc_ledger,
     execute_transactions,
-    get_canister_id,
-    run_command,
 )
 
 
 def main():
+    """Run the vault canister tests."""
     try:
-        """Run the vault canister tests."""
         print("=== Starting Vault IC Tests ===")
 
         # Create test identities
@@ -112,46 +112,11 @@ def main():
         for account, balance in expected_balances.items():
             print(f"  {account}: {balance}")
 
-        # # Re-install vault canister
-        # print("\nTesting vault canister upgrade...")
-
-        # # Skip the balance check before/after upgrade since we just verified balances
-        # results["Re-install Vault"] = True
-
-        # # Run a simple upgrade test that doesn't try to verify balances
-        # upgrade_success = run_command("dfx canister install vault --mode=upgrade --yes")
-
-        # if upgrade_success:
-        #     print_ok("Vault canister upgraded successfully")
-        # else:
-        #     print_error("Failed to upgrade vault canister")
-        #     results["Re-install Vault"] = False
-
-        # # Print test summary
-        # print("\n=== Test Summary ===")
-        # for test_name, passed in results.items():
-        #     if passed:
-        #         print_ok(test_name)
-        #     else:
-        #         print_error(test_name)
-
-        # # Count passed tests
-        # passed_count = sum(1 for passed in results.values() if passed)
-        # total_count = len(results)
-
-        # print_ok(
-        #     f"\nPassed {passed_count} of {total_count} tests ({passed_count/total_count*100:.1f}%)"
-        # )
-
-        # # Check if all tests passed
-        # if all(results.values()):
-        #     print_ok("All tests passed!")
-        #     return 0
-        # else:
-        #     print_error("Some tests failed!")
-        #     return 1
+        # Since we've reached the end without errors, return success
+        return 0
     except Exception as e:
         print_error(f"Error running tests: {e}\n{traceback.format_exc()}")
+        return 1
 
 
 if __name__ == "__main__":

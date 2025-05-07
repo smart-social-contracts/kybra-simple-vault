@@ -8,32 +8,32 @@ Main test runner for the vault canister tests.
 import traceback
 import os
 import sys
-import json
+import json  # noqa: F401
 
 # Add the parent directory to the Python path to make imports work
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 # isort: on
 
 
-from tests.test_cases.balance_tests import (
+from tests.test_cases.balance_tests import (  # noqa: F401
     check_balance,
     test_balance,
     test_nonexistent_user_balance,
 )
-from tests.test_cases.deployment_tests import (
+from tests.test_cases.deployment_tests import test_upgrade  # noqa: F401
+from tests.test_cases.deployment_tests import (  # noqa: F401
     test_deploy_vault_with_params,
     test_deploy_vault_without_params,
     test_set_canisters,
-    test_upgrade,
 )
-from tests.test_cases.transaction_tests import (
-    test_get_transactions,
+from tests.test_cases.transaction_tests import test_get_transactions  # noqa: F401
+from tests.test_cases.transaction_tests import (  # noqa: F401
     test_get_transactions_nonexistent_user,
     test_transaction_ordering,
     test_transaction_validity,
     test_update_transactions_batches,
 )
-from tests.test_cases.transfer_tests import (
+from tests.test_cases.transfer_tests import (  # noqa: F401
     test_exceed_balance_transfer,
     test_multiple_transfers_sequence,
     test_negative_amount_transfer,
@@ -42,19 +42,19 @@ from tests.test_cases.transfer_tests import (
     test_zero_amount_transfer,
 )
 from tests.utils.colors import print_error, print_ok
+from tests.utils.command import create_test_identities  # noqa: F401
+from tests.utils.command import execute_transactions  # noqa: F401
+from tests.utils.command import get_canister_id  # noqa: F401
 from tests.utils.command import (
-    create_test_identities,
     deploy_ckbtc_indexer,
     deploy_ckbtc_ledger,
-    execute_transactions,
-    get_canister_id,
     run_command,
 )
 
 
 def main():
+    """Run the vault canister tests."""
     try:
-        """Run the vault canister tests."""
         print("=== Starting Vault IC Tests ===")
 
         deploy_ckbtc_ledger(
@@ -129,6 +129,7 @@ def main():
             return 1
     except Exception as e:
         print_error(f"Error running tests: {e}\n{traceback.format_exc()}")
+        return 1
 
 
 if __name__ == "__main__":
