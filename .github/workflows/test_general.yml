@@ -1,4 +1,4 @@
-name: Test on IC
+name: Test on IC replica (general)
 
 on:
   push:

@@ -57,12 +57,18 @@ def main():
         """Run the vault canister tests."""
         print("=== Starting Vault IC Tests ===")
 
+        deploy_ckbtc_ledger(
+            initial_balance=1_000_000_000,  # Current principal gets 1B tokens
+            transfer_fee=10,
+        )
+        deploy_ckbtc_indexer()
+
         results = {}
 
         # Deploy the vault canister
         results["Deploy Vault Without Params"] = test_deploy_vault_without_params()
         results["Set canisters"] = test_set_canisters()
-        
+
         # Transfer tokens to the vault
         results["Transfer To Vault"] = test_transfer_to_vault(1000)
 
@@ -77,7 +83,9 @@ def main():
         # results["Non-existent User Balance"] = test_nonexistent_user_balance()
 
         # Check transaction history
-        results["Non-existent User Transactions"] = test_get_transactions_nonexistent_user()
+        results["Non-existent User Transactions"] = (
+            test_get_transactions_nonexistent_user()
+        )
         results["Transaction Ordering"] = test_transaction_ordering()
         results["Transaction Validity"] = test_transaction_validity()
 
