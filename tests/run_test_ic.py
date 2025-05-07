@@ -88,16 +88,13 @@ def main():
         # Define transaction sequence - keep it simple to ensure success
         print("\nExecuting transaction sequence...")
         transactions = [
-            # Just do deposits from Alice
-            ['alice', 'vault'],    # Alice deposits 101
-            
-            # Update history to process deposits
-            ['update_history', None],
-            
-            # Another deposit
-            ['alice', 'vault'],    # Alice deposits 102
+            ['alice', 'vault'],              # Alice deposits 101
+            ['update_history', None],        # Update transaction history
+            ['check_balance', 'alice'],      # Verify Alice's balance (should be 101)
+            ['bob', 'vault'],                # Bob deposits 102
+            ['update_history', None],        # Update transaction history
+            ['check_balance', 'bob'],        # Verify Bob's balance (should be 102)
         ]
-        
         # Execute transactions and track expected balances
         print("Executing transactions...")
         success, expected_balances = execute_transactions(
@@ -112,46 +109,6 @@ def main():
         print("\nExpected Balances After Transactions:")
         for account, balance in expected_balances.items():
             print(f"  {account}: {balance}")
-        
-        # Ensure all transactions are processed by the vault
-        print("\nMaking sure all transactions are processed...")
-        run_command("dfx canister call vault update_transaction_history_until_no_more_transactions --output json")
-        
-        # Verify balances - just check Alice's vault balance
-        print("\nVerifying Alice's balance in the vault...")
-        balance_verification_success = True
-        
-        # Alice should have deposited a total of 203 (101 + 102)
-        alice_principal = identities.get('alice')
-        if alice_principal:
-            # First get Alice's actual balance
-            balance_cmd = f"dfx canister call vault get_balance '(\"{alice_principal}\")' --output json"
-            balance_result = run_command(balance_cmd)
-            
-            if balance_result:
-                balance_json = json.loads(balance_result)
-                if balance_json.get("success", False):
-                    actual_balance = int(balance_json["data"][0]["Balance"]["amount"])
-                    expected_balance = 203  # 101 + 102
-                    
-                    print(f"Alice's vault balance: {actual_balance}, Expected: {expected_balance}")
-                    if actual_balance == expected_balance:
-                        print_ok("Alice's balance verification passed!")
-                    else:
-                        print_error(f"Balance mismatch: got {actual_balance}, expected {expected_balance}")
-                        balance_verification_success = False
-                else:
-                    error_msg = balance_json.get("message", "Unknown error")
-                    if "Balance not found" in error_msg:
-                        print_error("Alice's balance not found in vault - transactions might not have been processed")
-                    else:
-                        print_error(f"Error getting balance: {error_msg}")
-                    balance_verification_success = False
-            else:
-                print_error("Failed to query Alice's balance")
-                balance_verification_success = False
-        
-        results["Balance Verification"] = balance_verification_success
         
         # # Re-install vault canister
         # print("\nTesting vault canister upgrade...")

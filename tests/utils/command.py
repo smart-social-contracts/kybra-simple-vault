@@ -326,6 +326,33 @@ def execute_transactions(transaction_pairs, identities=None, start_amount=101, i
         if sender == 'update_history':
             run_command("dfx canister call vault update_transaction_history --output json")
             continue
+            
+        if sender == 'check_balance':
+            # receiver should be the name of the identity to check
+            if receiver in principals:
+                principal_id = principals[receiver]
+                expected_amount = vault_balances.get(receiver, 0)
+                
+                from tests.test_cases.balance_tests import check_balance
+                actual_balance, balance_success = check_balance(principal_id, expected_amount)
+                
+                if not balance_success:
+                    print_error(f"Balance verification failed for {receiver}")
+                    success = False
+            elif receiver == 'vault':
+                vault_id = get_canister_id("vault")
+                expected_amount = vault_balances.get('vault', 0)
+                
+                from tests.test_cases.balance_tests import check_balance
+                actual_balance, balance_success = check_balance(vault_id, expected_amount)
+                
+                if not balance_success:
+                    print_error(f"Balance verification failed for vault")
+                    success = False
+            else:
+                print_error(f"Unknown identity for balance check: {receiver}")
+                success = False
+            continue
         
         # Get sender and receiver principals/identities
         sender_principal = principals.get(sender, sender) if sender != 'vault' else 'vault'
