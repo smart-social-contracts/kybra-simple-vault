@@ -18,7 +18,7 @@ class ApplicationData(Entity, TimestampedMixin):
     scan_oldest_tx_id = Integer()
 
 
-'''
+"""
 
 
 recent_history_end_tx_id
@@ -36,7 +36,7 @@ the query returns transacions, get the batch_oldest_tx_id
 if batch_oldest_tx_id == oldest_tx_id:
     exit
 
-'''
+"""
 
 
 class Canisters(Entity, TimestampedMixin):

@@ -38,7 +38,7 @@ from vault.candid_types import (
     TransferArg,
     TransferResult,
 )
-from vault.constants import CANISTER_PRINCIPALS, MAX_iteration_count, MAX_RESULTS
+from vault.constants import CANISTER_PRINCIPALS, MAX_RESULTS, MAX_iteration_count
 from vault.entities import Balance, Canisters, VaultTransaction, app_data
 from vault.ic_util_calls import get_account_transactions
 
@@ -281,7 +281,7 @@ def update_transaction_history() -> Async[Response]:
 
         batch_max_iteration_count = app_data().max_iteration_count
         batch_max_results = app_data().max_results
-        
+
         scan_end_tx_id = app_data().scan_end_tx_id
         scan_start_tx_id = app_data().scan_start_tx_id
         scan_oldest_tx_id = app_data().scan_oldest_tx_id
@@ -292,13 +292,21 @@ def update_transaction_history() -> Async[Response]:
         # Implement cursor-based pagination to fetch all transactions
         while batch_iteration_count < batch_max_iteration_count:
             batch_iteration_count += 1
-            logger.debug(f"batch_iteration_count: {batch_iteration_count}/{batch_max_iteration_count}")
+            logger.debug(
+                f"batch_iteration_count: {batch_iteration_count}/{batch_max_iteration_count}"
+            )
 
             start_tx_id = None
-            if scan_start_tx_id is not None and scan_oldest_tx_id is not None and scan_oldest_tx_id < scan_start_tx_id:
+            if (
+                scan_start_tx_id is not None
+                and scan_oldest_tx_id is not None
+                and scan_oldest_tx_id < scan_start_tx_id
+            ):
                 start_tx_id = scan_start_tx_id
 
-            logger.debug(f"Fetching transactions with start_tx_id={start_tx_id}, max_results={batch_max_results}")
+            logger.debug(
+                f"Fetching transactions with start_tx_id={start_tx_id}, max_results={batch_max_results}"
+            )
             response = yield get_account_transactions(
                 canister_id=indexer_canister_id,
                 owner_principal=canister_id,
@@ -316,24 +324,35 @@ def update_transaction_history() -> Async[Response]:
             if not response_txs:
                 logger.debug("Empty batch - No older transactions will be found")
                 break
-           
+
             logger.debug(f"Received {len(response_txs)} transactions")
 
             # if len(response_txs) < batch_max_results:
             #     logger.debug(f"Number of transactions in batch is less than max_results ({len(response_txs)} < {batch_max_results})")
             #     do_not_iterate_next = False
 
-            response_txs.sort(key=lambda x: x["id"], reverse=True)  # sort by id descending
+            response_txs.sort(
+                key=lambda x: x["id"], reverse=True
+            )  # sort by id descending
 
             # highest_tx_id = response_txs[0]["id"]
             # if scan_oldest_tx_id is not None and scan_oldest_tx_id == scan_start_tx_id and highest_tx_id <= scan_end_tx_id:
             #     logger.info("No new transactions to be scanned. We are in sync.")
             #     break
 
-            (processed_batch_oldest_tx_id, processed_batch_newest_tx_id, processed_tx_ids, inserted_new_txs_ids) = _process_batch_txs(canister_id, response_txs)
+            (
+                processed_batch_oldest_tx_id,
+                processed_batch_newest_tx_id,
+                processed_tx_ids,
+                inserted_new_txs_ids,
+            ) = _process_batch_txs(canister_id, response_txs)
             logger.debug(f"Processed {len(processed_tx_ids)} transactions in batch")
-            logger.debug(f"Processed batch oldest tx id: {processed_batch_oldest_tx_id}")
-            logger.debug(f"Processed batch newest tx id: {processed_batch_newest_tx_id}")
+            logger.debug(
+                f"Processed batch oldest tx id: {processed_batch_oldest_tx_id}"
+            )
+            logger.debug(
+                f"Processed batch newest tx id: {processed_batch_newest_tx_id}"
+            )
             if not len(processed_tx_ids):
                 logger.debug("No transactions processed in batch")
                 break
@@ -343,7 +362,11 @@ def update_transaction_history() -> Async[Response]:
             if not scan_end_tx_id or scan_end_tx_id < processed_batch_newest_tx_id:
                 scan_end_tx_id = processed_batch_newest_tx_id
                 app_data().scan_end_tx_id = processed_batch_newest_tx_id
-            if not scan_start_tx_id or scan_start_tx_id > processed_batch_oldest_tx_id or start_tx_id is None:
+            if (
+                not scan_start_tx_id
+                or scan_start_tx_id > processed_batch_oldest_tx_id
+                or start_tx_id is None
+            ):
                 scan_start_tx_id = processed_batch_oldest_tx_id
                 app_data().scan_start_tx_id = processed_batch_oldest_tx_id
 
@@ -357,7 +380,6 @@ def update_transaction_history() -> Async[Response]:
                 app_data().scan_start_tx_id = scan_end_tx_id
                 app_data().scan_oldest_tx_id = scan_end_tx_id
                 break
-
 
     except Exception as e:
         logger.error(f"Error processing transactions: {e}\n {traceback.format_exc()}")
@@ -477,7 +499,6 @@ def _process_batch_txs(canister_id, txs):
                     existing_tx.timestamp = timestamp
                     existing_tx.kind = kind
 
-
             else:
                 # Create new transaction
                 VaultTransaction(
@@ -550,10 +571,16 @@ def _process_batch_txs(canister_id, txs):
             logger.error(
                 f"Error processing transaction {tx_id}: {e}\n {traceback.format_exc()}"
             )
-    
-    logger.debug(f"Processed {len(processed_tx_ids)} transactions, from id {processed_batch_oldest_tx_id} to id {processed_batch_newest_tx_id}")
-    return processed_batch_oldest_tx_id, processed_batch_newest_tx_id, processed_tx_ids, inserted_new_txs_ids
 
+    logger.debug(
+        f"Processed {len(processed_tx_ids)} transactions, from id {processed_batch_oldest_tx_id} to id {processed_batch_newest_tx_id}"
+    )
+    return (
+        processed_batch_oldest_tx_id,
+        processed_batch_newest_tx_id,
+        processed_tx_ids,
+        inserted_new_txs_ids,
+    )
 
 
 @query

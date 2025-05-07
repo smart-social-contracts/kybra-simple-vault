@@ -15,12 +15,23 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 # isort: on
 
 
-from tests.utils.colors import print_ok, print_error
+from tests.test_cases.balance_tests import (
+    check_balance,
+    test_balance,
+    test_nonexistent_user_balance,
+)
 from tests.test_cases.deployment_tests import (
     test_deploy_vault_with_params,
     test_deploy_vault_without_params,
     test_set_canisters,
-    test_upgrade
+    test_upgrade,
+)
+from tests.test_cases.transaction_tests import (
+    test_get_transactions,
+    test_get_transactions_nonexistent_user,
+    test_transaction_ordering,
+    test_transaction_validity,
+    test_update_transactions_batches,
 )
 from tests.test_cases.transfer_tests import (
     test_exceed_balance_transfer,
@@ -30,25 +41,14 @@ from tests.test_cases.transfer_tests import (
     test_transfer_to_vault,
     test_zero_amount_transfer,
 )
-from tests.test_cases.transaction_tests import (
-    test_update_transactions_batches,
-    test_get_transactions,
-    test_get_transactions_nonexistent_user,
-    test_transaction_ordering,
-    test_transaction_validity,
-)
-from tests.test_cases.balance_tests import (
-    test_balance,
-    test_nonexistent_user_balance,
-    check_balance
-)
+from tests.utils.colors import print_error, print_ok
 from tests.utils.command import (
-    deploy_ckbtc_ledger,
-    deploy_ckbtc_indexer,
     create_test_identities,
+    deploy_ckbtc_indexer,
+    deploy_ckbtc_ledger,
     execute_transactions,
     get_canister_id,
-    run_command
+    run_command,
 )
 
 
@@ -59,23 +59,23 @@ def main():
 
         # Create test identities
         print("\nCreating test identities...")
-        identities = create_test_identities(['alice', 'bob', 'charlie'])
+        identities = create_test_identities(["alice", "bob", "charlie"])
         print(f"Created identities: {', '.join(identities.keys())}")
-        
+
         # Set initial balances for identities
         identity_balances = {
-            'alice': 500_000_000,
-            'bob': 300_000_000,
-            'charlie': 100_000_000
+            "alice": 500_000_000,
+            "bob": 300_000_000,
+            "charlie": 100_000_000,
         }
-        
+
         # Deploy ck canisters with initial balances for identities
         print("\nDeploying ckBTC ledger with initial balances...")
         deploy_ckbtc_ledger(
             initial_balance=1_000_000_000,  # Current principal gets 1B tokens
             transfer_fee=10,
             identities=identities,
-            identity_balances=identity_balances
+            identity_balances=identity_balances,
         )
         deploy_ckbtc_indexer()
 
@@ -83,17 +83,19 @@ def main():
         results = {}
 
         # Deploy the vault canister
-        results["Deploy Vault With Params"] = test_deploy_vault_with_params(max_results=2, max_iteration_count=2)
-        
+        results["Deploy Vault With Params"] = test_deploy_vault_with_params(
+            max_results=2, max_iteration_count=2
+        )
+
         # Define transaction sequence - keep it simple to ensure success
         print("\nExecuting transaction sequence...")
         transactions = [
-            ['alice', 'vault'],              # Alice deposits 101
-            ['update_history', None],        # Update transaction history
-            ['check_balance', 'alice'],      # Verify Alice's balance (should be 101)
-            ['bob', 'vault'],                # Bob deposits 102
-            ['update_history', None],        # Update transaction history
-            ['check_balance', 'bob'],        # Verify Bob's balance (should be 102)
+            ["alice", "vault"],  # Alice deposits 101
+            ["update_history", None],  # Update transaction history
+            ["check_balance", "alice"],  # Verify Alice's balance (should be 101)
+            ["bob", "vault"],  # Bob deposits 102
+            ["update_history", None],  # Update transaction history
+            ["check_balance", "bob"],  # Verify Bob's balance (should be 102)
         ]
         # Execute transactions and track expected balances
         print("Executing transactions...")
@@ -101,30 +103,30 @@ def main():
             transactions,
             identities=identities,
             start_amount=101,
-            initial_balances=identity_balances.copy()
+            initial_balances=identity_balances.copy(),
         )
-        
+
         results["Transaction Sequence"] = success
-        
+
         print("\nExpected Balances After Transactions:")
         for account, balance in expected_balances.items():
             print(f"  {account}: {balance}")
-        
+
         # # Re-install vault canister
         # print("\nTesting vault canister upgrade...")
-        
+
         # # Skip the balance check before/after upgrade since we just verified balances
         # results["Re-install Vault"] = True
-        
+
         # # Run a simple upgrade test that doesn't try to verify balances
         # upgrade_success = run_command("dfx canister install vault --mode=upgrade --yes")
-        
+
         # if upgrade_success:
         #     print_ok("Vault canister upgraded successfully")
         # else:
         #     print_error("Failed to upgrade vault canister")
         #     results["Re-install Vault"] = False
-        
+
         # # Print test summary
         # print("\n=== Test Summary ===")
         # for test_name, passed in results.items():
@@ -150,7 +152,6 @@ def main():
         #     return 1
     except Exception as e:
         print_error(f"Error running tests: {e}\n{traceback.format_exc()}")
-
 
 
 if __name__ == "__main__":

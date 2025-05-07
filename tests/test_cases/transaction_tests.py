@@ -3,12 +3,13 @@
 Tests for transaction history functionality of the vault canister.
 """
 
-from tests.utils.command import get_current_principal, run_command
-from tests.utils.colors import print_ok, print_error
 import json
 import os
 import sys
 import traceback
+
+from tests.utils.colors import print_error, print_ok
+from tests.utils.command import get_current_principal, run_command
 
 # Add the parent directory to the Python path to make imports work
 sys.path.insert(
@@ -31,7 +32,9 @@ def update_transaction_history():
 
         return update_json, success
     except Exception as e:
-        print_error(f"Error updating transaction history: {e}\n{traceback.format_exc()}")
+        print_error(
+            f"Error updating transaction history: {e}\n{traceback.format_exc()}"
+        )
         return None, False
 
 
@@ -71,9 +74,13 @@ def test_update_transactions_batches(expected_new_counts=None):
             print_error("Failed to update transaction history")
             return False
 
-        new_count = int(update_json.get("data")[0].get("TransactionSummary").get("new_txs_count"))
+        new_count = int(
+            update_json.get("data")[0].get("TransactionSummary").get("new_txs_count")
+        )
         if new_count != expected_new_count:
-            print_error(f"Transaction count does not match expected count: {new_count} != {expected_new_count}")
+            print_error(
+                f"Transaction count does not match expected count: {new_count} != {expected_new_count}"
+            )
             return False
 
         # total_processed_count += new_count
@@ -84,7 +91,6 @@ def test_update_transactions_batches(expected_new_counts=None):
 
     print_ok("Transaction history updated successfully")
     return True
-
 
 
 def test_get_transactions(expected_amounts=None):
