@@ -26,7 +26,7 @@ from tests.utils.command import (
 def check_balance(principal_id, expected_amount=None):
     """Helper function to check balance for a principal."""
     balance_result = run_command(
-        f"dfx canister call vault get_balance '(\"{principal_id}\")' --output json"
+        f"dfx canister call vault get_balance '(principal \"{principal_id}\")' --output json"
     )
 
     if not balance_result:

@@ -152,16 +152,14 @@ def test_upgrade():
         return False
 
     # Get current balance
-    balance_cmd = (
-        f"dfx canister call vault get_balance '(\"{current_principal}\")' --output json"
-    )
+    balance_cmd = f"dfx canister call vault get_balance '(principal \"{current_principal}\")' --output json"
     pre_balance = run_command_expects_response_obj(balance_cmd)
     if not pre_balance:
         print_error("Failed to get balance before upgrade")
         return False
 
     # Get existing transactions
-    transactions_cmd = f"dfx canister call vault get_transactions '(\"{current_principal}\")' --output json"
+    transactions_cmd = f"dfx canister call vault get_transactions '(principal \"{current_principal}\")' --output json"
     pre_transactions = run_command_expects_response_obj(transactions_cmd)
     if not pre_transactions:
         print_error("Failed to get transactions before upgrade")

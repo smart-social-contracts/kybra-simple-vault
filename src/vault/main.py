@@ -141,28 +141,28 @@ def admin_only(func):
 
 @update
 @admin_only
-def set_canister(canister_name: str, principal_id: Principal) -> Response:
+def set_canister(canister_name: str, principal: Principal) -> Response:
     """
     Set or update the principal ID for a specific canister in the Canisters entity.
 
     Args:
         canister_name: The name of the canister to set/update (e.g., "ckBTC ledger", "ckBTC indexer")
-        principal_id: The principal ID of the canister
+        principal: The principal ID of the canister
 
     Returns:
         Response object with success status and message
     """
 
     try:
-        logger.info(
-            f"Setting canister '{canister_name}' to principal: {principal_id.to_str()}"
-        )
+        principal_id = principal.to_str()
+
+        logger.info(f"Setting canister '{canister_name}' to principal: {principal_id}")
 
         # Check if the canister already exists
         existing_canister = Canisters[canister_name]
         if existing_canister:
             # Update the existing canister record
-            existing_canister.principal = principal_id.to_str()
+            existing_canister.principal = principal_id
             logger.info(
                 f"Updated existing canister '{canister_name}' with new principal."
             )
@@ -174,7 +174,7 @@ def set_canister(canister_name: str, principal_id: Principal) -> Response:
             )
         else:
             # Create a new canister record
-            Canisters(_id=canister_name, principal=principal_id.to_str())
+            Canisters(_id=canister_name, principal=principal_id)
             logger.info(f"Created new canister '{canister_name}' with principal.")
             return Response(
                 success=True,
@@ -584,17 +584,19 @@ def _process_batch_txs(canister_id, txs):
 
 
 @query
-def get_balance(principal_id: str) -> Response:
+def get_balance(principal: Principal) -> Response:
     """
     Get the balance for a specific principal.
 
     Args:
-        principal_id: The principal ID to check balance for
+        principal: The principal ID to check balance for
 
     Returns:
         Response object with success status, message, and balance data
     """
     try:
+        principal_id: str = principal.to_str()
+
         logger.debug(f"Getting balance for principal: {principal_id}")
 
         # Look up the balance in the database
@@ -626,18 +628,20 @@ def get_balance(principal_id: str) -> Response:
 
 
 @query
-def get_transactions(principal_id: str) -> Response:
+def get_transactions(principal: Principal) -> Response:
     """
     Get all transactions associated with a specific principal.
 
     Args:
-        principal_id: The principal ID to get transactions for
+        principal: The principal ID to get transactions for
 
     Returns:
         Response object with success status, message, and transactions data
     """
 
     try:
+        principal_id: str = principal.to_str()
+
         logger.info(f"Getting transactions for principal: {principal_id}")
 
         # Collect all transactions where this principal is involved

@@ -293,12 +293,12 @@ def generate_transaction_commands(transactions):
 
         elif tx["type"] == "get_transactions":
             # Command to get transactions for a principal
-            cmd = "dfx canister call vault get_transactions '(\"{tx['principal']}\")' --output json"
+            cmd = "dfx canister call vault get_transactions '(principal \"{tx['principal']}\")' --output json"
             commands.append(cmd)
 
         elif tx["type"] == "get_balance":
             # Command to get balance for a principal
-            cmd = f"dfx canister call vault get_balance '(\"{tx['principal']}\")' --output json"
+            cmd = f"dfx canister call vault get_balance '(principal \"{tx['principal']}\")' --output json"
             commands.append(cmd)
 
         else:

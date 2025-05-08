@@ -41,7 +41,7 @@ def update_transaction_history():
 def get_transactions(principal_id):
     """Get transactions for a principal and return parsed result."""
     try:
-        cmd = f"dfx canister call vault get_transactions '(\"{principal_id}\")' --output json"
+        cmd = f"dfx canister call vault get_transactions '(principal \"{principal_id}\")' --output json"
         tx_result = run_command(cmd)
 
         if not tx_result:
