@@ -1,9 +1,12 @@
 # Kybra Simple Vault
 
 A canister written in Python using Kybra with which:
-- Users can deposit ckBTC
-- The admin can withdraw ckBTC to specific addresses
-- Balance and transaction history can be queried
+- Users can deposit chain-key tokens (currently, only ckBTC is supported).
+- Only the admin can withdraw.
+- Balance and transaction history can be queried.
+- 
+
+The canister uses the [official ICRC compliant ledger and indexer canisters](https://github.com/dfinity/ic/releases?q=ledger-suite-icrc&expanded=true).
 
 
 **WARNING: This is not ready for production use yet and funds stored in the vault canister can be lost. Use at your own risk.**
