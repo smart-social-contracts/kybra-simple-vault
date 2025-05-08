@@ -50,8 +50,6 @@ storage = StableBTreeMap[str, str](
 )
 Database.init(db_storage=storage, audit_enabled=True)
 
-# TODO: can this be called by anyone? CHECK
-
 
 @init
 def init_(

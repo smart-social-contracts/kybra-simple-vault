@@ -97,7 +97,6 @@ def main():
         # Upgrade the vault canister
         results["Upgrade Vault"] = test_upgrade()
 
-
         # Print test summary
         print("\n=== Test Summary ===")
         for test_name, passed in results.items():
