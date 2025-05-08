@@ -27,28 +27,100 @@ The canister uses the [official ICRC compliant ledger and indexer canisters](htt
 $ dfx deploy vault
 
 # Get an overview of the state of the vault.
-$ dfx canister call vault status 
+$ dfx canister call vault status --output json
+{
+  "data": {
+    "Stats": {
+      "app_data": {
+        "admin_principal": "ah6ac-cc73l-bb2zc-ni7bh-jov4q-roeyj-6k2ob-mkg5j-pequi-vuaa6-2ae",
+        "max_iteration_count": "2",
+        "max_results": "2",
+        "scan_end_tx_id": "4",
+        "scan_oldest_tx_id": "4",
+        "scan_start_tx_id": "4"
+      },
+      "balances": [
+        {
+          "amount": "101",
+          "principal_id": "br5f7-7uaaa-aaaaa-qaaca-cai"
+        },
+        {
+          "amount": "101",
+          "principal_id": "bzbu5-7fzna-4swqp-hn6cu-g47l7-ictdj-3gymg-eyv4b-5uuux-hp6r6-pqe"
+        }
+      ],
+      "canisters": [
+        {
+          "id": "ckBTC indexer",
+          "principal": "bd3sg-teaaa-aaaaa-qaaba-cai"
+        },
+        {
+          "id": "ckBTC ledger",
+          "principal": "bnz7o-iuaaa-aaaaa-qaaaa-cai"
+        }
+      ]
+    }
+  },
+  "success": true
+}
 
 # Update the transaction history of the vault.
-$ dfx canister call vault update_transaction_history
+$ dfx canister call vault update_transaction_history --output json
+{
+  "data": {
+    "TransactionSummary": {
+      "new_txs_count": "4"
+    }
+  },
+  "success": true
+}
 
 # Get the balance for a specific principal.
-$ dfx canister call vault get_balance 
+$ dfx canister call vault get_balance '(principal "...")' --output json
+{
+  "data": {
+    "Balance": {
+      "amount": "4_014",
+      "principal_id": "ah6ac-cc73l-bb2zc-ni7bh-jov4q-roeyj-6k2ob-mkg5j-pequi-vuaa6-2ae"
+    }
+  },
+  "success": true
+}
 
 # Get all the transactions for a specific principal.
-$ dfx canister call vault get_transactions 
+$ dfx canister call vault get_transactions '(principal "...")' --output json
+{
+  "data": {
+    "Transactions": [
+      {
+        "amount": "1_005",
+        "id": "5",
+        "timestamp": "1_746_721_396_182_936_275"
+      },
+      ...
+      {
+        "amount": "1_002",
+        "id": "2",
+        "timestamp": "1_746_721_392_122_493_649"
+      }
+    ]
+  },
+  "success": true
+}
 
 # Send tokens to a specific address (only the admin can do this operation).
-$ dfx canister call vault transfer 
-
+$ dfx canister call vault transfer '(principal "...", 100)' --output json
+{
+  "data": {
+    "TransactionId": {
+      "transaction_id": "6"
+    }
+  },
+  "success": true
+}
 
 ```
 
-
-### Prerequisites
-
-- Python 3.10
-- dfx
 
 ### Installation
 
@@ -64,11 +136,10 @@ python -m venv venv
 source venv/bin/activate
 
 # Install dependencies
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
+pip install -r requirements.txt -r requirements-dev.txt
 
 # Running tests
-./run_linters.sh && ./run_tests.sh && ./run_test_ic.sh
+./run_linters.sh --fix && ./run_test.sh
 ```
 
 ## License
