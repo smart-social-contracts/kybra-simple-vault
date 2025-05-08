@@ -55,7 +55,7 @@ def get_and_check_status(
 
         stats_data = status_json["data"]["Stats"]
 
-        assert stats_data["app_data"]["admin_principal"][0] == admin_principal
+        assert stats_data["app_data"]["admin_principal"]["principal_id"] == admin_principal
         assert stats_data["app_data"]["max_iteration_count"] == str(max_iteration_count)
         assert stats_data["app_data"]["max_results"] == str(max_results)
 
@@ -193,8 +193,8 @@ def test_upgrade():
         return False
 
     # Compare balance amounts
-    pre_balance_amount = pre_balance.get("data", [{}])[0].get("amount", "0")
-    post_balance_amount = post_balance.get("data", [{}])[0].get("amount", "0")
+    pre_balance_amount = pre_balance.get("data", {}).get("Balance", {}).get("amount", "0")
+    post_balance_amount = post_balance.get("data", {}).get("Balance", {}).get("amount", "0")
     if pre_balance_amount != post_balance_amount:
         print_error(
             f"Balance not preserved after upgrade: before={pre_balance_amount}, after={post_balance_amount}"

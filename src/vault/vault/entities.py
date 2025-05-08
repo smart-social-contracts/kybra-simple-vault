@@ -13,9 +13,9 @@ class ApplicationData(Entity, TimestampedMixin):
     max_results = Integer()
     max_iteration_count = Integer()
 
-    scan_end_tx_id = Integer()
-    scan_start_tx_id = Integer()
-    scan_oldest_tx_id = Integer()
+    scan_end_tx_id = Integer(default=0)
+    scan_start_tx_id = Integer(default=0)
+    scan_oldest_tx_id = Integer(default=0)
 
 
 """

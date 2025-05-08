@@ -168,12 +168,12 @@ def set_canister(canister_name: str, principal_id: Principal) -> Response:
             logger.info(
                 f"Updated existing canister '{canister_name}' with new principal."
             )
-            return Response(success=True)
+            return Response(success=True, data=ResponseData(Message=f"Canister '{canister_name}' updated successfully"))
         else:
             # Create a new canister record
             Canisters(_id=canister_name, principal=principal_id.to_str())
             logger.info(f"Created new canister '{canister_name}' with principal.")
-            return Response(success=True)
+            return Response(success=True, data=ResponseData(Message=f"Canister '{canister_name}' created successfully"))
     except Exception as e:
         logger.error(
             f"Error setting canister '{canister_name}' to principal: {e}\n{traceback.format_exc()}"
@@ -275,11 +275,7 @@ def update_transaction_history() -> Async[Response]:
             )
 
             start_tx_id = None
-            if (
-                scan_start_tx_id is not None
-                and scan_oldest_tx_id is not None
-                and scan_oldest_tx_id < scan_start_tx_id
-            ):
+            if scan_start_tx_id and scan_oldest_tx_id and scan_oldest_tx_id < scan_start_tx_id:
                 start_tx_id = scan_start_tx_id
 
             logger.debug(
@@ -343,7 +339,7 @@ def update_transaction_history() -> Async[Response]:
             if (
                 not scan_start_tx_id
                 or scan_start_tx_id > processed_batch_oldest_tx_id
-                or start_tx_id is None
+                or not start_tx_id
             ):
                 scan_start_tx_id = processed_batch_oldest_tx_id
                 app_data().scan_start_tx_id = processed_batch_oldest_tx_id
@@ -578,7 +574,7 @@ def get_balance(principal_id: str) -> Response:
             return Response(success=False, data=ResponseData(Error=f"Balance not found for principal: {principal_id}"))
 
         return Response(success=True,
-                data=ResponseData(Balance=BalanceRecord(principal_id=principal_id, amount=balance.amount))
+                data=ResponseData(Balance=BalanceRecord(principal_id=Principal.from_str(principal_id), amount=balance.amount))
             )
     except Exception as e:
         logger.error(
@@ -662,7 +658,7 @@ def status() -> Response:
         # Get app_data with proper typing
         app_data_obj = app_data()
         app_data_record = AppDataRecord(
-            admin_principal=app_data_obj.admin_principal,
+            admin_principal=Principal.from_str(app_data_obj.admin_principal),
             max_results=app_data_obj.max_results,
             max_iteration_count=app_data_obj.max_iteration_count,
             scan_end_tx_id=app_data_obj.scan_end_tx_id,
@@ -675,7 +671,7 @@ def status() -> Response:
         for balance in Balance.instances():
             balances.append(
                 BalanceRecord(
-                    principal_id=balance._id,
+                    principal_id=Principal.from_str(balance._id),
                     amount=balance.amount,
                 )
             )
@@ -685,8 +681,8 @@ def status() -> Response:
         for canister in Canisters.instances():
             canisters.append(
                 CanisterRecord(
-                    _id=canister._id,
-                    principal=canister.principal,
+                    id=canister._id,
+                    principal=Principal.from_str(canister.principal),
                 )
             )
 

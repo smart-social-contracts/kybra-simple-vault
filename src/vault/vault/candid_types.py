@@ -19,12 +19,12 @@ from kybra import (
 
 
 class CanisterRecord(Record):
-    _id: text
-    principal: text
+    id: text
+    principal: Principal
 
 
 class BalanceRecord(Record):
-    principal_id: text
+    principal_id: Principal
     amount: int
 
 
@@ -35,12 +35,12 @@ class TransactionRecord(Record):
 
 
 class AppDataRecord(Record):
-    admin_principal: Opt[text]
+    admin_principal: Principal
     max_results: nat
     max_iteration_count: nat
-    scan_end_tx_id: Opt[nat]
-    scan_start_tx_id: Opt[nat]
-    scan_oldest_tx_id: Opt[nat]
+    scan_end_tx_id: nat
+    scan_start_tx_id: nat
+    scan_oldest_tx_id: nat
 
 
 class Account(Record):
@@ -163,12 +163,13 @@ class ResponseData(Variant, total=False):
     Balance: BalanceRecord
     Transactions: Vec[TransactionRecord]
     Stats: StatsRecord
-    Error: Opt[str]
+    Error: str
+    Message: str
 
 
 class Response(Record):
-    success: bool  # True for success, False for failure
-    data: ResponseData  # Optional data payload for the response
+    success: bool
+    data: ResponseData
 
 
 # ICRC standard types
