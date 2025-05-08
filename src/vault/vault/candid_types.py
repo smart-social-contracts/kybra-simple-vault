@@ -15,8 +15,6 @@ from kybra import (
     text,
 )
 
-# Define Candid record types for stats
-
 
 class CanisterRecord(Record):
     id: text
@@ -96,9 +94,6 @@ class TransferResult(Variant, total=False):
     Err: TransferError
 
 
-# Define the request and response types for get_transactions
-
-
 class Spender(Record):
     owner: Principal
     subaccount: Opt[Vec[nat]]
@@ -158,7 +153,6 @@ class TransactionsListRecord(Record):
     transactions: Vec[TransactionRecord]
 
 
-# Generic response type for API responses
 class ResponseData(Variant, total=False):
     TransactionId: TransactionIdRecord
     TransactionSummary: TransactionSummaryRecord
@@ -172,9 +166,6 @@ class ResponseData(Variant, total=False):
 class Response(Record):
     success: bool
     data: ResponseData
-
-
-# ICRC standard types
 
 
 class ICRCLedger(Service):

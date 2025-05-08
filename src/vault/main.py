@@ -7,13 +7,11 @@ from kybra import (
     CallResult,
     Opt,
     Principal,
-    Record,
     StableBTreeMap,
     Tuple,
     Vec,
     ic,
     init,
-    match,
     nat,
     query,
     update,
@@ -33,12 +31,11 @@ from vault.candid_types import (
     StatsRecord,
     TransactionIdRecord,
     TransactionRecord,
-    TransactionsListRecord,
     TransactionSummaryRecord,
     TransferArg,
     TransferResult,
 )
-from vault.constants import CANISTER_PRINCIPALS, MAX_RESULTS, MAX_iteration_count
+from vault.constants import CANISTER_PRINCIPALS, MAX_ITERATION_COUNT, MAX_RESULTS
 from vault.entities import Balance, Canisters, VaultTransaction, app_data
 from vault.ic_util_calls import get_account_transactions
 
@@ -108,7 +105,7 @@ def init_(
         app_data().max_results = new_max_results
 
     if not app_data().max_iteration_count:
-        new_max_iteration_count = max_iteration_count or MAX_iteration_count
+        new_max_iteration_count = max_iteration_count or MAX_ITERATION_COUNT
         logger.info(f"Setting max iteration_count to {new_max_iteration_count}")
         app_data().max_iteration_count = new_max_iteration_count
 
@@ -768,87 +765,3 @@ def status() -> Response:
             success=False,
             data=ResponseData(Error=f"Error retrieving vault statistics: {str(e)}"),
         )
-
-
-# ##### Import Kybra and the internal function #####
-
-
-from kybra import Opt, Record, Vec, nat, query  # noqa: E402
-from kybra_simple_logging import get_canister_logs as _get_canister_logs  # noqa: E402
-
-
-# Define the PublicLogEntry class directly in the test canister
-class PublicLogEntry(Record):
-    timestamp: nat
-    level: str
-    logger_name: str
-    message: str
-    id: nat
-
-
-@query
-def get_canister_logs(
-    from_entry: Opt[nat] = None,
-    max_entries: Opt[nat] = None,
-    min_level: Opt[str] = None,
-    logger_name: Opt[str] = None,
-) -> Vec[PublicLogEntry]:
-    """
-    Re-export the get_canister_logs query function from the library
-    This makes it accessible as a query method on the test canister
-    """
-    logs = _get_canister_logs(
-        from_entry=from_entry,
-        max_entries=max_entries,
-        min_level=min_level,
-        logger_name=logger_name,
-    )
-
-    # Convert the logs to our local PublicLogEntry type
-    return [
-        PublicLogEntry(
-            timestamp=log["timestamp"],
-            level=log["level"],
-            logger_name=log["logger_name"],
-            message=log["message"],
-            id=log["id"],
-        )
-        for log in logs
-    ]
-
-
-@update
-def execute_code(code: str) -> str:
-    """Executes Python code and returns the output.
-
-    This is the core function needed for the Kybra Simple Shell to work.
-    It captures stdout, stderr, and return values from the executed code.
-    """
-    import io
-    import sys
-    import traceback
-
-    stdout = io.StringIO()
-    stderr = io.StringIO()
-    sys.stdout = stdout
-    sys.stderr = stderr
-
-    try:
-        # Try to evaluate as an expression
-        result = eval(code, globals())
-        if result is not None:
-            ic.print(repr(result))
-    except SyntaxError:
-        try:
-            # If it's not an expression, execute it as a statement
-            # Use the built-in exec function but with a different name to avoid conflict
-            exec_builtin = exec
-            exec_builtin(code, globals())
-        except Exception:
-            traceback.print_exc()
-    except Exception:
-        traceback.print_exc()
-
-    sys.stdout = sys.__stdout__
-    sys.stderr = sys.__stderr__
-    return stdout.getvalue() + stderr.getvalue()

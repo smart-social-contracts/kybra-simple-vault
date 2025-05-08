@@ -11,8 +11,8 @@ import traceback
 
 from src.vault.vault.constants import (
     CANISTER_PRINCIPALS,
+    MAX_ITERATION_COUNT,
     MAX_RESULTS,
-    MAX_iteration_count,
 )
 from tests.utils.colors import GREEN, RED, RESET, print_error, print_ok
 from tests.utils.command import (
@@ -124,7 +124,7 @@ def test_deploy_vault_without_params():
     # Default values
     ledger_id = CANISTER_PRINCIPALS["ckBTC"]["ledger"]
     indexer_id = CANISTER_PRINCIPALS["ckBTC"]["indexer"]
-    max_iteration_count = MAX_iteration_count
+    max_iteration_count = MAX_ITERATION_COUNT
     max_results = MAX_RESULTS
 
     print(
@@ -276,12 +276,12 @@ def test_set_canisters():
     run_command_expects_response_obj(set_cmd)
 
     return get_and_check_status(
-        get_current_principal(), ledger_id, indexer_id, MAX_iteration_count, MAX_RESULTS
+        get_current_principal(), ledger_id, indexer_id, MAX_ITERATION_COUNT, MAX_RESULTS
     )
 
 
 if __name__ == "__main__":
-    test_deploy_vault_with_params(MAX_iteration_count, MAX_RESULTS)
+    test_deploy_vault_with_params(MAX_ITERATION_COUNT, MAX_RESULTS)
     test_deploy_vault_without_params()
     test_upgrade()
     test_set_canisters()

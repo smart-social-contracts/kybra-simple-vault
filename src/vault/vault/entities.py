@@ -18,27 +18,6 @@ class ApplicationData(Entity, TimestampedMixin):
     scan_oldest_tx_id = Integer(default=0)
 
 
-"""
-
-
-recent_history_end_tx_id
-recent_history_start_tx_id => needs to catch up to history_end_tx_id
-...
-
-old_history_end_tx_id
-old_history_start_tx_id => needs to catch up to oldest_tx_id
-
-
-Algorithm:
-query with start_tx_id = None
-the query returns transacions, get the batch_oldest_tx_id
-
-if batch_oldest_tx_id == oldest_tx_id:
-    exit
-
-"""
-
-
 class Canisters(Entity, TimestampedMixin):
     principal = String()
 
@@ -58,16 +37,6 @@ class VaultTransaction(Entity, TimestampedMixin):
     timestamp = Integer(min_value=0)
     kind = String()
     categories = ManyToMany("Category", "transactions")
-
-
-"""
-Stores the number of tokens deposited into the vault for each user.
-Vault balance is updated when:
-- user deposits in the vault
-- vault transfers to user
-
-However, note that Balance["vault"] is the total number of token deposit in the vault.
-"""
 
 
 class Balance(Entity, TimestampedMixin):
