@@ -707,6 +707,15 @@ def status() -> Response:
     try:
         # Get app_data with proper typing
         app_data_obj = app_data()
+        sync_status = (
+            "Synced"
+            if app_data_obj.scan_end_tx_id
+            == app_data_obj.scan_oldest_tx_id
+            == app_data_obj.scan_start_tx_id
+            else "Syncing"
+        )
+        sync_tx_id = app_data_obj.scan_oldest_tx_id
+
         app_data_record = AppDataRecord(
             admin_principal=Principal.from_str(app_data_obj.admin_principal),
             max_results=app_data_obj.max_results,
@@ -714,6 +723,8 @@ def status() -> Response:
             scan_end_tx_id=app_data_obj.scan_end_tx_id,
             scan_start_tx_id=app_data_obj.scan_start_tx_id,
             scan_oldest_tx_id=app_data_obj.scan_oldest_tx_id,
+            sync_status=sync_status,
+            sync_tx_id=sync_tx_id,
         )
 
         # Get balances with proper typing

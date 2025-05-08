@@ -59,6 +59,21 @@ def get_and_check_status(
         assert stats_data["app_data"]["max_iteration_count"] == str(max_iteration_count)
         assert stats_data["app_data"]["max_results"] == str(max_results)
 
+        # Verify sync_status is correctly determined based on transaction IDs
+        end_tx_id = stats_data["app_data"].get("scan_end_tx_id", "0")
+        oldest_tx_id = stats_data["app_data"].get("scan_oldest_tx_id", "0")
+        start_tx_id = stats_data["app_data"].get("scan_start_tx_id", "0")
+
+        expected_sync_status = (
+            "Synced" if end_tx_id == oldest_tx_id == start_tx_id else "Syncing"
+        )
+        actual_sync_status = stats_data["app_data"].get("sync_status", "")
+
+        assert actual_sync_status == expected_sync_status, (
+            f"Expected sync_status to be '{expected_sync_status}' when tx IDs are "
+            f"end={end_tx_id}, oldest={oldest_tx_id}, start={start_tx_id}, but got '{actual_sync_status}'"
+        )
+
         tuples_to_check = [("ckBTC indexer", indexer_id), ("ckBTC ledger", ledger_id)]
 
         assert all(

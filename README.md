@@ -1,12 +1,10 @@
 # Kybra Simple Vault
 
-A canister written in Python using Kybra with which:
+A canister written in Python using Kybra with the following features:
 - Users can deposit chain-key tokens (currently, only ckBTC is supported).
 - Only the admin can withdraw.
 - Balance and transaction history can be queried.
-- 
-
-The canister uses the [official ICRC compliant ledger and indexer canisters](https://github.com/dfinity/ic/releases?q=ledger-suite-icrc&expanded=true).
+- Uses the [official ICRC compliant ledger and indexer canisters](https://github.com/dfinity/ic/releases?q=ledger-suite-icrc&expanded=true).
 
 
 **WARNING: This is not ready for production use yet and funds stored in the vault canister can be lost. Use at your own risk.**
@@ -37,7 +35,9 @@ $ dfx canister call vault status --output json
         "max_results": "2",
         "scan_end_tx_id": "4",
         "scan_oldest_tx_id": "4",
-        "scan_start_tx_id": "4"
+        "scan_start_tx_id": "4",
+        "sync_status": "Synced",
+        "sync_tx_id": "4"
       },
       "balances": [
         {
@@ -141,6 +141,11 @@ pip install -r requirements.txt -r requirements-dev.txt
 # Running tests
 ./run_linters.sh --fix && ./run_test.sh
 ```
+
+### Syncing
+
+The syncing mechanism is run by an external call to the `update_transaction_history` method. The syncing process is limited by the `max_iteration_count` and `max_results` parameters.
+Syncing is guaranteed regardless of how many unprocessed transactions there are, as long as the `update_transaction_history` method is called enough times.
 
 ## License
 

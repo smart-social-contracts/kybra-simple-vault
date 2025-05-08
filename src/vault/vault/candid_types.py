@@ -41,6 +41,8 @@ class AppDataRecord(Record):
     scan_end_tx_id: nat
     scan_start_tx_id: nat
     scan_oldest_tx_id: nat
+    sync_status: text
+    sync_tx_id: nat
 
 
 class Account(Record):
