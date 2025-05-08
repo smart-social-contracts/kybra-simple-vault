@@ -54,7 +54,7 @@ def get_transactions(principal_id):
             message = tx_json.get("message", "Unknown error")
             return tx_json, False, message
 
-        transactions = tx_json["data"][0]["Transactions"] if success else []
+        transactions = tx_json["data"]["Transactions"] if success else []
 
         return tx_json, success, transactions
     except Exception as e:
@@ -75,7 +75,7 @@ def test_update_transactions_batches(expected_new_counts=None):
             return False
 
         new_count = int(
-            update_json.get("data")[0].get("TransactionSummary").get("new_txs_count")
+            update_json.get("data").get("TransactionSummary").get("new_txs_count")
         )
         if new_count != expected_new_count:
             print_error(
@@ -84,7 +84,7 @@ def test_update_transactions_batches(expected_new_counts=None):
             return False
 
         # total_processed_count += new_count
-        # total_processed = int(update_json.get("data")[0].get("TransactionSummary").get("total_processed"))
+        # total_processed = int(update_json.get("data").get("TransactionSummary").get("total_processed"))
         # if total_processed != total_processed_count:
         #     print_error(f"Total processed count does not match expected count: {total_processed} != {total_processed_count}")
         #     return False

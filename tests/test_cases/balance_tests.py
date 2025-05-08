@@ -41,7 +41,7 @@ def check_balance(principal_id, expected_amount=None):
             print(f"{RED}✗ Balance check failed: {message}{RESET}")
             return None, (message, False)
 
-        balance_data = balance_json["data"][0]["Balance"]
+        balance_data = balance_json["data"]["Balance"]
         amount = int(balance_data.get("amount", 0))
 
         if expected_amount is not None:

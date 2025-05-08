@@ -53,7 +53,7 @@ def get_and_check_status(
             print_error("Vault status check failed")
             return False
 
-        stats_data = status_json["data"][0]["Stats"]
+        stats_data = status_json["data"]["Stats"]
 
         assert stats_data["app_data"]["admin_principal"][0] == admin_principal
         assert stats_data["app_data"]["max_iteration_count"] == str(max_iteration_count)
@@ -207,7 +207,7 @@ def test_upgrade():
         print_error("Failed to get transactions after upgrade")
         return False
 
-    post_tx_count = len(post_transactions["data"][0]["Transactions"])
+    post_tx_count = len(post_transactions["data"]["Transactions"])
     if post_tx_count < pre_tx_count:
         print_error(
             f"Transactions not preserved after upgrade: before={pre_tx_count}, after={post_tx_count}"
@@ -232,7 +232,7 @@ def test_upgrade():
         print_error("Failed to get final transactions")
         return False
 
-    final_tx_count = len(final_transactions["data"][0]["Transactions"])
+    final_tx_count = len(final_transactions["data"]["Transactions"])
     if final_tx_count != post_tx_count + 1:
         print_error("New transaction was not recorded after upgrade")
         return False

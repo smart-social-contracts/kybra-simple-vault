@@ -163,12 +163,12 @@ class ResponseData(Variant, total=False):
     Balance: BalanceRecord
     Transactions: Vec[TransactionRecord]
     Stats: StatsRecord
+    Error: Opt[str]
 
 
 class Response(Record):
     success: bool  # True for success, False for failure
-    message: text  # Success or error message
-    data: Opt[ResponseData]  # Optional data payload for the response
+    data: ResponseData  # Optional data payload for the response
 
 
 # ICRC standard types

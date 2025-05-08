@@ -212,7 +212,7 @@ def update_transaction_history_until_no_more_transactions():
             return False
 
         new_count = int(
-            response_json.get("data")[0].get("TransactionSummary").get("new_txs_count")
+            response_json.get("data").get("TransactionSummary").get("new_txs_count")
         )
         print(f"New count: {new_count}")
         if new_count == 0:
