@@ -1,10 +1,10 @@
 # Kybra Simple Vault
 
 A canister written in Python using Kybra with the following features:
-- Users can deposit chain-key tokens (currently, only ckBTC is supported).
-- Only the admin can withdraw.
-- Balance and transaction history can be queried.
-- Uses the [official ICRC compliant ledger and indexer canisters](https://github.com/dfinity/ic/releases?q=ledger-suite-icrc&expanded=true).
+- Users can deposit chain-key tokens (currently, only ckBTC is supported). The vault keeps track of the user's "balances", meaning the net number of tokens each user has deposited into the vault and have been withdrawn out from the vault to the user.
+- Only the admin can transfer tokens out of the vault.
+- Balance and transaction history per user can be queried.
+- The canister makes calls to the [official ICRC compliant ledger and indexer canisters](https://github.com/dfinity/ic/releases?q=ledger-suite-icrc&expanded=true).
 
 
 **WARNING: This is not ready for production use yet and funds stored in the vault canister can be lost. Use at your own risk.**
@@ -31,32 +31,36 @@ $ dfx canister call vault status --output json
     "Stats": {
       "app_data": {
         "admin_principal": "ah6ac-cc73l-bb2zc-ni7bh-jov4q-roeyj-6k2ob-mkg5j-pequi-vuaa6-2ae",
-        "max_iteration_count": "2",
-        "max_results": "2",
-        "scan_end_tx_id": "4",
-        "scan_oldest_tx_id": "4",
-        "scan_start_tx_id": "4",
+        "max_iteration_count": "5",
+        "max_results": "20",
+        "scan_end_tx_id": "2_467_102",
+        "scan_oldest_tx_id": "2_467_102",
+        "scan_start_tx_id": "2_467_102",
         "sync_status": "Synced",
-        "sync_tx_id": "4"
+        "sync_tx_id": "2_467_102"
       },
       "balances": [
         {
-          "amount": "101",
-          "principal_id": "br5f7-7uaaa-aaaaa-qaaca-cai"
+          "amount": "906",
+          "principal_id": "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe"
         },
         {
-          "amount": "101",
-          "principal_id": "bzbu5-7fzna-4swqp-hn6cu-g47l7-ictdj-3gymg-eyv4b-5uuux-hp6r6-pqe"
+          "amount": "-15",
+          "principal_id": "ah6ac-cc73l-bb2zc-ni7bh-jov4q-roeyj-6k2ob-mkg5j-pequi-vuaa6-2ae"
+        },
+        {
+          "amount": "891",
+          "principal_id": "guja4-2aaaa-aaaam-qdhjq-cai"
         }
       ],
       "canisters": [
         {
           "id": "ckBTC indexer",
-          "principal": "bd3sg-teaaa-aaaaa-qaaba-cai"
+          "principal": "n5wcd-faaaa-aaaar-qaaea-cai"
         },
         {
           "id": "ckBTC ledger",
-          "principal": "bnz7o-iuaaa-aaaaa-qaaaa-cai"
+          "principal": "mxzaz-hqaaa-aaaar-qaada-cai"
         }
       ]
     }
