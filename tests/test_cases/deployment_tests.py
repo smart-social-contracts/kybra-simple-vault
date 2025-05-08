@@ -55,14 +55,14 @@ def get_and_check_status(
 
         stats_data = status_json["data"]["Stats"]
 
-        assert stats_data["app_data"]["admin_principal"]["principal_id"] == admin_principal
+        assert stats_data["app_data"]["admin_principal"] == admin_principal
         assert stats_data["app_data"]["max_iteration_count"] == str(max_iteration_count)
         assert stats_data["app_data"]["max_results"] == str(max_results)
 
         tuples_to_check = [("ckBTC indexer", indexer_id), ("ckBTC ledger", ledger_id)]
 
         assert all(
-            t in {(item["_id"], item["principal"]) for item in stats_data["canisters"]}
+            t in {(item["id"], item["principal"]) for item in stats_data["canisters"]}
             for t in tuples_to_check
         )
 
