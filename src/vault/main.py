@@ -132,9 +132,7 @@ def admin_only(func):
     def wrapper(*args, **kwargs):
         # Check if caller is admin
         if ic.caller().to_str() != app_data().admin_principal:
-            return Response(
-                success=False, message="Caller is not the admin principal"
-            )
+            return Response(success=False, message="Caller is not the admin principal")
         # If caller is admin, proceed with the function
         return func(*args, **kwargs)
 
@@ -168,17 +166,29 @@ def set_canister(canister_name: str, principal_id: Principal) -> Response:
             logger.info(
                 f"Updated existing canister '{canister_name}' with new principal."
             )
-            return Response(success=True, data=ResponseData(Message=f"Canister '{canister_name}' updated successfully"))
+            return Response(
+                success=True,
+                data=ResponseData(
+                    Message=f"Canister '{canister_name}' updated successfully"
+                ),
+            )
         else:
             # Create a new canister record
             Canisters(_id=canister_name, principal=principal_id.to_str())
             logger.info(f"Created new canister '{canister_name}' with principal.")
-            return Response(success=True, data=ResponseData(Message=f"Canister '{canister_name}' created successfully"))
+            return Response(
+                success=True,
+                data=ResponseData(
+                    Message=f"Canister '{canister_name}' created successfully"
+                ),
+            )
     except Exception as e:
         logger.error(
             f"Error setting canister '{canister_name}' to principal: {e}\n{traceback.format_exc()}"
         )
-        return Response(success=False, data=ResponseData(Error=f"Error setting canister: {str(e)}"))
+        return Response(
+            success=False, data=ResponseData(Error=f"Error setting canister: {str(e)}")
+        )
 
 
 @update
@@ -199,10 +209,15 @@ def transfer(to: Principal, amount: nat) -> Async[Response]:
         logger.debug(f"Transfer called by {ic.caller()}")
         logger.debug(f"Admin principal is {app_data().admin_principal}")
         if ic.caller().to_str() != app_data().admin_principal:
-            return Response(success=False, data=ResponseData(Error="Caller is not the admin principal"))
+            return Response(
+                success=False,
+                data=ResponseData(Error="Caller is not the admin principal"),
+            )
 
         if amount <= 0:
-            return Response(success=False, data=ResponseData(Error="Amount must be positive"))
+            return Response(
+                success=False, data=ResponseData(Error="Amount must be positive")
+            )
         logger.info(f"Transferring {amount} tokens to {to.to_str()}")
         principal = Canisters["ckBTC ledger"].principal
         ledger = ICRCLedger(Principal.from_str(principal))
@@ -224,20 +239,27 @@ def transfer(to: Principal, amount: nat) -> Async[Response]:
             transfer_result = result.Ok
             if transfer_result.get("Ok") is not None:
                 tx_id = transfer_result["Ok"]
-                return Response(success=True,
+                return Response(
+                    success=True,
                     data=ResponseData(
                         TransactionId=TransactionIdRecord(transaction_id=tx_id)
                     ),
                 )
             else:
                 error = transfer_result.get("Err")
-                return Response(success=False, data=ResponseData(Error=f"Transfer error: {error}"))
+                return Response(
+                    success=False, data=ResponseData(Error=f"Transfer error: {error}")
+                )
         else:
             logger.error(f"Transfer failed: {result.Err}")
-            return Response(success=False, data=ResponseData(Error=f"Call error: {result.Err}"))
+            return Response(
+                success=False, data=ResponseData(Error=f"Call error: {result.Err}")
+            )
     except Exception as e:
         logger.error(f"Exception in transfer: {e}\n{traceback.format_exc()}")
-        return Response(success=False, data=ResponseData(Error=f"Exception in transfer: {str(e)}"))
+        return Response(
+            success=False, data=ResponseData(Error=f"Exception in transfer: {str(e)}")
+        )
 
 
 @update
@@ -275,7 +297,11 @@ def update_transaction_history() -> Async[Response]:
             )
 
             start_tx_id = None
-            if scan_start_tx_id and scan_oldest_tx_id and scan_oldest_tx_id < scan_start_tx_id:
+            if (
+                scan_start_tx_id
+                and scan_oldest_tx_id
+                and scan_oldest_tx_id < scan_start_tx_id
+            ):
                 start_tx_id = scan_start_tx_id
 
             logger.debug(
@@ -357,11 +383,15 @@ def update_transaction_history() -> Async[Response]:
 
     except Exception as e:
         logger.error(f"Error processing transactions: {e}\n {traceback.format_exc()}")
-        return Response(success=False, data=ResponseData(Error=f"Error processing transactions: {str(e)}"))
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Error processing transactions: {str(e)}"),
+        )
 
     summary_msg = f"Processed a total of {new_txs_count} new transactions"
     logger.info(summary_msg)
-    return Response(success=True,
+    return Response(
+        success=True,
         data=ResponseData(
             TransactionSummary=TransactionSummaryRecord(
                 new_txs_count=new_txs_count,
@@ -571,16 +601,28 @@ def get_balance(principal_id: str) -> Response:
         balance = Balance[principal_id]
 
         if not balance:
-            return Response(success=False, data=ResponseData(Error=f"Balance not found for principal: {principal_id}"))
-
-        return Response(success=True,
-                data=ResponseData(Balance=BalanceRecord(principal_id=Principal.from_str(principal_id), amount=balance.amount))
+            return Response(
+                success=False,
+                data=ResponseData(
+                    Error=f"Balance not found for principal: {principal_id}"
+                ),
             )
+
+        return Response(
+            success=True,
+            data=ResponseData(
+                Balance=BalanceRecord(
+                    principal_id=Principal.from_str(principal_id), amount=balance.amount
+                )
+            ),
+        )
     except Exception as e:
         logger.error(
             f"Error getting balance for principal {principal_id}: {e}\n{traceback.format_exc()}"
         )
-        return Response(success=False, data=ResponseData(Error=f"Error getting balance: {str(e)}"))
+        return Response(
+            success=False, data=ResponseData(Error=f"Error getting balance: {str(e)}")
+        )
 
 
 @query
@@ -635,14 +677,18 @@ def get_transactions(principal_id: str) -> Response:
                 logger.error(f"Error sorting transactions: {e}")
                 # Continue without sorting if there's an error
 
-        return Response(success=True,
+        return Response(
+            success=True,
             data=ResponseData(Transactions=txs),
         )
     except Exception as e:
         logger.error(
             f"Error getting transactions for principal {principal_id}: {e}\n {traceback.format_exc()}"
         )
-        return Response(success=False, data=ResponseData(Error=f"Error getting transactions: {str(e)}"))
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Error getting transactions: {str(e)}"),
+        )
 
 
 @query
@@ -694,7 +740,8 @@ def status() -> Response:
         )
 
         # Return response with stats
-        return Response(success=True,
+        return Response(
+            success=True,
             data=ResponseData(Stats=stats),
         )
 
@@ -702,7 +749,10 @@ def status() -> Response:
         logger.error(
             f"Error retrieving vault statistics: {e}\n{traceback.format_exc()}"
         )
-        return Response(success=False, data=ResponseData(Error=f"Error retrieving vault statistics: {str(e)}"))
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Error retrieving vault statistics: {str(e)}"),
+        )
 
 
 # ##### Import Kybra and the internal function #####
