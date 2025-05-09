@@ -20,7 +20,7 @@ from tests.utils.command import (
     get_current_principal,
     run_command,
     run_command_expects_response_obj,
-    update_transaction_history_until_no_more_transactions,
+    update_transaction_history,
 )
 
 # Add the parent directory to the Python path to make imports work
@@ -152,7 +152,7 @@ def test_upgrade():
     """Test upgrading the vault canister while preserving state."""
     print("\nTesting vault canister upgrade...")
 
-    update_transaction_history_until_no_more_transactions()
+    update_transaction_history()
 
     # Step 1: Store current state before upgrade
 
@@ -239,9 +239,7 @@ def test_upgrade():
         print_error("Failed to perform transfer after upgrade")
         return False
 
-    # Update transaction history
-    update_tx_cmd = "dfx canister call vault update_transaction_history --output json"
-    run_command_expects_response_obj(update_tx_cmd)
+    update_transaction_history()
 
     # Verify new transaction was added
     final_transactions = run_command_expects_response_obj(transactions_cmd)

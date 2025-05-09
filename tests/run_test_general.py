@@ -49,7 +49,7 @@ from tests.utils.command import (
     deploy_ckbtc_indexer,
     deploy_ckbtc_ledger,
     run_command,
-    update_transaction_history_until_no_more_transactions,
+    update_transaction_history,
 )
 
 
@@ -88,7 +88,7 @@ def main():
             test_get_transactions_nonexistent_user()
         )
 
-        update_transaction_history_until_no_more_transactions()
+        update_transaction_history()
 
         # Check transaction ordering and validity
         results["Transaction Ordering"] = test_transaction_ordering()

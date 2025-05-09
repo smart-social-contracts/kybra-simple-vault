@@ -17,27 +17,6 @@ sys.path.insert(
 )
 
 
-def update_transaction_history():
-    """Update transaction history in the vault and return result."""
-    try:
-        update_result = run_command(
-            "dfx canister call vault update_transaction_history --output json"
-        )
-
-        if not update_result:
-            return None, False
-
-        update_json = json.loads(update_result)
-        success = update_json.get("success", False)
-
-        return update_json, success
-    except Exception as e:
-        print_error(
-            f"Error updating transaction history: {e}\n{traceback.format_exc()}"
-        )
-        return None, False
-
-
 def get_transactions(principal_id):
     """Get transactions for a principal and return parsed result."""
     try:

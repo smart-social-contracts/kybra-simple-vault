@@ -198,38 +198,38 @@ def deploy_ckbtc_indexer(ledger_id=None, interval_seconds=1):
     return indexer_id
 
 
-def update_transaction_history_until_no_more_transactions(
-    expected_sync_status=None, expected_new_txs_count=None, expected_scan_end_tx_id=None
+def update_transaction_history(
+    expected_new_txs_count=None, expected_sync_status=None, expected_scan_end_tx_id=None
 ):
-    loop_count = 0
-    while loop_count < 20:
-        loop_count += 1
-        response = run_command(
-            "dfx canister call vault update_transaction_history --output json"
-        )
-        response_json = json.loads(response)
-        success = response_json.get("success", False)
-        if not success:
-            print_error("Failed to update transaction history")
-            return False
+    """Update transaction history in the vault and return result."""
 
-        transaction_summary = response_json.get("data").get("TransactionSummary")
-        new_count = int(transaction_summary.get("new_txs_count"))
-        sync_status = transaction_summary.get("sync_status", "Unknown")
-        scan_end_tx_id = int(transaction_summary.get("scan_end_tx_id", 0))
-        
-        print(f"New transactions: {new_count}, Sync status: {sync_status}, Last tx ID: {scan_end_tx_id}")
-        if expected_new_txs_count is not None and new_count != expected_new_txs_count:
-            return False
-        if expected_sync_status is not None and sync_status != expected_sync_status:
-            return False
-        if expected_scan_end_tx_id is not None and scan_end_tx_id != expected_scan_end_tx_id:
-            return False
-        return True
-
-    raise Exception(
-        "Failed to update transaction history completely after max iteration_count"
+    update_result = run_command(
+        "dfx canister call vault update_transaction_history --output json"
     )
+
+    if not update_result:
+        raise Exception("Failed to update transaction history")
+
+    update_json = json.loads(update_result)
+    if not update_json.get("success", False):
+        raise Exception("Failed to update transaction history")
+
+    transaction_summary = update_json.get("data").get("TransactionSummary")
+    new_count = int(transaction_summary.get("new_txs_count"))
+    sync_status = transaction_summary.get("sync_status", "Unknown")
+    scan_end_tx_id = int(transaction_summary.get("scan_end_tx_id", 0))
+
+    if expected_new_txs_count is not None and new_count != expected_new_txs_count:
+        raise Exception("New transaction count does not match expected count")
+    if expected_sync_status is not None and sync_status != expected_sync_status:
+        raise Exception("Sync status does not match expected status")
+    if (
+        expected_scan_end_tx_id is not None
+        and scan_end_tx_id != expected_scan_end_tx_id
+    ):
+        raise Exception("Scan end tx ID does not match expected ID")
+
+    return True
 
 
 def generate_transaction_commands(transactions):
@@ -297,7 +297,7 @@ def generate_transaction_commands(transactions):
 
         elif tx["type"] == "update_history":
             # Command to update transaction history
-            cmd = "dfx canister call vault update_transaction_history --output json"
+            cmd = "dfx canister call vault update_transaction_history --output json"  # TODO
             commands.append(cmd)
 
         elif tx["type"] == "get_transactions":
@@ -355,10 +355,7 @@ def execute_transactions(
     # Process each transaction
     for sender, receiver in transaction_pairs:
         if sender == "update_history":
-            run_command(
-                "dfx canister call vault update_transaction_history --output json"
-            )
-            continue
+            update_transaction_history()
 
         if sender == "check_balance":
             # receiver should be the name of the identity to check
@@ -471,12 +468,7 @@ def execute_transactions(
             print(f"Transfer successful: {transfer_json}")
 
             # Now tell the vault to update transaction history
-            update_cmd = (
-                "dfx canister call vault update_transaction_history --output json"
-            )
-            update_result = run_command(update_cmd)
-            if not update_result:
-                print_error("Failed to update transaction history")
+            update_transaction_history()
 
             cmd = transfer_cmd  # For logging
 
