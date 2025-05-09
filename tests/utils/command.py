@@ -426,6 +426,11 @@ def execute_transactions(
                 principal "{receiver_id}",
                 {amount}
             )' --output json"""
+            tx_result = run_command(cmd)
+            if not tx_result or not json.loads(tx_result).get("success", False):
+                print_error(f"Transaction failed: {sender} -> {receiver}")
+                success = False
+                continue
 
         elif receiver == "vault":
             # User sending to vault - need to transfer via ledger
@@ -474,21 +479,38 @@ def execute_transactions(
             cmd = transfer_cmd  # For logging
 
         else:
-            # Get current identity's principal
-            current_principal = get_current_principal()
-
-            # If sender is not the current principal, we need to switch identities
+            # User-to-user direct transfer via ledger (out-of-vault)
             identity_arg = f"--identity {sender}" if sender in identities else ""
 
-            cmd = f"""dfx {identity_arg} canister call vault send '(
-                principal "{receiver_id}",
-                {amount}
+            # Transfer tokens directly from one user to another
+            transfer_cmd = f"""dfx {identity_arg} canister call ckbtc_ledger icrc1_transfer '(
+                record {{ 
+                    to = record {{ 
+                        owner = principal "{receiver_id}"; 
+                        subaccount = null 
+                    }}; 
+                    amount = {amount}; 
+                    fee = null; 
+                    memo = null; 
+                    from_subaccount = null; 
+                    created_at_time = null 
+                }}
             )' --output json"""
 
-            # Run the transaction command
-            tx_result = run_command(cmd)
-            if not tx_result or not json.loads(tx_result).get("success", False):
-                print_error(f"Transaction failed: {sender} -> {receiver}")
+            print(
+                f"Transferring {amount} tokens directly from {sender} to {receiver} via ledger..."
+            )
+            tx_result = run_command(transfer_cmd)
+
+            try:
+                tx_response = json.loads(tx_result)
+                if "Ok" in tx_response:
+                    print(f"Transfer successful: {tx_response}")
+                else:
+                    print_error(f"Transfer failed: {tx_response}")
+                    success = False
+            except (json.JSONDecodeError, TypeError):
+                print_error(f"Failed to parse transfer response: {tx_result}")
                 success = False
 
         amount += 1

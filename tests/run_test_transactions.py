@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 """
-Main test runner for the vault canister tests.
+Transaction test runner for the vault canister.
+
+This module tests the transaction capabilities of the vault canister, focusing on:
+- Deposit transactions into the vault
+- Withdrawal transactions from the vault
+- Balance verification after transactions
+- Transaction history synchronization
+- User-to-user transfers via the vault
+
+It deploys all necessary canisters (ckBTC ledger, indexer, vault) and sets up
+test identities before running the transaction sequence.
 """
 
-
-# isort: off
-import traceback
-import os
 import sys
+import traceback
 
 # Add the parent directory to the Python path to make imports work
-sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
-# isort: on
-
+sys.path.insert(0, sys.path[0] + "/..")
 
 from tests.test_cases.deployment_tests import test_deploy_vault_with_params
 from tests.utils.colors import print_error, print_ok
@@ -23,9 +28,34 @@ from tests.utils.command import (
     execute_transactions,
 )
 
+# Test configuration constants
+INITIAL_TRANSFER_AMOUNT = 101  # Starting amount for transfers
+MAX_RESULTS = 2  # Max results parameter for vault deployment
+MAX_ITERATION_COUNT = 2  # Max iteration count parameter for vault deployment
+
+# Initial balances for test identities
+IDENTITY_BALANCES = {
+    "alice": 500_000_000,
+    "bob": 300_000_000,
+    "charlie": 100_000_000,
+}
+
 
 def main():
-    """Run the vault canister tests."""
+    """
+    Run the vault transaction tests.
+
+    This function:
+    1. Creates test identities (alice, bob, charlie)
+    2. Deploys the ckBTC ledger with initial balances
+    3. Deploys the ckBTC indexer
+    4. Deploys the vault canister with test parameters
+    5. Executes a sequence of test transactions
+    6. Verifies results and reports success/failure
+
+    Returns:
+        int: 0 for success, 1 for failure
+    """
     try:
         print("=== Starting Vault IC Tests ===")
 
@@ -34,20 +64,13 @@ def main():
         identities = create_test_identities(["alice", "bob", "charlie"])
         print(f"Created identities: {', '.join(identities.keys())}")
 
-        # Set initial balances for identities
-        identity_balances = {
-            "alice": 500_000_000,
-            "bob": 300_000_000,
-            "charlie": 100_000_000,
-        }
-
         # Deploy ck canisters with initial balances for identities
         print("\nDeploying ckBTC ledger with initial balances...")
         deploy_ckbtc_ledger(
             initial_balance=1_000_000_000,  # Current principal gets 1B tokens
             transfer_fee=10,
             identities=identities,
-            identity_balances=identity_balances,
+            identity_balances=IDENTITY_BALANCES,
         )
         deploy_ckbtc_indexer()
 
@@ -56,26 +79,47 @@ def main():
 
         # Deploy the vault canister
         results["Deploy Vault With Params"] = test_deploy_vault_with_params(
-            max_results=2, max_iteration_count=2
+            max_results=MAX_RESULTS, max_iteration_count=MAX_ITERATION_COUNT
         )
 
-        # Define transaction sequence - keep it simple to ensure success
+        # Define a more comprehensive transaction sequence
         print("\nExecuting transaction sequence...")
         transactions = [
-            ["alice", "vault"],  # Alice deposits 101
+            # Basic deposits
+            ["alice", "vault"],  # Alice deposits to vault (amount: 101)
             ["update_history", None],  # Update transaction history
-            ["check_balance", "alice"],  # Verify Alice's balance (should be 101)
-            ["bob", "vault"],  # Bob deposits 102
+            ["check_balance", "alice"],  # Verify Alice's balance = 101
+            ["bob", "vault"],  # Bob deposits to vault (amount: 102)
             ["update_history", None],  # Update transaction history
-            ["check_balance", "bob"],  # Verify Bob's balance (should be 102)
+            ["check_balance", "bob"],  # Verify Bob's balance = 102
+            # Additional transaction: Charlie deposits
+            ["charlie", "vault"],  # Charlie deposits to vault (amount: 103)
+            ["update_history", None],  # Update transaction history
+            ["check_balance", "charlie"],  # Verify Charlie's balance = 103
+            # Withdrawal transaction
+            ["vault", "alice"],  # Withdraw to Alice (amount: 104)
+            ["update_history", None],  # Update transaction history
+            ["check_balance", "alice"],  # Verify updated Alice balance = 101 - 104 = -3
+            # Advanced: vault makes multiple transfers
+            ["vault", "bob"],  # Withdraw to Bob (amount: 105)
+            [
+                "bob",
+                "charlie",
+            ],  # Out-of-vault transfer from Bob to Charlie (amount: 106)
+            ["update_history", None],  # Update transaction history
+            # Final balance verification
+            ["check_balance", "alice"],  # Verify Alice's final balance
+            ["check_balance", "bob"],  # Verify Bob's final balance
+            ["check_balance", "charlie"],  # Verify Charlie's final balance
         ]
+
         # Execute transactions and track expected balances
         print("Executing transactions...")
         success, expected_balances = execute_transactions(
             transactions,
             identities=identities,
-            start_amount=101,
-            initial_balances=identity_balances.copy(),
+            start_amount=INITIAL_TRANSFER_AMOUNT,
+            initial_balances=IDENTITY_BALANCES.copy(),
         )
 
         results["Transaction Sequence"] = success
