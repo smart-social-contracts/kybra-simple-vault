@@ -154,7 +154,7 @@ def deploy_ckbtc_ledger(
     # Get the ledger canister ID
     ledger_id = get_canister_id("ckbtc_ledger")
     if ledger_id:
-        print_ok(f"✓ ckbtc_ledger canister deployed with ID: {ledger_id}")
+        print_ok(f"ckbtc_ledger canister deployed with ID: {ledger_id}")
 
     return ledger_id
 

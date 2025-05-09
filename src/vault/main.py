@@ -324,18 +324,9 @@ def update_transaction_history() -> Async[Response]:
 
             logger.debug(f"Received {len(response_txs)} transactions")
 
-            # if len(response_txs) < batch_max_results:
-            #     logger.debug(f"Number of transactions in batch is less than max_results ({len(response_txs)} < {batch_max_results})")
-            #     do_not_iterate_next = False
-
             response_txs.sort(
                 key=lambda x: x["id"], reverse=True
             )  # sort by id descending
-
-            # highest_tx_id = response_txs[0]["id"]
-            # if scan_oldest_tx_id is not None and scan_oldest_tx_id == scan_start_tx_id and highest_tx_id <= scan_end_tx_id:
-            #     logger.info("No new transactions to be scanned. We are in sync.")
-            #     break
 
             (
                 processed_batch_oldest_tx_id,
