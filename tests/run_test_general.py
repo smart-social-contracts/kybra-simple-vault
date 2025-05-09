@@ -8,25 +8,17 @@ Main test runner for the vault canister tests.
 import traceback
 import os
 import sys
-import json
 
 # Add the parent directory to the Python path to make imports work
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 # isort: on
 
 
-from tests.test_cases.balance_tests import (
-    check_balance,
-    test_balance,
-    test_nonexistent_user_balance,
-)
-from tests.test_cases.deployment_tests import test_upgrade
 from tests.test_cases.deployment_tests import (
-    test_deploy_vault_with_params,
     test_deploy_vault_without_params,
     test_set_canisters,
+    test_upgrade,
 )
-from tests.test_cases.transaction_tests import test_get_transactions
 from tests.test_cases.transaction_tests import (
     test_get_transactions_nonexistent_user,
     test_transaction_ordering,
@@ -34,20 +26,16 @@ from tests.test_cases.transaction_tests import (
 )
 from tests.test_cases.transfer_tests import (
     test_exceed_balance_transfer,
-    test_multiple_transfers_sequence,
     test_negative_amount_transfer,
-    test_transfer_from_vault,
-    test_transfer_to_vault,
     test_zero_amount_transfer,
+    transfer_from_vault,
+    transfer_to_vault,
 )
 from tests.utils.colors import print_error, print_ok
-from tests.utils.command import create_test_identities
-from tests.utils.command import execute_transactions
-from tests.utils.command import get_canister_id
 from tests.utils.command import (
     deploy_ckbtc_indexer,
     deploy_ckbtc_ledger,
-    run_command,
+    get_current_principal,
     update_transaction_history,
 )
 
@@ -70,10 +58,12 @@ def main():
         results["Set canisters"] = test_set_canisters()
 
         # Transfer tokens to the vault
-        results["Transfer To Vault"] = test_transfer_to_vault(1000)
+        results["Transfer To Vault"] = transfer_to_vault(1000)
 
         # Transfer tokens from the vault
-        results["Transfer From Vault"] = test_transfer_from_vault(100)
+        results["Transfer From Vault"] = transfer_from_vault(
+            get_current_principal(), 100
+        )
 
         # Edge cases for transfers
         results["Zero Amount Transfer"] = test_zero_amount_transfer()

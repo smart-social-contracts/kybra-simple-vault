@@ -5,7 +5,6 @@ Tests for deploying the vault canister with specific parameters.
 
 import json
 import os
-import subprocess
 import sys
 import traceback
 
@@ -14,7 +13,7 @@ from src.vault.vault.constants import (
     MAX_ITERATION_COUNT,
     MAX_RESULTS,
 )
-from tests.utils.colors import GREEN, RED, RESET, print_error, print_ok
+from tests.utils.colors import print_error, print_ok
 from tests.utils.command import (
     get_canister_id,
     get_current_principal,
@@ -276,10 +275,3 @@ def test_set_canisters():
     return get_and_check_status(
         get_current_principal(), ledger_id, indexer_id, MAX_ITERATION_COUNT, MAX_RESULTS
     )
-
-
-if __name__ == "__main__":
-    test_deploy_vault_with_params(MAX_ITERATION_COUNT, MAX_RESULTS)
-    test_deploy_vault_without_params()
-    test_upgrade()
-    test_set_canisters()

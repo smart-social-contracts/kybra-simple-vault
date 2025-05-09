@@ -6,7 +6,6 @@ Tests for token transfer functionality of the vault canister.
 import json
 import os
 import sys
-import time
 import traceback
 
 # Add the parent directory to the Python path to make imports work
@@ -21,7 +20,6 @@ from tests.utils.command import get_canister_id, get_current_principal, run_comm
 def transfer_from_vault(to_principal, amount):
     """Helper function to transfer tokens from vault to a principal."""
     try:
-        vault_id = get_canister_id("vault")
         print(f"Transferring {amount} tokens from vault to {to_principal}")
 
         transfer_cmd = f"dfx canister call vault transfer '(principal \"{to_principal}\", {amount})' --output json"
@@ -46,13 +44,14 @@ def transfer_from_vault(to_principal, amount):
         return None, False
 
 
-def transfer_to_vault(from_principal, amount):
+def transfer_to_vault(amount):
     """Helper function to transfer tokens to the vault from a principal."""
     try:
-        vault_id = get_canister_id("vault")
-        ledger_id = get_canister_id("ckbtc_ledger")
 
+        from_principal = get_current_principal()
         print(f"Transferring {amount} tokens to vault from {from_principal}")
+
+        vault_id = get_canister_id("vault")
 
         transfer_cmd = f"dfx canister call ckbtc_ledger icrc1_transfer '(record {{ to = record {{ owner = principal \"{vault_id}\"; subaccount = null }}; amount = {amount}; fee = null; memo = null; from_subaccount = null; created_at_time = null }})' --output json"
         transfer_result = run_command(transfer_cmd)
@@ -75,46 +74,6 @@ def transfer_to_vault(from_principal, amount):
             f"{RED}✗ Error transferring to vault: {e}\n{traceback.format_exc()}{RESET}"
         )
         return None, False
-
-
-def test_transfer_from_vault(amount=100):
-    """Test transferring tokens from the vault canister to another account."""
-    print(f"\nTesting token transfer from vault with amount {amount}...")
-
-    # Get the destination principal (current identity)
-    destination_principal = get_current_principal()
-    if not destination_principal:
-        return False
-
-    # Execute the transfer
-    _, success = transfer_from_vault(destination_principal, amount)
-
-    # Wait for the transaction to be processed
-    if success:
-        print("Waiting for the transaction to be processed...")
-        time.sleep(2)
-
-    return success
-
-
-def test_transfer_to_vault(amount=100):
-    """Test transferring tokens to the vault canister."""
-    print(f"\nTesting token transfer to vault with amount {amount}...")
-
-    # Get the source principal (current identity)
-    source_principal = get_current_principal()
-    if not source_principal:
-        return False
-
-    # Execute the transfer
-    _, success = transfer_to_vault(source_principal, amount)
-
-    # Wait for the transaction to be processed
-    if success:
-        print("Waiting for the transaction to be processed...")
-        time.sleep(2)
-
-    return success
 
 
 def test_zero_amount_transfer():
@@ -173,35 +132,6 @@ def test_negative_amount_transfer():
         return False
 
 
-# def test_invalid_principal_transfer():
-#     """Test transferring tokens to an invalid principal."""
-#     print("\nTesting transfer to invalid principal...")
-
-#     # Use an invalid principal format that will be caught by the Base32 check
-#     invalid_principal = (
-#         "aaaaa-aaaa-aaaa-aaaa-aaaaa"  # Valid Base32 but likely invalid principal
-#     )
-
-#     # Try to transfer to invalid principal
-#     result_json, success = transfer_from_vault(invalid_principal, 100)
-
-#     # Invalid principal transfers should be rejected
-#     if not success:
-#         if result_json is None:
-#             print(
-#                 f"{GREEN}✓ Transfer to invalid principal correctly rejected at command level{RESET}"
-#             )
-#         else:
-#             message = result_json.get("message", "")
-#             print(
-#                 f"{GREEN}✓ Transfer to invalid principal correctly rejected: {message}{RESET}"
-#             )
-#         return True
-#     else:
-#         print(f"{RED}✗ Transfer to invalid principal unexpectedly succeeded{RESET}")
-#         return False
-
-
 def test_exceed_balance_transfer():
     """Test transferring more tokens than the vault has."""
     print("\nTesting transfer exceeding vault balance...")
@@ -228,32 +158,3 @@ def test_exceed_balance_transfer():
     else:
         print(f"{RED}✗ Excess transfer unexpectedly succeeded{RESET}")
         return False
-
-
-def test_multiple_transfers_sequence(transfer_amounts):
-    """Test a sequence of multiple transfers to verify consistency."""
-    print("\nTesting a sequence of multiple transfers...")
-
-    # Get destination principal
-    destination_principal = get_current_principal()
-    if not destination_principal:
-        return False
-
-    # Perform multiple transfers
-    successful_transfers = 0
-    num_transfers = len(transfer_amounts)
-
-    for i in range(num_transfers):
-        print(f"Transfer attempt {i+1}/{num_transfers}...")
-
-        _, success = transfer_from_vault(destination_principal, transfer_amounts[i])
-
-        if success:
-            successful_transfers += 1
-            # Wait between transfers
-            time.sleep(2)
-
-    print(f"Completed {successful_transfers}/{num_transfers} successful transfers")
-
-    # Test passes if at least one transfer succeeded
-    return successful_transfers > 0

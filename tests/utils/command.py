@@ -356,6 +356,7 @@ def execute_transactions(
     for sender, receiver in transaction_pairs:
         if sender == "update_history":
             update_transaction_history()
+            continue  # Skip the rest of the loop for update_history transactions
 
         if sender == "check_balance":
             # receiver should be the name of the identity to check

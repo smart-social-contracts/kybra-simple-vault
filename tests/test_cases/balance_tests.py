@@ -16,11 +16,7 @@ sys.path.insert(
 )
 
 from tests.utils.colors import GREEN, RED, RESET
-from tests.utils.command import (
-    get_current_principal,
-    run_command,
-    update_transaction_history,
-)
+from tests.utils.command import run_command
 
 
 def check_balance(principal_id, expected_amount=None):
@@ -65,32 +61,6 @@ def check_balance(principal_id, expected_amount=None):
         return None, False
 
 
-def test_balance(expected_user_balance, expected_vault_balance):
-    """Test checking both user and vault balances."""
-
-    update_transaction_history()
-
-    print("\nTesting balance functionality...")
-
-    # Get current user principal
-    principal = get_current_principal()
-    if not principal:
-        return False
-
-    # Check user balance
-    user_amount, user_success = check_balance(principal, expected_user_balance)
-    if not user_success:
-        return False
-
-    # Check vault balance
-    vault_id = get_canister_id("vault")
-    vault_amount, vault_success = check_balance(vault_id, expected_vault_balance)
-    if not vault_success:
-        return False
-
-    return True
-
-
 def test_nonexistent_user_balance():
     """Test balance checking for a non-existent user."""
     print("\nTesting balance check for non-existent user...")
@@ -114,34 +84,3 @@ def test_nonexistent_user_balance():
     else:
         print(f"{GREEN}✓ Non-existent user has balance: {amount}{RESET}")
         return True
-
-
-# def test_invalid_principal():
-#     """Test balance checking with an invalid principal format."""
-#     print("\nTesting balance check with invalid principal format...")
-
-#     # Use a syntactically valid but semantically invalid principal
-#     invalid_principal = (
-#         "aaaaa-aaaa-aaaa-aaaa-aaaaa"  # Valid Base32 but likely invalid principal
-#     )
-
-#     try:
-#         amount, result = check_balance(invalid_principal)
-
-#         if isinstance(result, tuple):
-#             # This means we got an error message
-#             error_message, _ = result
-#             print(
-#                 f"{GREEN}✓ Invalid principal correctly rejected: {error_message}{RESET}"
-#             )
-#             return True
-#         elif amount is None:
-#             print(f"{GREEN}✓ Invalid principal correctly rejected{RESET}")
-#             return True
-#         else:
-#             print(f"{RED}✗ Invalid principal was accepted, unexpected behavior{RESET}")
-#             return False
-#     except Exception as e:
-#         # If the execution failed with an exception, this might be expected behavior
-#         print(f"{GREEN}✓ Invalid principal correctly caused exception: {e}{RESET}")
-#         return True

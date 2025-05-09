@@ -8,41 +8,14 @@ Main test runner for the vault canister tests.
 import traceback
 import os
 import sys
-import json
 
 # Add the parent directory to the Python path to make imports work
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 # isort: on
 
 
-from tests.test_cases.balance_tests import (
-    check_balance,
-    test_balance,
-    test_nonexistent_user_balance,
-)
-from tests.test_cases.deployment_tests import test_set_canisters
-from tests.test_cases.deployment_tests import test_upgrade
-from tests.test_cases.deployment_tests import (
-    test_deploy_vault_with_params,
-    test_deploy_vault_without_params,
-)
-from tests.test_cases.transaction_tests import test_get_transactions
-from tests.test_cases.transaction_tests import test_transaction_ordering
-from tests.test_cases.transaction_tests import test_transaction_validity
-from tests.test_cases.transaction_tests import (
-    test_get_transactions_nonexistent_user,
-)
-from tests.test_cases.transfer_tests import test_exceed_balance_transfer
-from tests.test_cases.transfer_tests import test_negative_amount_transfer
-from tests.test_cases.transfer_tests import test_transfer_from_vault
-from tests.test_cases.transfer_tests import test_transfer_to_vault
-from tests.test_cases.transfer_tests import test_zero_amount_transfer
-from tests.test_cases.transfer_tests import (
-    test_multiple_transfers_sequence,
-)
+from tests.test_cases.deployment_tests import test_deploy_vault_with_params
 from tests.utils.colors import print_error, print_ok
-from tests.utils.command import get_canister_id
-from tests.utils.command import run_command
 from tests.utils.command import (
     create_test_identities,
     deploy_ckbtc_indexer,
@@ -111,8 +84,29 @@ def main():
         for account, balance in expected_balances.items():
             print(f"  {account}: {balance}")
 
-        # Since we've reached the end without errors, return success
-        return 0
+        # Print test summary
+        print("\n=== Test Summary ===")
+        for test_name, passed in results.items():
+            if passed:
+                print_ok(test_name)
+            else:
+                print_error(test_name)
+
+        # Count passed tests
+        passed_count = sum(1 for passed in results.values() if passed)
+        total_count = len(results)
+
+        print_ok(
+            f"\nPassed {passed_count} of {total_count} tests ({passed_count/total_count*100:.1f}%)"
+        )
+
+        # Check if all tests passed
+        if all(results.values()):
+            print_ok("All tests passed!")
+            return 0
+        else:
+            print_error("Some tests failed!")
+            return 1
     except Exception as e:
         print_error(f"Error running tests: {e}\n{traceback.format_exc()}")
         return 1
