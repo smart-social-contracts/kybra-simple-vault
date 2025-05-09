@@ -18,13 +18,13 @@ from kybra import (
 # Basic Data Records
 
 
-# Record representing a canister on the Internet Computer.
+# Record representing a canister (ledger or indexer) on the Internet Computer.
 class CanisterRecord(Record):
     id: text
     principal: Principal
 
 
-# Record containing balance information for a principal.
+# Record containing balance information for a principal (user).
 class BalanceRecord(Record):
     principal_id: Principal
     amount: int
@@ -64,6 +64,8 @@ class TransactionIdRecord(Record):
 # Summary information about transactions.
 class TransactionSummaryRecord(Record):
     new_txs_count: nat
+    sync_status: text
+    scan_end_tx_id: nat
 
 
 # Container for a list of transaction records.

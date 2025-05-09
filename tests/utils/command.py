@@ -198,7 +198,9 @@ def deploy_ckbtc_indexer(ledger_id=None, interval_seconds=1):
     return indexer_id
 
 
-def update_transaction_history_until_no_more_transactions():
+def update_transaction_history_until_no_more_transactions(
+    expected_sync_status=None, expected_new_txs_count=None, expected_scan_end_tx_id=None
+):
     loop_count = 0
     while loop_count < 20:
         loop_count += 1
@@ -211,12 +213,19 @@ def update_transaction_history_until_no_more_transactions():
             print_error("Failed to update transaction history")
             return False
 
-        new_count = int(
-            response_json.get("data").get("TransactionSummary").get("new_txs_count")
-        )
-        print(f"New count: {new_count}")
-        if new_count == 0:
-            return True
+        transaction_summary = response_json.get("data").get("TransactionSummary")
+        new_count = int(transaction_summary.get("new_txs_count"))
+        sync_status = transaction_summary.get("sync_status", "Unknown")
+        scan_end_tx_id = int(transaction_summary.get("scan_end_tx_id", 0))
+        
+        print(f"New transactions: {new_count}, Sync status: {sync_status}, Last tx ID: {scan_end_tx_id}")
+        if expected_new_txs_count is not None and new_count != expected_new_txs_count:
+            return False
+        if expected_sync_status is not None and sync_status != expected_sync_status:
+            return False
+        if expected_scan_end_tx_id is not None and scan_end_tx_id != expected_scan_end_tx_id:
+            return False
+        return True
 
     raise Exception(
         "Failed to update transaction history completely after max iteration_count"

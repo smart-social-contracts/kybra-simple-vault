@@ -9,6 +9,8 @@ from kybra_simple_db import (
 
 
 class ApplicationData(Entity, TimestampedMixin):
+    """Stores global application configuration and synchronization state."""
+
     admin_principal = String()
     max_results = Integer()
     max_iteration_count = Integer()
@@ -19,18 +21,25 @@ class ApplicationData(Entity, TimestampedMixin):
 
 
 class Canisters(Entity, TimestampedMixin):
+    """Represents external canisters (e.g., ckBTC ledger, indexer) linked to the vault."""
+
     principal = String()
 
 
 def app_data():
+    """Retrieves the singleton ApplicationData instance, creating it if it doesn't exist."""
     return ApplicationData["main"] or ApplicationData(_id="main")
 
 
 class Category(Entity, TimestampedMixin):
+    """Defines a category that can be associated with transactions."""
+
     name = String()
 
 
 class VaultTransaction(Entity, TimestampedMixin):
+    """Records details of an ICRC-1 transaction relevant to the vault's operations."""
+
     principal_from = String()
     principal_to = String()
     amount = Integer(min_value=0)
@@ -40,11 +49,14 @@ class VaultTransaction(Entity, TimestampedMixin):
 
 
 class Balance(Entity, TimestampedMixin):
+    """Represents a balance amount, potentially associated with a 'Canister' entity."""
+
     amount = Integer(default=0)
     canister = OneToMany("Canister", "balances")
 
 
 def stats():
+    """Gathers and returns various statistics from the vault's entities."""
     return {
         "app_data": app_data().to_dict(),
         "balances": [_.to_dict() for _ in Balance.instances()],

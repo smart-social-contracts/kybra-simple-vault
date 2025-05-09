@@ -40,7 +40,6 @@ from vault.entities import Balance, Canisters, VaultTransaction, app_data
 from vault.ic_util_calls import get_account_transactions
 
 logger = get_logger(__name__)
-set_log_level(Level.DEBUG, logger_name=logger.name)
 
 storage = StableBTreeMap[str, str](
     memory_id=1, max_key_size=100000, max_value_size=1000
@@ -259,6 +258,18 @@ def transfer(to: Principal, amount: nat) -> Async[Response]:
         )
 
 
+def _sync_status(app_data_obj):
+    return (
+        "Synced"
+        if (
+            app_data_obj.scan_end_tx_id
+            == app_data_obj.scan_oldest_tx_id
+            == app_data_obj.scan_start_tx_id
+        )
+        else "Syncing"
+    )
+
+
 @update
 def update_transaction_history() -> Async[Response]:
     """
@@ -270,7 +281,7 @@ def update_transaction_history() -> Async[Response]:
     """
     try:
         canister_id = ic.id().to_str()
-        logger.debug(f"Updating transaction history for {canister_id}")
+        logger.info(f"Updating transaction history for {canister_id}")
 
         # Get the configured indexer canister ID
         indexer_canister = Canisters["ckBTC indexer"]
@@ -359,7 +370,9 @@ def update_transaction_history() -> Async[Response]:
                 app_data().scan_start_tx_id = processed_batch_oldest_tx_id
 
             if processed_batch_oldest_tx_id <= scan_oldest_tx_id:
-                logger.debug("Transaction history is now in sync")
+                logger.info(
+                    f"Transaction history is now in sync. Latest tx id: {scan_end_tx_id}"
+                )
 
                 scan_end_tx_id = scan_end_tx_id
                 scan_start_tx_id = scan_end_tx_id
@@ -383,6 +396,8 @@ def update_transaction_history() -> Async[Response]:
         data=ResponseData(
             TransactionSummary=TransactionSummaryRecord(
                 new_txs_count=new_txs_count,
+                scan_end_tx_id=scan_end_tx_id,
+                sync_status=_sync_status(app_data()),
             )
         ),
     )
@@ -396,8 +411,6 @@ def _process_batch_txs(canister_id, txs):
     inserted_new_txs_ids = []
 
     logger.debug(f"Processing batch of {len(txs)} transactions")
-
-    # txs.sort(key=lambda x: x["id"], reverse=True)  # sort by id descending
 
     for tx in txs:
         try:
@@ -585,7 +598,7 @@ def get_balance(principal: Principal) -> Response:
     try:
         principal_id: str = principal.to_str()
 
-        logger.debug(f"Getting balance for principal: {principal_id}")
+        logger.info(f"Getting balance for principal: {principal_id}")
 
         # Look up the balance in the database
         balance = Balance[principal_id]
@@ -695,13 +708,7 @@ def status() -> Response:
     try:
         # Get app_data with proper typing
         app_data_obj = app_data()
-        sync_status = (
-            "Synced"
-            if app_data_obj.scan_end_tx_id
-            == app_data_obj.scan_oldest_tx_id
-            == app_data_obj.scan_start_tx_id
-            else "Syncing"
-        )
+        sync_status = _sync_status(app_data_obj)
         sync_tx_id = app_data_obj.scan_oldest_tx_id
 
         app_data_record = AppDataRecord(
