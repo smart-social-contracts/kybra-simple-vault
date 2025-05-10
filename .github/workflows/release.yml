@@ -47,11 +47,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install build setuptools wheel bumpversion
     
-    # Build vault canister WASM in Docker
-    - name: Build vault canister WASM in Docker
-      run: bash ./build_vault_wasm.sh
-    
-    # Only perform version bump if release_type is provided
+    # First, perform version bump if release_type is provided
     - name: Bump version
       if: ${{ github.event.inputs.release_type != '' }}
       id: bump_version
@@ -61,7 +57,11 @@ jobs:
         bumpversion ${{ github.event.inputs.release_type }}
         echo "NEW_VERSION=$(grep -A 3 '\[metadata\]' setup.cfg | grep 'version =' | cut -d '=' -f 2 | tr -d ' ')" >> $GITHUB_OUTPUT
     
-    # Only push changes if we did a version bump
+    # Next, build vault canister WASM with the new version
+    - name: Build vault canister WASM in Docker
+      run: bash ./build_vault_wasm.sh
+    
+    # Push changes if we did a version bump
     - name: Push changes
       if: ${{ github.event.inputs.release_type != '' }}
       run: |
@@ -69,7 +69,7 @@ jobs:
         git push origin
         git push origin --tags
     
-    # Only create a GitHub release if we did a version bump and the user requested it
+    # Create a GitHub release if requested
     - name: Create Release
       if: ${{ github.event.inputs.release_type != '' && github.event.inputs.create_github_release == 'true' }}
       uses: softprops/action-gh-release@v1
