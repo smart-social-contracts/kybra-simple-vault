@@ -5,8 +5,8 @@ A canister written in Python using [Kybra](https://github.com/demergent-labs/kyb
 
 **WARNING: This is not ready for production use yet and funds stored in the vault canister can be lost. Use at your own risk.**
 
-[![Test on IC](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_ic.yml/badge.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/actions)
-[![Test](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test.yml/badge.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/actions)
+[![Test General](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_general.yml/badge.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_general.yml)
+[![Test Transactions](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_transactions.yml/badge.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_transactions.yml)
 [![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3107/)
 [![License](https://img.shields.io/github/license/smart-social-contracts/kybra-simple-vault.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/blob/main/LICENSE)
 
