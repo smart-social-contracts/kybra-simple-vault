@@ -77,6 +77,8 @@ jobs:
         tag_name: v${{ steps.bump_version.outputs.NEW_VERSION }}
         name: Release v${{ steps.bump_version.outputs.NEW_VERSION }}
         generate_release_notes: true
-        files: vault_*.wasm
+        files: |
+          vault_*.wasm
+          vault_*.did
       env:
         GITHUB_TOKEN: ${{ secrets.PAT_GITHUB }}
