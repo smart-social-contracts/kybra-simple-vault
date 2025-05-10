@@ -44,15 +44,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install build setuptools wheel bumpversion
     
+    # Build vault canister WASM in Docker
+    - name: Build vault canister WASM in Docker
+      run: bash ./build_vault_wasm.sh
+    
     # Only perform version bump if release_type is provided
     - name: Bump version
       if: ${{ github.event.inputs.release_type != '' }}
       id: bump_version
-
-    # Build vault canister WASM in Docker
-    - name: Build vault canister WASM in Docker
-      run: bash ./build_vault_wasm.sh
-
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
