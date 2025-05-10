@@ -130,7 +130,12 @@ def admin_only(func):
         caller_id = ic.caller().to_str()
         admin_id = app_data().admin_principal
         if caller_id != admin_id:
-            return Response(success=False, data=ResponseData(Error=f"Caller ({caller_id}) is not the admin principal ({admin_id})"))
+            return Response(
+                success=False,
+                data=ResponseData(
+                    Error=f"Caller ({caller_id}) is not the admin principal ({admin_id})"
+                ),
+            )
         # If caller is admin, proceed with the function
         return func(*args, **kwargs)
 
@@ -208,7 +213,7 @@ def transfer(to: Principal, amount: nat) -> Async[Response]:
             return Response(
                 success=False, data=ResponseData(Error="Amount must be positive")
             )
-        
+
         logger.info(f"Transferring {amount} tokens to {to.to_str()}")
         principal = Canisters["ckBTC ledger"].principal
         ledger = ICRCLedger(Principal.from_str(principal))
