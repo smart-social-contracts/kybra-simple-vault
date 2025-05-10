@@ -2,38 +2,30 @@
 set -e
 set -x
 
-echo "Running tests..."
-
-exit_code=0
-
-TEST_IDS=('initialization' 'transaction_processing' 'balance_tracking' 'sync_recovery' 'reset' 'admin')
-
-# Use absolute paths to ensure imports work properly
-PROJECT_ROOT="$(pwd)"
-TEST_PYTHON_PATH="$PROJECT_ROOT:$PROJECT_ROOT/src:$PROJECT_ROOT/src/vault"
-
-# Check if a specific test ID is provided as an argument
-if [ "$1" ]; then
-  if [[ " ${TEST_IDS[@]} " =~ " $1 " ]]; then
-    echo "Running test $1..."
-    PYTHONPATH=$TEST_PYTHON_PATH python tests/test_$1.py || exit_code=1
-    exit $exit_code
-  else
-    echo "Invalid test ID: $1"
-    echo "Valid test IDs are: ${TEST_IDS[@]}"
-    exit 1
-  fi
+# Get the test type from the first parameter, or run 'general' and 'transactions' tests if not provided
+if [ -z "$1" ]; then
+    TEST_TYPES=("general" "transactions")
+else
+    TEST_TYPES=("$1")
 fi
 
-for TEST_ID in "${TEST_IDS[@]}"; do
-  echo "Running test $TEST_ID..."
-  PYTHONPATH=$TEST_PYTHON_PATH python tests/test_${TEST_ID}.py || exit_code=1
+IMAGE_NAME=kybra-simple-vault-test
+
+# Download test artifacts
+echo "Downloading test artifacts..."
+./download_test_artifacts.sh
+
+# Build the Docker image
+echo "Building Docker image..."
+docker build -t $IMAGE_NAME .
+
+# Run the tests in a Docker container with the specified test type(s)
+for TEST_TYPE in "${TEST_TYPES[@]}"; do
+    echo "Running IC tests in Docker container for test type: $TEST_TYPE..."
+    docker run --rm $IMAGE_NAME $TEST_TYPE || {
+        echo "❌ Tests failed for $TEST_TYPE"
+        exit 1
+    }
 done
 
-if [ $exit_code -eq 0 ]; then
-  echo -e "\033[0;32mAll tests passed successfully!\033[0m"
-else
-  echo -e "\033[0;31mSome tests failed. Please check the logs.\033[0m"
-fi
-
-exit $exit_code
+echo "✅ All tests passed successfully!"

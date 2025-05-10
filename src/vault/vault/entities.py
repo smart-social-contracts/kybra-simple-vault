@@ -1,36 +1,45 @@
-from kybra_simple_db import *
-
-from vault.constants import CKBTC_CANISTER
+from kybra_simple_db import (
+    Entity,
+    Integer,
+    ManyToMany,
+    OneToMany,
+    String,
+    TimestampedMixin,
+)
 
 
 class ApplicationData(Entity, TimestampedMixin):
-    last_processed_index = Integer(min_value=0, default=0)
-    log_length = Integer(min_value=0, default=0)
+    """Stores global application configuration and synchronization state."""
+
     admin_principal = String()
-    vault_principal = String()
-    last_heartbeat_time = Integer(min_value=0, default=0)
-    heartbeat_interval_seconds = Integer(min_value=0, default=0)
+    max_results = Integer()
+    max_iteration_count = Integer()
+
+    scan_end_tx_id = Integer(default=0)
+    scan_start_tx_id = Integer(default=0)
+    scan_oldest_tx_id = Integer(default=0)
 
 
-class LedgerCanister(Entity, TimestampedMixin):
+class Canisters(Entity, TimestampedMixin):
+    """Represents external canisters (e.g., ckBTC ledger, indexer) linked to the vault."""
+
     principal = String()
 
 
 def app_data():
+    """Retrieves the singleton ApplicationData instance, creating it if it doesn't exist."""
     return ApplicationData["main"] or ApplicationData(_id="main")
 
 
-def ledger_canister():
-    return LedgerCanister["ckBTC"] or LedgerCanister(
-        _id="ckBTC", principal=CKBTC_CANISTER
-    )
-
-
 class Category(Entity, TimestampedMixin):
+    """Defines a category that can be associated with transactions."""
+
     name = String()
 
 
 class VaultTransaction(Entity, TimestampedMixin):
+    """Records details of an ICRC-1 transaction relevant to the vault's operations."""
+
     principal_from = String()
     principal_to = String()
     amount = Integer(min_value=0)
@@ -40,14 +49,17 @@ class VaultTransaction(Entity, TimestampedMixin):
 
 
 class Balance(Entity, TimestampedMixin):
+    """Represents a balance amount, potentially associated with a 'Canister' entity."""
+
     amount = Integer(default=0)
-    currency = String()
+    canister = OneToMany("Canister", "balances")
 
 
 def stats():
+    """Gathers and returns various statistics from the vault's entities."""
     return {
         "app_data": app_data().to_dict(),
         "balances": [_.to_dict() for _ in Balance.instances()],
         "vault_transactions": [_.to_dict() for _ in VaultTransaction.instances()],
-        "ledger_canisters": [_.to_dict() for _ in LedgerCanister.instances()],
+        "canisters": [_.to_dict() for _ in Canisters.instances()],
     }

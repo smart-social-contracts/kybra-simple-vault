@@ -1,9 +1,19 @@
-_MAINNET_CKBTC_LEDGER_CANISTER = "mxzaz-hqaaa-aaaar-qaada-cai"
-_MAINNET_CKETH_LEDGER_CANISTER = "ss2fx-dyaaa-aaaar-qacoq-cai"
+# Canister Configuration and System Limits
 
-CKBTC_CANISTER = _MAINNET_CKBTC_LEDGER_CANISTER
+# Dictionary of canister principal IDs implementing Chain-Key tokens in the IC
+# Each token has a corresponding ledger canister for token operations
+# and an indexer canister for transaction history and queries
+CANISTER_PRINCIPALS = {
+    "ckBTC": {
+        "ledger": "mxzaz-hqaaa-aaaar-qaada-cai",
+        "indexer": "n5wcd-faaaa-aaaar-qaaea-cai",
+    }
+}
 
-TRANSACTION_BATCH_SIZE = 5
-DO_NOT_IMPLEMENT_HEARTBEAT = (
-    True  # set to False to implement heartbeat, but it is cycle-expensive
-)
+# Maximum number of results to return in paginated responses
+# Used to limit the size of transaction history and other list responses
+MAX_RESULTS = 20
+
+# Maximum number of iterations for operations that process data in batches
+# Prevents infinite loops and excessive resource consumption
+MAX_ITERATION_COUNT = 5

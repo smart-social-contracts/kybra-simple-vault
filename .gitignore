@@ -40,4 +40,10 @@ kybra_simple_logging/
 .vscode/
 *.swp
 *.swo
-*~
+*.wasm
+*.did
+*deleteme*
+
+# Release artifacts
+vault_*.wasm
+vault_*.did
