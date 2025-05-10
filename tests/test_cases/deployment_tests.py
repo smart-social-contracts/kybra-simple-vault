@@ -15,6 +15,7 @@ from src.vault.vault.constants import (
 )
 from tests.utils.colors import print_error, print_ok
 from tests.utils.command import (
+    create_test_identities,
     get_canister_id,
     get_current_principal,
     run_command,
@@ -275,3 +276,71 @@ def test_set_canisters():
     return get_and_check_status(
         get_current_principal(), ledger_id, indexer_id, MAX_ITERATION_COUNT, MAX_RESULTS
     )
+
+
+def test_set_admin():
+    """Test the set_admin functionality, including proper access controls."""
+    print("\nTesting set_admin functionality...")
+
+    # Check current admin (which should be the deployer)
+    original_admin = get_current_principal()
+    if not original_admin:
+        print_error("Failed to get current principal")
+        return False
+
+    # Create a test identity to use as new admin
+    try:
+        # Create new identity
+        identities = create_test_identities(["new_admin"])
+        new_admin_principal = identities["new_admin"]
+        print(
+            f"Created test identity 'new_admin' with principal: {new_admin_principal}"
+        )
+
+        # Test 1: Original admin should be able to set new admin
+        print("\nTesting set_admin by original admin (should succeed)...")
+        cmd = f'dfx canister call vault set_admin "(principal \\"{new_admin_principal}\\")" --output json'
+        result = run_command(cmd)
+
+        if not result:
+            print_error("Failed to call set_admin")
+            return False
+
+        result_json = json.loads(result)
+        if not result_json.get("success", False):
+            print_error(f"set_admin failed: {result_json}")
+            return False
+
+        print_ok("Successfully changed admin to new identity")
+
+        # Test 2: Verify with status check and test new admin can set admin back
+        status_cmd = "dfx canister call vault status --output json"
+        status_result = json.loads(run_command(status_cmd))
+
+        if (
+            status_result.get("success", False)
+            and status_result["data"]["Stats"]["app_data"]["admin_principal"]
+            == new_admin_principal
+        ):
+            print_ok(f"Status confirmed admin principal is now: {new_admin_principal}")
+
+            # Test 3: New admin sets admin back to original
+            cmd = f'dfx --identity new_admin canister call vault set_admin "(principal \\"{original_admin}\\")" --output json'
+            result = run_command(cmd)
+
+            if result and json.loads(result).get("success", False):
+                print_ok("New admin successfully changed admin back to original")
+
+                # Clean up - remove test identity
+                run_command("dfx identity remove new_admin || true")
+                return True
+
+        print_error("Admin principal change verification failed")
+        run_command("dfx identity remove new_admin || true")
+        return False
+
+    except Exception as e:
+        print_error(f"Error in test_set_admin: {e}\n{traceback.format_exc()}")
+        # Clean up - ensure we remove test identity even if test fails
+        run_command("dfx identity remove new_admin || true")
+        return False

@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
 from tests.test_cases.deployment_tests import (
     test_deploy_vault_without_params,
+    test_set_admin,
     test_set_canisters,
     test_upgrade,
 )
@@ -82,6 +83,14 @@ def main():
         # Check transaction ordering and validity
         results["Transaction Ordering"] = test_transaction_ordering()
         results["Transaction Validity"] = test_transaction_validity()
+
+        # Test set canisters and ensure only the admin can do so
+        if not test_set_canisters():
+            return 1
+
+        # Test set_admin functionality and admin controls
+        if not test_set_admin():
+            return 1
 
         # Upgrade the vault canister
         results["Upgrade Vault"] = test_upgrade()
