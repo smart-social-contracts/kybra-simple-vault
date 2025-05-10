@@ -127,8 +127,10 @@ def admin_only(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         # Check if caller is admin
-        if ic.caller().to_str() != app_data().admin_principal:
-            return Response(success=False, message="Caller is not the admin principal")
+        caller_id = ic.caller().to_str()
+        admin_id = app_data().admin_principal
+        if caller_id != admin_id:
+            return Response(success=False, data=ResponseData(Error=f"Caller ({caller_id}) is not the admin principal ({admin_id})"))
         # If caller is admin, proceed with the function
         return func(*args, **kwargs)
 
@@ -202,18 +204,11 @@ def transfer(to: Principal, amount: nat) -> Async[Response]:
     """
 
     try:
-        logger.debug(f"Transfer called by {ic.caller()}")
-        logger.debug(f"Admin principal is {app_data().admin_principal}")
-        if ic.caller().to_str() != app_data().admin_principal:
-            return Response(
-                success=False,
-                data=ResponseData(Error="Caller is not the admin principal"),
-            )
-
         if amount <= 0:
             return Response(
                 success=False, data=ResponseData(Error="Amount must be positive")
             )
+        
         logger.info(f"Transferring {amount} tokens to {to.to_str()}")
         principal = Canisters["ckBTC ledger"].principal
         ledger = ICRCLedger(Principal.from_str(principal))
@@ -762,4 +757,41 @@ def status() -> Response:
         return Response(
             success=False,
             data=ResponseData(Error=f"Error retrieving vault statistics: {str(e)}"),
+        )
+
+
+@update
+@admin_only
+def set_admin(new_admin: Principal) -> Response:
+    """
+    Set a new admin principal for the vault.
+
+    This function can only be called by the current admin.
+
+    Args:
+        new_admin: The principal ID of the new admin
+
+    Returns:
+        Response object with success status and message
+    """
+    try:
+        current_admin = app_data().admin_principal
+        new_admin_id = new_admin.to_str()
+
+        logger.info(f"Changing admin principal from {current_admin} to {new_admin_id}")
+
+        # Update the admin_principal in app_data
+        app_data().admin_principal = new_admin_id
+
+        return Response(
+            success=True,
+            data=ResponseData(
+                Message=f"Admin principal updated successfully to {new_admin_id}"
+            ),
+        )
+    except Exception as e:
+        logger.error(f"Error setting admin principal: {e}\n{traceback.format_exc()}")
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Error setting admin principal: {str(e)}"),
         )
