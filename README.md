@@ -137,6 +137,8 @@ $ dfx canister call vault transfer '(principal "...", 100)' --output json
 
 ```
 
+For more examples of how to interact with the vault canister from an external canister, see the [external_use](tests/external_use) directory.
+
 
 ### Installation
 
