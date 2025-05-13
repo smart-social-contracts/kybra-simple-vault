@@ -1,19 +1,18 @@
 import json
 import traceback
 
+from candid_types import (
+    Response,
+    ResponseData,
+    VaultService,
+    VaultTestResults,
+)
 from kybra import (
     Async,
     CallResult,
     Principal,
     ic,
     update,
-)
-
-from candid_types import (
-    Response,
-    ResponseData,
-    VaultService,
-    VaultTestResults,
 )
 
 
@@ -41,12 +40,12 @@ def run_vault_tests(vault_canister_id: Principal) -> Async[VaultTestResults]:
             ic.print(f"Status Ok response: {status_response}")
 
             # Parse the data of StatsRecord object
-            if 'Stats' in status_response['data']:
-                stats = status_response['data']['Stats']
+            if "Stats" in status_response["data"]:
+                stats = status_response["data"]["Stats"]
                 ic.print("\n=== Stats Record Details ===")
 
                 # AppData details
-                app_data = stats['app_data']
+                app_data = stats["app_data"]
                 ic.print(f"Admin Principal: {app_data['admin_principal']}")
                 ic.print(f"Max Results: {app_data['max_results']}")
                 ic.print(f"Sync Status: {app_data['sync_status']}")
@@ -54,16 +53,19 @@ def run_vault_tests(vault_canister_id: Principal) -> Async[VaultTestResults]:
 
                 # Balances information
                 ic.print(f"\nBalances Count: {len(stats['balances'])}")
-                for idx, balance in enumerate(stats['balances']):
-                    ic.print(f"  Balance {idx+1}: Principal: {balance['principal_id']}, Amount: {balance['amount']}")
+                for idx, balance in enumerate(stats["balances"]):
+                    ic.print(
+                        f"  Balance {idx+1}: Principal: {balance['principal_id']}, Amount: {balance['amount']}"
+                    )
 
                 # Canisters information
                 ic.print(f"\nCanisters Count: {len(stats['canisters'])}")
-                for idx, canister in enumerate(stats['canisters']):
-                    ic.print(f"  Canister {idx+1}: ID: {canister['id']}, Principal: {canister['principal']}")
+                for idx, canister in enumerate(stats["canisters"]):
+                    ic.print(
+                        f"  Canister {idx+1}: ID: {canister['id']}, Principal: {canister['principal']}"
+                    )
             else:
                 ic.print("No Stats data found in the response")
-
 
         else:
             # We got an error message
