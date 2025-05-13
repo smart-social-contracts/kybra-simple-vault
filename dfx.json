@@ -14,6 +14,10 @@
       "type": "custom",
       "wasm": "tests/artifacts/ledger_suite_icrc/indexer.wasm",
       "candid": "tests/artifacts/ledger_suite_icrc/indexer.did"
+    },
+    "external": {
+      "type": "kybra",
+      "main": "tests/external_use/src/external/main.py"
     }
   },
   "defaults": {
