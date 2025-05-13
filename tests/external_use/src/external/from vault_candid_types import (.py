@@ -71,16 +71,8 @@ class Response(Record):
     data: ResponseData
 
 
-# Define test results container
-class VaultTestResults(Record):
-    status_response: Response
-    # Additional fields can be added when more tests are implemented
-    # balance_response: Response
-    # transactions_response: Response
-
-
 # Define the vault service interface
-class VaultService(Service):
+class Vault(Service):
     @service_query
     def status(self) -> Response: ...
 
