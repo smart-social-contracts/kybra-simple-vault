@@ -81,14 +81,46 @@ def run_external_canister_tests():
     # Run the vault tests from the external canister
     print("\nRunning tests from external canister...")
     test_result = run_command(
-        f"dfx canister call external run_vault_tests '(principal \"{vault_canister_id}\")'"
+        f"dfx canister call external run_vault_tests '(principal \"{vault_canister_id}\")' --output json"
     )
     if not test_result:
         print_error("Failed to run tests from external canister")
         return False
     
-    print_ok(f"Test execution result: {test_result}")
-    
+    try:
+        result_json = json.loads(test_result)
+        
+        if "status_response" in result_json:
+            status_response = result_json["status_response"]
+            if "success" in status_response and status_response["success"]:
+                print_ok("Vault status check successful")
+                
+                # Output some details from the response for verification
+                if "data" in status_response and "Stats" in status_response["data"]:
+                    stats = status_response["data"]["Stats"]
+                    print(f"  Admin Principal: {stats['app_data']['admin_principal']}")
+                    print(f"  Sync Status: {stats['app_data']['sync_status']}")
+                    print(f"  Registered Canisters: {len(stats['canisters'])}")
+                    print(f"  Balances Count: {len(stats['balances'])}")
+            else:
+                error_msg = "Unknown error"
+                if "data" in status_response and "Error" in status_response["data"]:
+                    error_msg = status_response["data"]["Error"]
+                print_error(f"Vault status check failed: {error_msg}")
+                return False
+        else:
+            print_error("Invalid response format: 'status_response' field not found")
+            print(f"Received: {test_result}")
+            return False
+            
+    except json.JSONDecodeError:
+        print_error(f"Failed to parse JSON response: {test_result}")
+        return False
+    except Exception as e:
+        print_error(f"Error processing test result: {str(e)}")
+        return False
+
+    print_ok("All external canister tests completed successfully")
     return True
 
 
