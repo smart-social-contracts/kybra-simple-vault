@@ -4,104 +4,17 @@ import traceback
 from kybra import (
     Async,
     CallResult,
-    Opt,
     Principal,
-    Record,
-    Service,
-    Variant,
-    Vec,
     ic,
-    nat,
-    nat64,
-    service_query,
-    service_update,
-    text,
     update,
-    void,
 )
 
-# Define the vault service interface based on the vault's candid_types.py
-
-
-class TransactionRecord(Record):
-    id: nat
-    amount: int
-    timestamp: nat64
-
-
-class BalanceRecord(Record):
-    principal_id: Principal
-    amount: int
-
-
-class CanisterRecord(Record):
-    id: text
-    principal: Principal
-
-
-class AppDataRecord(Record):
-    admin_principal: Principal
-    max_results: nat
-    max_iteration_count: nat
-    scan_end_tx_id: nat
-    scan_start_tx_id: nat
-    scan_oldest_tx_id: nat
-    sync_status: text
-    sync_tx_id: nat
-
-
-class StatsRecord(Record):
-    app_data: AppDataRecord
-    balances: Vec[BalanceRecord]
-    canisters: Vec[CanisterRecord]
-
-
-class TransactionIdRecord(Record):
-    transaction_id: nat
-
-
-class TransactionSummaryRecord(Record):
-    new_txs_count: nat
-    sync_status: text
-    scan_end_tx_id: nat
-
-
-class ResponseData(Variant, total=False):
-    TransactionId: TransactionIdRecord
-    TransactionSummary: TransactionSummaryRecord
-    Balance: BalanceRecord
-    Transactions: Vec[TransactionRecord]
-    Stats: StatsRecord
-    Error: text
-    Message: text
-
-
-class Response(Record):
-    success: bool
-    data: ResponseData
-
-
-# Define test results container
-class VaultTestResults(Record):
-    status_response: Response
-    # Additional fields can be added when more tests are implemented
-    # balance_response: Response
-    # transactions_response: Response
-
-
-# Define the vault service interface
-class VaultService(Service):
-    @service_query
-    def status(self) -> Response: ...
-
-    @service_query
-    def get_balance(self, principal: Principal) -> Response: ...
-
-    @service_query
-    def get_transactions(self, principal: Principal) -> Response: ...
-
-    @service_update
-    def transfer(self, principal: Principal, amount: nat) -> Async[Response]: ...
+from candid_types import (
+    Response,
+    ResponseData,
+    VaultService,
+    VaultTestResults,
+)
 
 
 @update
@@ -126,6 +39,32 @@ def run_vault_tests(vault_canister_id: Principal) -> Async[VaultTestResults]:
             # We got a successful response
             status_response = status_result.Ok
             ic.print(f"Status Ok response: {status_response}")
+
+            # Parse the data of StatsRecord object
+            if 'Stats' in status_response['data']:
+                stats = status_response['data']['Stats']
+                ic.print("\n=== Stats Record Details ===")
+
+                # AppData details
+                app_data = stats['app_data']
+                ic.print(f"Admin Principal: {app_data['admin_principal']}")
+                ic.print(f"Max Results: {app_data['max_results']}")
+                ic.print(f"Sync Status: {app_data['sync_status']}")
+                ic.print(f"Sync Transaction ID: {app_data['sync_tx_id']}")
+
+                # Balances information
+                ic.print(f"\nBalances Count: {len(stats['balances'])}")
+                for idx, balance in enumerate(stats['balances']):
+                    ic.print(f"  Balance {idx+1}: Principal: {balance['principal_id']}, Amount: {balance['amount']}")
+
+                # Canisters information
+                ic.print(f"\nCanisters Count: {len(stats['canisters'])}")
+                for idx, canister in enumerate(stats['canisters']):
+                    ic.print(f"  Canister {idx+1}: ID: {canister['id']}, Principal: {canister['principal']}")
+            else:
+                ic.print("No Stats data found in the response")
+
+
         else:
             # We got an error message
             error_message = status_result.Err
