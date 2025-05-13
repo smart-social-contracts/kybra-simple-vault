@@ -17,26 +17,27 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
 from tests.utils.colors import print_error, print_ok
 from tests.utils.command import (
-    deploy_ckbtc_ledger,
     deploy_ckbtc_indexer,
+    deploy_ckbtc_ledger,
     get_canister_id,
     get_current_principal,
     run_command,
     update_transaction_history,
 )
 
+
 def deploy_vault_from_wasm():
     """Deploy the vault canister from the WASM file."""
     print("\n=== Deploying vault canister from WASM ===")
-    
+
     # Build WASM file
     run_command("dfx canister create vault")
     run_command("dfx build vault")
-    
+
     # Get canister IDs
     ledger_id = get_canister_id("ckbtc_ledger")
     indexer_id = get_canister_id("ckbtc_indexer")
-    
+
     # Create install command with the same format as in deployment_tests.py
     install_cmd = f"""dfx canister install vault --wasm .kybra/vault/vault.wasm --argument="(
       opt vec {{ 
@@ -44,21 +45,22 @@ def deploy_vault_from_wasm():
         record {{ \\"ckBTC indexer\\"; principal \\"{indexer_id}\\" }}
       }}
     )" """
-    
+
     return run_command(install_cmd)
+
 
 def deploy_external_canister():
     """Deploy the external canister that will interact with the vault."""
     print("\n=== Deploying external canister ===")
-    
+
     print("Deploying external canister with the vault reference...")
     # Explicitly specify the config file to use
-    
+
     deploy_result = run_command("dfx deploy external")
     if not deploy_result:
         print_error("Failed to deploy external canister")
         return False
-    
+
     print_ok("Successfully deployed external canister")
     return True
 
@@ -66,18 +68,18 @@ def deploy_external_canister():
 def run_external_canister_tests():
     """Run tests from the external canister against the vault."""
     print("\n=== Running external canister tests against vault ===")
-    
+
     # Get canister IDs
     vault_canister_id = run_command("dfx canister id vault")
     if not vault_canister_id:
         print_error("Failed to get vault canister ID")
         return False
-    
+
     external_canister_id = run_command("dfx canister id external")
     if not external_canister_id:
         print_error("Failed to get external canister ID")
         return False
-    
+
     # Run the vault tests from the external canister
     print("\nRunning tests from external canister...")
     test_result = run_command(
@@ -86,15 +88,15 @@ def run_external_canister_tests():
     if not test_result:
         print_error("Failed to run tests from external canister")
         return False
-    
+
     try:
         result_json = json.loads(test_result)
-        
+
         if "status_response" in result_json:
             status_response = result_json["status_response"]
             if "success" in status_response and status_response["success"]:
                 print_ok("Vault status check successful")
-                
+
                 # Output some details from the response for verification
                 if "data" in status_response and "Stats" in status_response["data"]:
                     stats = status_response["data"]["Stats"]
@@ -112,7 +114,7 @@ def run_external_canister_tests():
             print_error("Invalid response format: 'status_response' field not found")
             print(f"Received: {test_result}")
             return False
-            
+
     except json.JSONDecodeError:
         print_error(f"Failed to parse JSON response: {test_result}")
         return False
@@ -122,7 +124,6 @@ def run_external_canister_tests():
 
     print_ok("All external canister tests completed successfully")
     return True
-
 
 
 def main():
@@ -139,24 +140,24 @@ def main():
         if not ledger_id:
             print_error("Failed to deploy ckBTC ledger")
             return 1
-            
+
         indexer_id = deploy_ckbtc_indexer()
         if not indexer_id:
             print_error("Failed to deploy ckBTC indexer")
             return 1
-        
+
         # 2. Deploy the vault canister
         deploy_vault_from_wasm()
-        
+
         # 3. Deploy the external canister with vault reference
         if not deploy_external_canister():
             return 1
-        
+
         # 4. Run the tests from the external canister
         if not run_external_canister_tests():
             print_error("External canister tests failed")
             return 1
-        
+
         print("\n=== All External Canister Tests Completed Successfully ===")
         return 0
 

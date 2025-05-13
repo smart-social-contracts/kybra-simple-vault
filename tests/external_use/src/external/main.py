@@ -1,27 +1,27 @@
-import traceback
 import json
+import traceback
 
 from kybra import (
     Async,
-    nat,
+    CallResult,
+    Opt,
     Principal,
     Record,
     Service,
     Variant,
     Vec,
+    ic,
+    nat,
     nat64,
-    update,
-    void,
     service_query,
     service_update,
-    ic,
-    CallResult,
-    Opt,
-    text
+    text,
+    update,
+    void,
 )
 
-
 # Define the vault service interface based on the vault's candid_types.py
+
 
 class TransactionRecord(Record):
     id: nat
@@ -93,13 +93,13 @@ class VaultTestResults(Record):
 class VaultService(Service):
     @service_query
     def status(self) -> Response: ...
-    
+
     @service_query
     def get_balance(self, principal: Principal) -> Response: ...
-    
+
     @service_query
     def get_transactions(self, principal: Principal) -> Response: ...
-    
+
     @service_update
     def transfer(self, principal: Principal, amount: nat) -> Async[Response]: ...
 
@@ -107,20 +107,20 @@ class VaultService(Service):
 @update
 def run_vault_tests(vault_canister_id: Principal) -> Async[VaultTestResults]:
     """Test interacting with the vault canister
-    
+
     Args:
         vault_canister_id: Principal ID of the vault canister to test
-        
+
     Returns:
         VaultTestResults with the response from calling status() on the vault
     """
     try:
         # Get a reference to the vault canister
         vault = VaultService(vault_canister_id)
-        
+
         # Test 1: Get vault status
         status_result: CallResult[Response] = yield vault.status()
-        
+
         # Check the status result
         if status_result.Ok is not None:
             # We got a successful response
@@ -130,23 +130,19 @@ def run_vault_tests(vault_canister_id: Principal) -> Async[VaultTestResults]:
             # We got an error message
             error_message = status_result.Err
             ic.print(f"Status Err response: {error_message}")
-            
+
             # Create a proper Response object with the error message
             error_data = ResponseData(Error=f"Error from vault: {error_message}")
             status_response = Response(success=False, data=error_data)
-        
+
         # Return original response objects from the vault
-        return VaultTestResults(
-            status_response=status_response
-        )
-        
+        return VaultTestResults(status_response=status_response)
+
     except Exception as e:
         ic.print(f"Error: {str(e)}\n{traceback.format_exc()}")
         # Create a failed response with error message
         error_msg = f"Error: {str(e)}"
         error_data = ResponseData(Error=error_msg)
         error_response = Response(success=False, data=error_data)
-        
-        return VaultTestResults(
-            status_response=error_response
-        )
+
+        return VaultTestResults(status_response=error_response)
