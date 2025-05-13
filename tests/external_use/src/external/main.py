@@ -1,107 +1,26 @@
-import json
-import traceback
+"""
+This is an example of how to interact with the vault canister from an external canister.
+"""
 
 from kybra import (
     Async,
     CallResult,
-    Opt,
     Principal,
     Record,
-    Service,
-    Variant,
-    Vec,
     ic,
-    nat,
-    nat64,
-    service_query,
-    service_update,
-    text,
     update,
-    void,
 )
-
-# Define the vault service interface based on the vault's candid_types.py
-
-
-class TransactionRecord(Record):
-    id: nat
-    amount: int
-    timestamp: nat64
-
-
-class BalanceRecord(Record):
-    principal_id: Principal
-    amount: int
-
-
-class CanisterRecord(Record):
-    id: text
-    principal: Principal
-
-
-class AppDataRecord(Record):
-    admin_principal: Principal
-    max_results: nat
-    max_iteration_count: nat
-    scan_end_tx_id: nat
-    scan_start_tx_id: nat
-    scan_oldest_tx_id: nat
-    sync_status: text
-    sync_tx_id: nat
-
-
-class StatsRecord(Record):
-    app_data: AppDataRecord
-    balances: Vec[BalanceRecord]
-    canisters: Vec[CanisterRecord]
-
-
-class TransactionIdRecord(Record):
-    transaction_id: nat
-
-
-class TransactionSummaryRecord(Record):
-    new_txs_count: nat
-    sync_status: text
-    scan_end_tx_id: nat
-
-
-class ResponseData(Variant, total=False):
-    TransactionId: TransactionIdRecord
-    TransactionSummary: TransactionSummaryRecord
-    Balance: BalanceRecord
-    Transactions: Vec[TransactionRecord]
-    Stats: StatsRecord
-    Error: text
-    Message: text
-
-
-class Response(Record):
-    success: bool
-    data: ResponseData
+from vault_candid_types import (
+    Response,
+    Vault,
+)
 
 
 # Define test results container
 class VaultTestResults(Record):
     status_response: Response
-    # Additional fields can be added when more tests are implemented
-    # balance_response: Response
-    # transactions_response: Response
-
-
-# Define the vault service interface
-class VaultService(Service):
-    @service_query
-    def status(self) -> Response: ...
-
-    @service_query
-    def get_balance(self, principal: Principal) -> Response: ...
-
-    @service_query
-    def get_transactions(self, principal: Principal) -> Response: ...
-
-    @service_update
-    def transfer(self, principal: Principal, amount: nat) -> Async[Response]: ...
+    balance_response: Response
+    transactions_response: Response
 
 
 @update
@@ -114,35 +33,75 @@ def run_vault_tests(vault_canister_id: Principal) -> Async[VaultTestResults]:
     Returns:
         VaultTestResults with the response from calling status() on the vault
     """
-    try:
-        # Get a reference to the vault canister
-        vault = VaultService(vault_canister_id)
 
-        # Test 1: Get vault status
-        status_result: CallResult[Response] = yield vault.status()
+    # Get a reference to the vault canister
+    vault = Vault(vault_canister_id)
 
-        # Check the status result
-        if status_result.Ok is not None:
-            # We got a successful response
-            status_response = status_result.Ok
-            ic.print(f"Status Ok response: {status_response}")
+    # Test 1: Get vault status
+    status_result: CallResult[Response] = yield vault.status()
+
+    # Test 2: Get vault balance
+    balance_result: CallResult[Response] = yield vault.get_balance(ic.caller())
+
+    # Test 3: Get vault transactions
+    transactions_result: CallResult[Response] = yield vault.get_transactions(
+        ic.caller()
+    )
+
+    # Check the status result
+    if status_result.Ok is not None:
+        # We got a successful response
+        status_response = status_result.Ok
+        ic.print(f"Status Ok response: {status_response}")
+
+        # Parse the data of StatsRecord object
+        if "Stats" in status_response["data"]:
+            stats = status_response["data"]["Stats"]
+            ic.print("\n=== Stats Record Details ===")
+
+            # AppData details
+            app_data = stats["app_data"]
+            ic.print(f"Admin Principal: {app_data['admin_principal']}")
+            ic.print(f"Max Results: {app_data['max_results']}")
+            ic.print(f"Sync Status: {app_data['sync_status']}")
+            ic.print(f"Sync Transaction ID: {app_data['sync_tx_id']}")
+
+            # Balances information
+            ic.print(f"\nBalances Count: {len(stats['balances'])}")
+            for idx, balance in enumerate(stats["balances"]):
+                ic.print(
+                    f"  Balance {idx+1}: Principal: {balance['principal_id']}, Amount: {balance['amount']}"
+                )
+
+            # Canisters information
+            ic.print(f"\nCanisters Count: {len(stats['canisters'])}")
+            for idx, canister in enumerate(stats["canisters"]):
+                ic.print(
+                    f"  Canister {idx+1}: ID: {canister['id']}, Principal: {canister['principal']}"
+                )
         else:
-            # We got an error message
-            error_message = status_result.Err
-            ic.print(f"Status Err response: {error_message}")
+            ic.print("No Stats data found in the response")
 
-            # Create a proper Response object with the error message
-            error_data = ResponseData(Error=f"Error from vault: {error_message}")
-            status_response = Response(success=False, data=error_data)
+    if balance_result.Ok is not None:
+        # We got a successful response
+        balance_response = balance_result.Ok
+        ic.print(f"Balance Ok response: {balance_response}")
 
-        # Return original response objects from the vault
-        return VaultTestResults(status_response=status_response)
+    if transactions_result.Ok is not None:
+        # We got a successful response
+        transactions_response = transactions_result.Ok
+        ic.print(f"Transactions Ok response: {transactions_response}")
 
-    except Exception as e:
-        ic.print(f"Error: {str(e)}\n{traceback.format_exc()}")
-        # Create a failed response with error message
-        error_msg = f"Error: {str(e)}"
-        error_data = ResponseData(Error=error_msg)
-        error_response = Response(success=False, data=error_data)
+    if (
+        transactions_result.Err is not None
+        or balance_result.Err is not None
+        or status_result.Err is not None
+    ):
+        raise Exception("Error from vault")
 
-        return VaultTestResults(status_response=error_response)
+    # Return original response objects from the vault
+    return VaultTestResults(
+        status_response=status_response,
+        balance_response=balance_response,
+        transactions_response=transactions_response,
+    )
