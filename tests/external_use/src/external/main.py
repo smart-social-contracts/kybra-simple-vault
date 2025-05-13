@@ -2,14 +2,6 @@
 This is an example of how to interact with the vault canister from an external canister.
 """
 
-import json
-import traceback
-
-from candid_types import (
-    Response,
-    ResponseData,
-    Vault,
-)
 from kybra import (
     Async,
     CallResult,
@@ -17,6 +9,10 @@ from kybra import (
     Record,
     ic,
     update,
+)
+from vault_candid_types import (
+    Response,
+    Vault,
 )
 
 
