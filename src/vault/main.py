@@ -18,7 +18,7 @@ from kybra import (
     void,
 )
 from kybra_simple_db import Database
-from kybra_simple_logging import Level, get_logger, set_log_level
+from kybra_simple_logging import get_logger
 
 from vault.candid_types import (
     Account,
@@ -41,10 +41,8 @@ from vault.ic_util_calls import get_account_transactions
 
 logger = get_logger(__name__)
 
-storage = StableBTreeMap[str, str](
-    memory_id=1, max_key_size=100000, max_value_size=1000
-)
-Database.init(db_storage=storage, audit_enabled=True)
+storage = StableBTreeMap[str, str](memory_id=1, max_key_size=100, max_value_size=1000)
+Database.init(db_storage=storage)
 
 
 @init

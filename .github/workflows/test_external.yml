@@ -1,4 +1,4 @@
-name: Test on IC replica (transactions)
+name: Test on IC replica (external canister calls)
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -25,4 +25,4 @@ jobs:
     
     - name: Run IC tests on Docker
       run: |
-        ./run_test.sh transactions
+        ./run_test.sh external
