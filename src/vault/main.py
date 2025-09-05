@@ -25,6 +25,7 @@ from vault.candid_types import (
     AppDataRecord,
     BalanceRecord,
     CanisterRecord,
+    CreateTransactionRequest,
     ICRCLedger,
     Response,
     ResponseData,
@@ -292,6 +293,112 @@ def _sync_status(app_data_obj):
     )
 
 
+def _validate_transaction_inputs(transaction_id, principal_from, principal_to, amount, kind):
+    """
+    Validate transaction inputs and check for existing transactions.
+
+    Args:
+        transaction_id: Unique identifier for the transaction
+        principal_from: Principal ID of the sender
+        principal_to: Principal ID of the recipient
+        amount: Transaction amount
+        kind: Transaction type
+
+    Returns:
+        Response object with error if validation fails, None if validation passes
+    """
+    # Validate amount
+    if amount < 0:
+        return Response(
+            success=False,
+            data=ResponseData(Error="Amount must be non-negative"),
+        )
+
+    # Validate principals
+    if not principal_from or not principal_to:
+        return Response(
+            success=False,
+            data=ResponseData(Error="Both principal_from and principal_to must be provided"),
+        )
+
+    # Validate kind
+    if not kind:
+        return Response(
+            success=False,
+            data=ResponseData(Error="Transaction kind must be provided"),
+        )
+
+    # Validate transaction kind
+    valid_kinds = ["transfer", "mint", "burn", "approve"]
+    if kind not in valid_kinds:
+        return Response(
+            success=False,
+            data=ResponseData(
+                Error=f"Invalid transaction kind. Must be one of: {', '.join(valid_kinds)}"
+            ),
+        )
+
+    # Check if transaction already exists
+    existing_tx = VaultTransaction[transaction_id]
+    if existing_tx:
+        return Response(
+            success=False,
+            data=ResponseData(
+                Error=f"Transaction with ID {transaction_id} already exists"
+            ),
+        )
+
+    return None  # No validation errors
+
+
+def _update_balances_for_transaction(principal_from, principal_to, amount, kind, canister_id):
+    """
+    Update balances based on transaction type and participants.
+
+    Args:
+        principal_from: Principal ID of the sender
+        principal_to: Principal ID of the recipient
+        amount: Transaction amount
+        kind: Transaction type ("mint", "burn", "transfer")
+        canister_id: The vault canister ID
+    """
+    if kind == "mint":
+        # For mint, increase recipient's balance
+        balance_to = Balance[principal_to] or Balance(_id=principal_to, amount=0)
+        balance_to.amount = balance_to.amount + amount
+        logger.debug(f"Updated balance for {principal_to} to {balance_to.amount}")
+
+    elif kind == "burn":
+        # For burn, decrease sender's balance
+        balance_from = Balance[principal_from] or Balance(_id=principal_from, amount=0)
+        balance_from.amount = balance_from.amount - amount
+        logger.debug(f"Updated balance for {principal_from} to {balance_from.amount}")
+
+    elif kind == "transfer":
+        # For transfers involving the vault canister
+        if canister_id == principal_to:
+            # Deposit into vault - increase user's balance and vault balance
+            balance_from = Balance[principal_from] or Balance(_id=principal_from, amount=0)
+            balance_from.amount = balance_from.amount + amount
+
+            vault_balance = Balance[canister_id] or Balance(_id=canister_id, amount=0)
+            vault_balance.amount = vault_balance.amount + amount
+
+            logger.debug(f"Deposit: Updated balance for {principal_from} to {balance_from.amount}")
+            logger.debug(f"Deposit: Updated vault balance to {vault_balance.amount}")
+
+        elif canister_id == principal_from:
+            # Withdrawal from vault - decrease user's balance and vault balance
+            balance_to = Balance[principal_to] or Balance(_id=principal_to, amount=0)
+            balance_to.amount = balance_to.amount - amount
+
+            vault_balance = Balance[canister_id] or Balance(_id=canister_id, amount=0)
+            vault_balance.amount = vault_balance.amount - amount
+
+            logger.debug(f"Withdrawal: Updated balance for {principal_to} to {balance_to.amount}")
+            logger.debug(f"Withdrawal: Updated vault balance to {vault_balance.amount}")
+
+
 @update
 def update_transaction_history() -> Async[Response]:
     """
@@ -534,53 +641,7 @@ def _process_batch_txs(canister_id, txs):
                 )
 
                 # Update balances based on transaction type
-                if kind == "mint":
-                    # For mint, only update the recipient's balance
-                    balance_to = Balance[principal_to] or Balance(
-                        _id=principal_to, amount=0
-                    )
-                    balance_to.amount = balance_to.amount + amount
-                    logger.debug(
-                        f"Updated balance for {principal_to} to {balance_to.amount}"
-                    )
-                elif kind == "burn":
-                    # For burn, only update the sender's balance
-                    balance_from = Balance[principal_from] or Balance(
-                        _id=principal_from, amount=0
-                    )
-                    balance_from.amount = balance_from.amount - amount
-                    logger.debug(
-                        f"Updated balance for {principal_from} to {balance_from.amount}"
-                    )
-                elif kind == "transfer":
-                    """
-                    user deposits in the vault => balance of user increases
-                    vault transfers to user => balance of user decreases
-                    """
-
-                    if canister_id == principal_to:
-                        balance_from = Balance[principal_from] or Balance(
-                            _id=principal_from, amount=0
-                        )
-                        balance_from.amount = balance_from.amount + amount
-                        logger.debug(
-                            f"Updated balance for {principal_from} to {balance_from.amount}"
-                        )
-
-                        vault_balance = Balance[canister_id]
-                        vault_balance.amount = vault_balance.amount + amount
-
-                    if canister_id == principal_from:
-                        balance_to = Balance[principal_to] or Balance(
-                            _id=principal_to, amount=0
-                        )
-                        balance_to.amount = balance_to.amount - amount
-                        logger.debug(
-                            f"Updated balance for {principal_to} to {balance_to.amount}"
-                        )
-
-                        vault_balance = Balance[canister_id]
-                        vault_balance.amount = vault_balance.amount - amount
+                _update_balances_for_transaction(principal_from, principal_to, amount, kind, canister_id)
 
                 inserted_new_txs_ids.append(tx_id)
 
@@ -890,4 +951,66 @@ def remove_admin(admin_to_remove: Principal) -> Response:
         return Response(
             success=False,
             data=ResponseData(Error=f"Error removing admin principal: {str(e)}"),
+        )
+
+
+@update
+@admin_only
+def create_transaction_record(request: CreateTransactionRequest) -> Response:
+    """
+    Create a new transaction record manually.
+
+    This function can only be called by an admin and allows for manual creation
+    of transaction records that may not have been captured through normal sync.
+
+    Args:
+        request: CreateTransactionRequest containing transaction details
+
+    Returns:
+        Response object with success status and message
+    """
+    try:
+        # Extract parameters from request
+        transaction_id = request["transaction_id"]
+        principal_from = request["principal_from"]
+        principal_to = request["principal_to"]
+        amount = request["amount"]
+        timestamp = request["timestamp"]
+        kind = request["kind"]
+
+        # Validate inputs using shared validation function
+        validation_error = _validate_transaction_inputs(
+            transaction_id, principal_from, principal_to, amount, kind
+        )
+        if validation_error:
+            return validation_error
+
+        logger.info(f"Creating transaction record {transaction_id}: {kind} from {principal_from} to {principal_to}, amount: {amount}")
+
+        # Create the transaction record
+        VaultTransaction(
+            _id=transaction_id,
+            principal_from=principal_from,
+            principal_to=principal_to,
+            amount=amount,
+            timestamp=timestamp,
+            kind=kind,
+        )
+
+        # Update balances based on transaction type
+        canister_id = ic.id().to_str()
+        _update_balances_for_transaction(principal_from, principal_to, amount, kind, canister_id)
+
+        return Response(
+            success=True,
+            data=ResponseData(
+                TransactionId=TransactionIdRecord(transaction_id=transaction_id)
+            ),
+        )
+
+    except Exception as e:
+        logger.error(f"Error creating transaction record: {e}\n{traceback.format_exc()}")
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Error creating transaction record: {str(e)}"),
         )

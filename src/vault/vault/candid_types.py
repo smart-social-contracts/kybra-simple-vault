@@ -61,6 +61,16 @@ class TransactionIdRecord(Record):
     transaction_id: nat
 
 
+# Record for creating a new transaction manually.
+class CreateTransactionRequest(Record):
+    transaction_id: nat
+    principal_from: text
+    principal_to: text
+    amount: int
+    timestamp: nat
+    kind: text
+
+
 # Summary information about transactions.
 class TransactionSummaryRecord(Record):
     new_txs_count: nat

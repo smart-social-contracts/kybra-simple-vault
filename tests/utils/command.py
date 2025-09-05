@@ -31,18 +31,26 @@ def run_command_expects_response_obj(command):
     """Run a shell command and return its output as a JSON object."""
     result = run_command(command)
     if not result:
-        print_error(f"✗ Failed to run command `{command}`")
-        return False
+        print_error(f"✗ Failed to run command `{command}`: Unknown error")
+        return None, False, "Unknown error"
 
-    result_json = json.loads(result)
-    success = result_json.get("success", False)
+    try:
+        result_json = json.loads(result)
+        success = result_json.get("success", False)
+        
+        if not success:
+            error_data = result_json.get("data", {})
+            if isinstance(error_data, dict) and "Error" in error_data:
+                message = error_data["Error"]
+            else:
+                message = result_json.get("message", "Unknown error")
+            print_error(f"✗ Failed to run command `{command}`: {message}")
+            return result_json, False, message
 
-    if not success:
-        message = result_json.get("message", "Unknown error")
-        print_error(f"✗ Failed to run command `{command}`: {message}")
-        return False
-
-    return result_json
+        return result_json, True, "Success"
+    except json.JSONDecodeError as e:
+        print_error(f"✗ Failed to parse JSON response: {e}")
+        return None, False, f"JSON parse error: {e}"
 
 
 def get_canister_id(canister_name):

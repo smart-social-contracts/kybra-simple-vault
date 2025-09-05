@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 # isort: on
 
 
+from tests.test_cases.create_transaction_tests import run_all_tests as run_create_transaction_tests
 from tests.test_cases.deployment_tests import (
     test_add_remove_admin,
     test_deploy_vault_without_params,
@@ -83,6 +84,9 @@ def main():
         # Check transaction ordering and validity
         results["Transaction Ordering"] = test_transaction_ordering()
         results["Transaction Validity"] = test_transaction_validity()
+
+        # Test create_transaction_record functionality
+        results["Create Transaction Record Tests"] = run_create_transaction_tests()
 
         # Test set canisters and ensure only the admin can do so
         if not test_set_canisters():
