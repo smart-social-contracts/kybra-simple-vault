@@ -14,7 +14,9 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 # isort: on
 
 
-from tests.test_cases.create_transaction_tests import run_all_tests as run_create_transaction_tests
+from tests.test_cases.create_transaction_tests import (
+    run_all_tests as run_create_transaction_tests,
+)
 from tests.test_cases.deployment_tests import (
     test_add_remove_admin,
     test_deploy_vault_without_params,

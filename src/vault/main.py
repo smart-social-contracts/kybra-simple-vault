@@ -293,7 +293,9 @@ def _sync_status(app_data_obj):
     )
 
 
-def _validate_transaction_inputs(transaction_id, principal_from, principal_to, amount, kind):
+def _validate_transaction_inputs(
+    transaction_id, principal_from, principal_to, amount, kind
+):
     """
     Validate transaction inputs and check for existing transactions.
 
@@ -318,7 +320,9 @@ def _validate_transaction_inputs(transaction_id, principal_from, principal_to, a
     if not principal_from or not principal_to:
         return Response(
             success=False,
-            data=ResponseData(Error="Both principal_from and principal_to must be provided"),
+            data=ResponseData(
+                Error="Both principal_from and principal_to must be provided"
+            ),
         )
 
     # Validate kind
@@ -351,7 +355,9 @@ def _validate_transaction_inputs(transaction_id, principal_from, principal_to, a
     return None  # No validation errors
 
 
-def _update_balances_for_transaction(principal_from, principal_to, amount, kind, canister_id):
+def _update_balances_for_transaction(
+    principal_from, principal_to, amount, kind, canister_id
+):
     """
     Update balances based on transaction type and participants.
 
@@ -378,13 +384,17 @@ def _update_balances_for_transaction(principal_from, principal_to, amount, kind,
         # For transfers involving the vault canister
         if canister_id == principal_to:
             # Deposit into vault - increase user's balance and vault balance
-            balance_from = Balance[principal_from] or Balance(_id=principal_from, amount=0)
+            balance_from = Balance[principal_from] or Balance(
+                _id=principal_from, amount=0
+            )
             balance_from.amount = balance_from.amount + amount
 
             vault_balance = Balance[canister_id] or Balance(_id=canister_id, amount=0)
             vault_balance.amount = vault_balance.amount + amount
 
-            logger.debug(f"Deposit: Updated balance for {principal_from} to {balance_from.amount}")
+            logger.debug(
+                f"Deposit: Updated balance for {principal_from} to {balance_from.amount}"
+            )
             logger.debug(f"Deposit: Updated vault balance to {vault_balance.amount}")
 
         elif canister_id == principal_from:
@@ -395,7 +405,9 @@ def _update_balances_for_transaction(principal_from, principal_to, amount, kind,
             vault_balance = Balance[canister_id] or Balance(_id=canister_id, amount=0)
             vault_balance.amount = vault_balance.amount - amount
 
-            logger.debug(f"Withdrawal: Updated balance for {principal_to} to {balance_to.amount}")
+            logger.debug(
+                f"Withdrawal: Updated balance for {principal_to} to {balance_to.amount}"
+            )
             logger.debug(f"Withdrawal: Updated vault balance to {vault_balance.amount}")
 
 
@@ -641,7 +653,9 @@ def _process_batch_txs(canister_id, txs):
                 )
 
                 # Update balances based on transaction type
-                _update_balances_for_transaction(principal_from, principal_to, amount, kind, canister_id)
+                _update_balances_for_transaction(
+                    principal_from, principal_to, amount, kind, canister_id
+                )
 
                 inserted_new_txs_ids.append(tx_id)
 
@@ -985,7 +999,9 @@ def create_transaction_record(request: CreateTransactionRequest) -> Response:
         if validation_error:
             return validation_error
 
-        logger.info(f"Creating transaction record {transaction_id}: {kind} from {principal_from} to {principal_to}, amount: {amount}")
+        logger.info(
+            f"Creating transaction record {transaction_id}: {kind} from {principal_from} to {principal_to}, amount: {amount}"
+        )
 
         # Create the transaction record
         VaultTransaction(
@@ -999,7 +1015,9 @@ def create_transaction_record(request: CreateTransactionRequest) -> Response:
 
         # Update balances based on transaction type
         canister_id = ic.id().to_str()
-        _update_balances_for_transaction(principal_from, principal_to, amount, kind, canister_id)
+        _update_balances_for_transaction(
+            principal_from, principal_to, amount, kind, canister_id
+        )
 
         return Response(
             success=True,
@@ -1009,7 +1027,9 @@ def create_transaction_record(request: CreateTransactionRequest) -> Response:
         )
 
     except Exception as e:
-        logger.error(f"Error creating transaction record: {e}\n{traceback.format_exc()}")
+        logger.error(
+            f"Error creating transaction record: {e}\n{traceback.format_exc()}"
+        )
         return Response(
             success=False,
             data=ResponseData(Error=f"Error creating transaction record: {str(e)}"),

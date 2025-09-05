@@ -37,7 +37,7 @@ def run_command_expects_response_obj(command):
     try:
         result_json = json.loads(result)
         success = result_json.get("success", False)
-        
+
         if not success:
             error_data = result_json.get("data", {})
             if isinstance(error_data, dict) and "Error" in error_data:
