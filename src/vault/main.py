@@ -36,7 +36,7 @@ from vault.candid_types import (
     TransferResult,
 )
 from vault.constants import CANISTER_PRINCIPALS, MAX_ITERATION_COUNT, MAX_RESULTS
-from vault.entities import Balance, Canisters, VaultTransaction, app_data
+from vault.entities import Admin, Balance, Canisters, VaultTransaction, app_data
 from vault.ic_util_calls import get_account_transactions
 
 logger = get_logger(__name__)
@@ -48,7 +48,7 @@ Database.init(db_storage=storage)
 @init
 def init_(
     canisters: Opt[Vec[Tuple[str, Principal]]] = None,
-    admin_principal: Opt[Principal] = None,
+    admin_principals: Opt[Vec[Principal]] = None,
     max_results: Opt[nat] = None,
     max_iteration_count: Opt[nat] = None,
 ) -> void:
@@ -89,12 +89,23 @@ def init_(
             f"Canister record 'ckBTC indexer' already exists with principal: {Canisters['ckBTC indexer'].principal}"
         )
 
-    if not app_data().admin_principal:
-        new_admin_principal = (
-            admin_principal.to_str() if admin_principal else ic.caller().to_str()
-        )
-        logger.info(f"Setting admin principal to {new_admin_principal}")
-        app_data().admin_principal = new_admin_principal
+    # Initialize admins if none exist
+    if not Admin.instances():
+        admins_to_add = set()
+        
+        # Handle multiple admins parameter
+        if admin_principals:
+            for principal in admin_principals:
+                admins_to_add.add(principal.to_str())
+        
+        # Default to caller if no admins specified
+        if not admins_to_add:
+            admins_to_add.add(ic.caller().to_str())
+        
+        # Create Admin entities
+        for admin_id in admins_to_add:
+            logger.info(f"Adding admin principal: {admin_id}")
+            Admin(_id=admin_id, principal_id=admin_id)
 
     if not app_data().max_results:
         new_max_results = max_results or MAX_RESULTS
@@ -114,7 +125,8 @@ def init_(
     logger.info(
         f"Canisters: {[canister.to_dict() for canister in Canisters.instances()]}"
     )
-    logger.info(f"Admin principal: {app_data().admin_principal}")
+    admin_principals = [admin.principal_id for admin in Admin.instances()]
+    logger.info(f"Admin principals: {admin_principals}")
     logger.info(f"Max results: {app_data().max_results}")
     logger.info(f"Max iteration_count: {app_data().max_iteration_count}")
 
@@ -124,14 +136,26 @@ def init_(
 def admin_only(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
+        # If no admins exist, allow the function to proceed
+        admin_instances = Admin.instances()
+        if not admin_instances:
+            return func(*args, **kwargs)
+
         # Check if caller is admin
         caller_id = ic.caller().to_str()
-        admin_id = app_data().admin_principal
-        if caller_id != admin_id:
+        
+        # Check if caller is in the Admin entities
+        is_admin = False
+        for admin in admin_instances:
+            if admin.principal_id == caller_id:
+                is_admin = True
+                break
+        
+        if not is_admin:
             return Response(
                 success=False,
                 data=ResponseData(
-                    Error=f"Caller ({caller_id}) is not the admin principal ({admin_id})"
+                    Error=f"Caller ({caller_id}) is not an admin principal"
                 ),
             )
         # If caller is admin, proceed with the function
@@ -709,8 +733,13 @@ def status() -> Response:
         sync_status = _sync_status(app_data_obj)
         sync_tx_id = app_data_obj.scan_oldest_tx_id
 
+        # Get all admin principals
+        admin_principals = []
+        for admin in Admin.instances():
+            admin_principals.append(Principal.from_str(admin.principal_id))
+
         app_data_record = AppDataRecord(
-            admin_principal=Principal.from_str(app_data_obj.admin_principal),
+            admin_principals=admin_principals,
             max_results=app_data_obj.max_results,
             max_iteration_count=app_data_obj.max_iteration_count,
             scan_end_tx_id=app_data_obj.scan_end_tx_id,
@@ -765,36 +794,103 @@ def status() -> Response:
 
 @update
 @admin_only
-def set_admin(new_admin: Principal) -> Response:
+def add_admin(new_admin: Principal) -> Response:
     """
-    Set a new admin principal for the vault.
+    Add a new admin principal to the vault.
 
-    This function can only be called by the current admin.
+    This function can only be called by an existing admin.
 
     Args:
-        new_admin: The principal ID of the new admin
+        new_admin: The principal ID of the new admin to add
 
     Returns:
         Response object with success status and message
     """
     try:
-        current_admin = app_data().admin_principal
         new_admin_id = new_admin.to_str()
 
-        logger.info(f"Changing admin principal from {current_admin} to {new_admin_id}")
+        # Check if admin already exists
+        existing_admin = Admin[new_admin_id]
+        if existing_admin:
+            return Response(
+                success=False,
+                data=ResponseData(
+                    Error=f"Principal {new_admin_id} is already an admin"
+                ),
+            )
 
-        # Update the admin_principal in app_data
-        app_data().admin_principal = new_admin_id
+        logger.info(f"Adding new admin principal: {new_admin_id}")
+
+        # Create new Admin entity
+        Admin(_id=new_admin_id, principal_id=new_admin_id)
 
         return Response(
             success=True,
             data=ResponseData(
-                Message=f"Admin principal updated successfully to {new_admin_id}"
+                Message=f"Admin principal {new_admin_id} added successfully"
             ),
         )
     except Exception as e:
-        logger.error(f"Error setting admin principal: {e}\n{traceback.format_exc()}")
+        logger.error(f"Error adding admin principal: {e}\n{traceback.format_exc()}")
         return Response(
             success=False,
-            data=ResponseData(Error=f"Error setting admin principal: {str(e)}"),
+            data=ResponseData(Error=f"Error adding admin principal: {str(e)}"),
+        )
+
+
+@update
+@admin_only
+def remove_admin(admin_to_remove: Principal) -> Response:
+    """
+    Remove an admin principal from the vault.
+
+    This function can only be called by an existing admin.
+    Cannot remove the last admin to prevent lockout.
+
+    Args:
+        admin_to_remove: The principal ID of the admin to remove
+
+    Returns:
+        Response object with success status and message
+    """
+    try:
+        admin_id_to_remove = admin_to_remove.to_str()
+        caller_id = ic.caller().to_str()
+
+        # Check if admin exists
+        admin_entity = Admin[admin_id_to_remove]
+        if not admin_entity:
+            return Response(
+                success=False,
+                data=ResponseData(
+                    Error=f"Principal {admin_id_to_remove} is not an admin"
+                ),
+            )
+
+        # Prevent removing the last admin
+        admin_count = len(Admin.instances())
+        if admin_count <= 1:
+            return Response(
+                success=False,
+                data=ResponseData(
+                    Error="Cannot remove the last admin principal"
+                ),
+            )
+
+        logger.info(f"Removing admin principal: {admin_id_to_remove}")
+
+        # Delete the Admin entity
+        admin_entity.delete()
+
+        return Response(
+            success=True,
+            data=ResponseData(
+                Message=f"Admin principal {admin_id_to_remove} removed successfully"
+            ),
+        )
+    except Exception as e:
+        logger.error(f"Error removing admin principal: {e}\n{traceback.format_exc()}")
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Error removing admin principal: {str(e)}"),
         )

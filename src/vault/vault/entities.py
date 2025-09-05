@@ -8,10 +8,15 @@ from kybra_simple_db import (
 )
 
 
+class Admin(Entity, TimestampedMixin):
+    """Stores admin principal IDs with access to vault administrative functions."""
+    
+    principal_id = String()
+
+
 class ApplicationData(Entity, TimestampedMixin):
     """Stores global application configuration and synchronization state."""
 
-    admin_principal = String()
     max_results = Integer()
     max_iteration_count = Integer()
 

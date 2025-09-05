@@ -39,7 +39,7 @@ class TransactionRecord(Record):
 
 # Application metadata containing settings and status information.
 class AppDataRecord(Record):
-    admin_principal: Principal
+    admin_principals: Vec[Principal]
     max_results: nat
     max_iteration_count: nat
     scan_end_tx_id: nat
