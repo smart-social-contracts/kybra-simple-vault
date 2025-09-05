@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
 from tests.test_cases.deployment_tests import (
     test_deploy_vault_without_params,
-    test_set_admin,
+    test_add_remove_admin,
     test_set_canisters,
     test_upgrade,
 )
@@ -88,8 +88,8 @@ def main():
         if not test_set_canisters():
             return 1
 
-        # Test set_admin functionality and admin controls
-        if not test_set_admin():
+        # Test add_admin and remove_admin functionality and admin controls
+        if not test_add_remove_admin():
             return 1
 
         # Upgrade the vault canister

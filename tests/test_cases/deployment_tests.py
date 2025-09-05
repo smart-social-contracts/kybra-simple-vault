@@ -55,7 +55,9 @@ def get_and_check_status(
 
         stats_data = status_json["data"]["Stats"]
 
-        assert stats_data["app_data"]["admin_principal"] == admin_principal
+        # Check that admin_principal is in the admin_principals array
+        admin_principals = stats_data["app_data"]["admin_principals"]
+        assert admin_principal in admin_principals
         assert stats_data["app_data"]["max_iteration_count"] == str(max_iteration_count)
         assert stats_data["app_data"]["max_results"] == str(max_results)
 
@@ -104,7 +106,7 @@ def test_deploy_vault_with_params(max_iteration_count, max_results):
         record {{ \\"ckBTC ledger\\"; principal \\"{ledger_id}\\" }};
         record {{ \\"ckBTC indexer\\"; principal \\"{indexer_id}\\" }}
       }},
-      opt principal \\"{get_current_principal()}\\",
+      opt vec {{ principal \\"{get_current_principal()}\\" }},
       opt {max_iteration_count},
       opt {max_results}
     )" """
@@ -278,9 +280,9 @@ def test_set_canisters():
     )
 
 
-def test_set_admin():
-    """Test the set_admin functionality, including proper access controls."""
-    print("\nTesting set_admin functionality...")
+def test_add_remove_admin():
+    """Test the add_admin and remove_admin functionality, including proper access controls."""
+    print("\nTesting add_admin and remove_admin functionality...")
 
     # Check current admin (which should be the deployer)
     original_admin = get_current_principal()
@@ -297,50 +299,57 @@ def test_set_admin():
             f"Created test identity 'new_admin' with principal: {new_admin_principal}"
         )
 
-        # Test 1: Original admin should be able to set new admin
-        print("\nTesting set_admin by original admin (should succeed)...")
-        cmd = f'dfx canister call vault set_admin "(principal \\"{new_admin_principal}\\")" --output json'
+        # Test 1: Original admin should be able to add new admin
+        print("\nTesting add_admin by original admin (should succeed)...")
+        cmd = f'dfx canister call vault add_admin "(principal \\"{new_admin_principal}\\")" --output json'
         result = run_command(cmd)
 
         if not result:
-            print_error("Failed to call set_admin")
+            print_error("Failed to call add_admin")
             return False
 
         result_json = json.loads(result)
         if not result_json.get("success", False):
-            print_error(f"set_admin failed: {result_json}")
+            print_error(f"add_admin failed: {result_json}")
             return False
 
-        print_ok("Successfully changed admin to new identity")
+        print_ok("Successfully added new admin")
 
-        # Test 2: Verify with status check and test new admin can set admin back
+        # Test 2: Verify with status check that new admin is in admin_principals
         status_cmd = "dfx canister call vault status --output json"
         status_result = json.loads(run_command(status_cmd))
 
         if (
             status_result.get("success", False)
-            and status_result["data"]["Stats"]["app_data"]["admin_principal"]
-            == new_admin_principal
+            and new_admin_principal in status_result["data"]["Stats"]["app_data"]["admin_principals"]
         ):
-            print_ok(f"Status confirmed admin principal is now: {new_admin_principal}")
+            print_ok(f"Status confirmed new admin principal is added: {new_admin_principal}")
 
-            # Test 3: New admin sets admin back to original
-            cmd = f'dfx --identity new_admin canister call vault set_admin "(principal \\"{original_admin}\\")" --output json'
-            result = run_command(cmd)
+            # Test 3: New admin can also add/remove admins
+            # Test that new admin can remove themselves (but not if they're the last admin)
+            admin_principals = status_result["data"]["Stats"]["app_data"]["admin_principals"]
+            if len(admin_principals) > 1:
+                cmd = f'dfx --identity new_admin canister call vault remove_admin "(principal \\"{new_admin_principal}\\")" --output json'
+                result = run_command(cmd)
 
-            if result and json.loads(result).get("success", False):
-                print_ok("New admin successfully changed admin back to original")
+                if result and json.loads(result).get("success", False):
+                    print_ok("New admin successfully removed themselves")
 
+                    # Clean up - remove test identity
+                    run_command("dfx identity remove new_admin || true")
+                    return True
+            else:
+                print_ok("Skipping self-removal test as new admin is the only admin")
                 # Clean up - remove test identity
                 run_command("dfx identity remove new_admin || true")
                 return True
 
-        print_error("Admin principal change verification failed")
+        print_error("Admin principal addition verification failed")
         run_command("dfx identity remove new_admin || true")
         return False
 
     except Exception as e:
-        print_error(f"Error in test_set_admin: {e}\n{traceback.format_exc()}")
+        print_error(f"Error in test_add_remove_admin: {e}\n{traceback.format_exc()}")
         # Clean up - ensure we remove test identity even if test fails
         run_command("dfx identity remove new_admin || true")
         return False

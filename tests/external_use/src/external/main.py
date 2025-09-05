@@ -61,7 +61,7 @@ def run_vault_tests(vault_canister_id: Principal) -> Async[VaultTestResults]:
 
             # AppData details
             app_data = stats["app_data"]
-            ic.print(f"Admin Principal: {app_data['admin_principal']}")
+            ic.print(f"Admin Principals: {app_data['admin_principals']}")
             ic.print(f"Max Results: {app_data['max_results']}")
             ic.print(f"Sync Status: {app_data['sync_status']}")
             ic.print(f"Sync Transaction ID: {app_data['sync_tx_id']}")
