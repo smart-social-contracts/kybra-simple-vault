@@ -28,7 +28,24 @@ def create_transaction_record(
 ):
     """Helper function to create a transaction record."""
     cmd = f'dfx canister call vault create_transaction_record \'(record {{ transaction_id = {transaction_id}; principal_from = "{principal_from}"; principal_to = "{principal_to}"; amount = {amount}; timestamp = {timestamp}; kind = "{kind}" }})\' --output json'
-    return run_command_expects_response_obj(cmd)
+    result, cmd_success, cmd_message = run_command_expects_response_obj(cmd)
+
+    # If the dfx command failed, return the command failure
+    if not cmd_success:
+        return result, False, cmd_message
+
+    # If the dfx command succeeded, check the canister response
+    canister_success = result.get("success", False)
+    if canister_success:
+        return result, True, "Success"
+    else:
+        # Extract error message from canister response
+        error_data = result.get("data", {})
+        if isinstance(error_data, dict) and "Error" in error_data:
+            error_message = error_data["Error"]
+        else:
+            error_message = "Unknown canister error"
+        return result, False, error_message
 
 
 def get_balance(principal_id):
@@ -290,10 +307,11 @@ def test_validation_errors():
             ),
             "expected_error": "Invalid transaction kind",
         },
-        # Duplicate transaction ID (reuse first ID)
+        # Duplicate transaction ID (create one first, then try to duplicate it)
         {
             "params": (
-                12345,
+                int(time.time() * 1000000)
+                + 999,  # Use a unique ID that we'll create first
                 current_principal,
                 current_principal,
                 100,
@@ -305,6 +323,28 @@ def test_validation_errors():
     ]
 
     all_passed = True
+
+    # For test case 4 (duplicate ID), we need to create the transaction first
+    duplicate_test_case = test_cases[3]  # The duplicate ID test case
+    duplicate_id = duplicate_test_case["params"][0]
+
+    # Create the first transaction to make the duplicate test valid
+    print(f"Creating initial transaction with ID {duplicate_id} for duplicate test...")
+    initial_result, initial_success, initial_message = create_transaction_record(
+        duplicate_id,
+        current_principal,
+        current_principal,
+        50,
+        int(time.time() * 1000000000),
+        "transfer",
+    )
+
+    if not initial_success:
+        print_error(
+            f"Failed to create initial transaction for duplicate test: {initial_message}"
+        )
+        return False
+
     for i, test_case in enumerate(test_cases):
         params = test_case["params"]
         expected_error = test_case["expected_error"]

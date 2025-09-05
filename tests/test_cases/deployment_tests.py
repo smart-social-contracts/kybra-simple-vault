@@ -170,19 +170,23 @@ def test_upgrade():
 
     # Get current balance
     balance_cmd = f"dfx canister call vault get_balance '(principal \"{current_principal}\")' --output json"
-    pre_balance = run_command_expects_response_obj(balance_cmd)
-    if not pre_balance:
-        print_error("Failed to get balance before upgrade")
+    pre_balance_result, pre_balance_success, pre_balance_message = (
+        run_command_expects_response_obj(balance_cmd)
+    )
+    if not pre_balance_success:
+        print_error(f"Failed to get balance before upgrade: {pre_balance_message}")
         return False
 
     # Get existing transactions
     transactions_cmd = f"dfx canister call vault get_transactions '(principal \"{current_principal}\")' --output json"
-    pre_transactions = run_command_expects_response_obj(transactions_cmd)
-    if not pre_transactions:
-        print_error("Failed to get transactions before upgrade")
+    pre_transactions_result, pre_tx_success, pre_tx_message = (
+        run_command_expects_response_obj(transactions_cmd)
+    )
+    if not pre_tx_success:
+        print_error(f"Failed to get transactions before upgrade: {pre_tx_message}")
         return False
 
-    pre_tx_count = len(pre_transactions.get("data", []))
+    pre_tx_count = len(pre_transactions_result.get("data", {}).get("Transactions", []))
     print(f"Pre-upgrade transaction count: {pre_tx_count}")
 
     # Step 2: Perform the upgrade
@@ -202,17 +206,19 @@ def test_upgrade():
         return False
 
     # Check balance is preserved
-    post_balance = run_command_expects_response_obj(balance_cmd)
-    if not post_balance:
-        print_error("Failed to get balance after upgrade")
+    post_balance_result, post_balance_success, post_balance_message = (
+        run_command_expects_response_obj(balance_cmd)
+    )
+    if not post_balance_success:
+        print_error(f"Failed to get balance after upgrade: {post_balance_message}")
         return False
 
     # Compare balance amounts
     pre_balance_amount = (
-        pre_balance.get("data", {}).get("Balance", {}).get("amount", "0")
+        pre_balance_result.get("data", {}).get("Balance", {}).get("amount", "0")
     )
     post_balance_amount = (
-        post_balance.get("data", {}).get("Balance", {}).get("amount", "0")
+        post_balance_result.get("data", {}).get("Balance", {}).get("amount", "0")
     )
     if pre_balance_amount != post_balance_amount:
         print_error(
@@ -221,12 +227,14 @@ def test_upgrade():
         return False
 
     # Check transactions are preserved
-    post_transactions = run_command_expects_response_obj(transactions_cmd)
-    if not post_transactions:
-        print_error("Failed to get transactions after upgrade")
+    post_transactions_result, post_tx_success, post_tx_message = (
+        run_command_expects_response_obj(transactions_cmd)
+    )
+    if not post_tx_success:
+        print_error(f"Failed to get transactions after upgrade: {post_tx_message}")
         return False
 
-    post_tx_count = len(post_transactions["data"]["Transactions"])
+    post_tx_count = len(post_transactions_result["data"]["Transactions"])
     if post_tx_count < pre_tx_count:
         print_error(
             f"Transactions not preserved after upgrade: before={pre_tx_count}, after={post_tx_count}"
@@ -236,20 +244,26 @@ def test_upgrade():
     # Test that transfer functionality still works
     print_ok("Testing transfer functionality after upgrade...")
     post_transfer_cmd = f"dfx canister call vault transfer '(principal \"{current_principal}\", 25)' --output json"
-    post_transfer_result = run_command_expects_response_obj(post_transfer_cmd)
-    if not post_transfer_result:
-        print_error("Failed to perform transfer after upgrade")
+    post_transfer_result, post_transfer_success, post_transfer_message = (
+        run_command_expects_response_obj(post_transfer_cmd)
+    )
+    if not post_transfer_success:
+        print_error(
+            f"Failed to perform transfer after upgrade: {post_transfer_message}"
+        )
         return False
 
     update_transaction_history()
 
     # Verify new transaction was added
-    final_transactions = run_command_expects_response_obj(transactions_cmd)
-    if not final_transactions:
-        print_error("Failed to get final transactions")
+    final_transactions_result, final_tx_success, final_tx_message = (
+        run_command_expects_response_obj(transactions_cmd)
+    )
+    if not final_tx_success:
+        print_error(f"Failed to get final transactions: {final_tx_message}")
         return False
 
-    final_tx_count = len(final_transactions["data"]["Transactions"])
+    final_tx_count = len(final_transactions_result["data"]["Transactions"])
     if final_tx_count != post_tx_count + 1:
         print_error("New transaction was not recorded after upgrade")
         return False
