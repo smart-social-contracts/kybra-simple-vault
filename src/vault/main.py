@@ -92,16 +92,16 @@ def init_(
     # Initialize admins if none exist
     if not Admin.instances():
         admins_to_add = set()
-        
+
         # Handle multiple admins parameter
         if admin_principals:
             for principal in admin_principals:
                 admins_to_add.add(principal.to_str())
-        
+
         # Default to caller if no admins specified
         if not admins_to_add:
             admins_to_add.add(ic.caller().to_str())
-        
+
         # Create Admin entities
         for admin_id in admins_to_add:
             logger.info(f"Adding admin principal: {admin_id}")
@@ -143,14 +143,14 @@ def admin_only(func):
 
         # Check if caller is admin
         caller_id = ic.caller().to_str()
-        
+
         # Check if caller is in the Admin entities
         is_admin = False
         for admin in admin_instances:
             if admin.principal_id == caller_id:
                 is_admin = True
                 break
-        
+
         if not is_admin:
             return Response(
                 success=False,
@@ -855,7 +855,6 @@ def remove_admin(admin_to_remove: Principal) -> Response:
     """
     try:
         admin_id_to_remove = admin_to_remove.to_str()
-        caller_id = ic.caller().to_str()
 
         # Check if admin exists
         admin_entity = Admin[admin_id_to_remove]
@@ -872,9 +871,7 @@ def remove_admin(admin_to_remove: Principal) -> Response:
         if admin_count <= 1:
             return Response(
                 success=False,
-                data=ResponseData(
-                    Error="Cannot remove the last admin principal"
-                ),
+                data=ResponseData(Error="Cannot remove the last admin principal"),
             )
 
         logger.info(f"Removing admin principal: {admin_id_to_remove}")

@@ -15,8 +15,8 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
 
 from tests.test_cases.deployment_tests import (
-    test_deploy_vault_without_params,
     test_add_remove_admin,
+    test_deploy_vault_without_params,
     test_set_canisters,
     test_upgrade,
 )

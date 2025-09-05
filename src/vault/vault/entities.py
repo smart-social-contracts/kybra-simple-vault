@@ -10,7 +10,7 @@ from kybra_simple_db import (
 
 class Admin(Entity, TimestampedMixin):
     """Stores admin principal IDs with access to vault administrative functions."""
-    
+
     principal_id = String()
 
 

@@ -100,7 +100,9 @@ def run_external_canister_tests():
                 # Output some details from the response for verification
                 if "data" in status_response and "Stats" in status_response["data"]:
                     stats = status_response["data"]["Stats"]
-                    print(f"  Admin Principals: {stats['app_data']['admin_principals']}")
+                    print(
+                        f"  Admin Principals: {stats['app_data']['admin_principals']}"
+                    )
                     print(f"  Sync Status: {stats['app_data']['sync_status']}")
                     print(f"  Registered Canisters: {len(stats['canisters'])}")
                     print(f"  Balances Count: {len(stats['balances'])}")

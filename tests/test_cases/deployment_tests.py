@@ -290,16 +290,37 @@ def test_add_remove_admin():
         print_error("Failed to get current principal")
         return False
 
-    # Create a test identity to use as new admin
+    # Create test identities
     try:
-        # Create new identity
-        identities = create_test_identities(["new_admin"])
+        # Create new identities for testing
+        identities = create_test_identities(["new_admin", "non_admin"])
         new_admin_principal = identities["new_admin"]
+        non_admin_principal = identities["non_admin"]
         print(
             f"Created test identity 'new_admin' with principal: {new_admin_principal}"
         )
+        print(
+            f"Created test identity 'non_admin' with principal: {non_admin_principal}"
+        )
 
-        # Test 1: Original admin should be able to add new admin
+        # Test 1: Non-admin should NOT be able to add admin (should fail)
+        print("\nTesting add_admin by non-admin (should fail)...")
+        cmd = f'dfx --identity non_admin canister call vault add_admin "(principal \\"{new_admin_principal}\\")" --output json'
+        result = run_command(cmd)
+
+        if result:
+            result_json = json.loads(result)
+            if result_json.get("success", False):
+                print_error("Non-admin was able to add admin - this should not happen!")
+                return False
+            else:
+                print_ok(
+                    f"Non-admin correctly denied: {result_json.get('data', {}).get('Error', 'Unknown error')}"
+                )
+        else:
+            print_ok("Non-admin add_admin call failed as expected")
+
+        # Test 2: Original admin should be able to add new admin
         print("\nTesting add_admin by original admin (should succeed)...")
         cmd = f'dfx canister call vault add_admin "(principal \\"{new_admin_principal}\\")" --output json'
         result = run_command(cmd)
@@ -315,41 +336,91 @@ def test_add_remove_admin():
 
         print_ok("Successfully added new admin")
 
-        # Test 2: Verify with status check that new admin is in admin_principals
+        # Test 3: Verify with status check that new admin is in admin_principals
         status_cmd = "dfx canister call vault status --output json"
         status_result = json.loads(run_command(status_cmd))
 
         if (
             status_result.get("success", False)
-            and new_admin_principal in status_result["data"]["Stats"]["app_data"]["admin_principals"]
+            and new_admin_principal
+            in status_result["data"]["Stats"]["app_data"]["admin_principals"]
         ):
-            print_ok(f"Status confirmed new admin principal is added: {new_admin_principal}")
+            print_ok(
+                f"Status confirmed new admin principal is added: {new_admin_principal}"
+            )
 
-            # Test 3: New admin can also add/remove admins
-            # Test that new admin can remove themselves (but not if they're the last admin)
-            admin_principals = status_result["data"]["Stats"]["app_data"]["admin_principals"]
+            # Test 4: Non-admin should NOT be able to remove admin (should fail)
+            print("\nTesting remove_admin by non-admin (should fail)...")
+            cmd = f'dfx --identity non_admin canister call vault remove_admin "(principal \\"{new_admin_principal}\\")" --output json'
+            result = run_command(cmd)
+
+            if result:
+                result_json = json.loads(result)
+                if result_json.get("success", False):
+                    print_error(
+                        "Non-admin was able to remove admin - this should not happen!"
+                    )
+                    return False
+                else:
+                    print_ok(
+                        f"Non-admin correctly denied: {result_json.get('data', {}).get('Error', 'Unknown error')}"
+                    )
+            else:
+                print_ok("Non-admin remove_admin call failed as expected")
+
+            # Test 5: New admin can remove themselves (if not the last admin)
+            admin_principals = status_result["data"]["Stats"]["app_data"][
+                "admin_principals"
+            ]
             if len(admin_principals) > 1:
+                print("\nTesting remove_admin by new admin (should succeed)...")
                 cmd = f'dfx --identity new_admin canister call vault remove_admin "(principal \\"{new_admin_principal}\\")" --output json'
                 result = run_command(cmd)
 
                 if result and json.loads(result).get("success", False):
                     print_ok("New admin successfully removed themselves")
-
-                    # Clean up - remove test identity
-                    run_command("dfx identity remove new_admin || true")
-                    return True
+                else:
+                    print_error("New admin failed to remove themselves")
+                    return False
             else:
-                print_ok("Skipping self-removal test as new admin is the only admin")
-                # Clean up - remove test identity
-                run_command("dfx identity remove new_admin || true")
-                return True
+                print_ok(
+                    "Skipping self-removal test as new admin would be the only admin"
+                )
+
+            # Test 6: Verify cannot remove the last admin
+            print("\nTesting prevention of last admin removal...")
+            # Get current admin count
+            status_result = json.loads(run_command(status_cmd))
+            admin_principals = status_result["data"]["Stats"]["app_data"][
+                "admin_principals"
+            ]
+
+            if len(admin_principals) == 1:
+                last_admin = admin_principals[0]
+                cmd = f'dfx canister call vault remove_admin "(principal \\"{last_admin}\\")" --output json'
+                result = run_command(cmd)
+
+                if result:
+                    result_json = json.loads(result)
+                    if not result_json.get("success", False):
+                        print_ok("Correctly prevented removal of last admin")
+                    else:
+                        print_error("Last admin was removed - this should not happen!")
+                        return False
+
+            # Clean up - remove test identities
+            run_command("dfx identity remove new_admin || true")
+            run_command("dfx identity remove non_admin || true")
+            return True
 
         print_error("Admin principal addition verification failed")
         run_command("dfx identity remove new_admin || true")
+        run_command("dfx identity remove non_admin || true")
         return False
 
     except Exception as e:
         print_error(f"Error in test_add_remove_admin: {e}\n{traceback.format_exc()}")
-        # Clean up - ensure we remove test identity even if test fails
+        # Clean up - ensure we remove test identities even if test fails
         run_command("dfx identity remove new_admin || true")
+        run_command("dfx identity remove non_admin || true")
         return False
