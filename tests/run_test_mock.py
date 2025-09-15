@@ -241,9 +241,11 @@ def test_integration_with_vault_functions():
     if not result:
         return False
         
-    # Check if the balance matches what we created
+    # Check if the balance matches what we created (handle underscore formatting)
     balance_amount = result.get("data", {}).get("Balance", {}).get("amount")
-    if balance_amount == str(TEST_BALANCE_AMOUNT):
+    # Remove underscores from the returned amount for comparison
+    balance_numeric = int(balance_amount.replace("_", "")) if balance_amount else 0
+    if balance_numeric == TEST_BALANCE_AMOUNT:
         print_ok("✅ Mock entities integrate correctly with vault functions")
         return True
     else:
