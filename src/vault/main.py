@@ -36,13 +36,16 @@ from vault.candid_types import (
     TransferResult,
 )
 from vault.constants import CANISTER_PRINCIPALS, MAX_ITERATION_COUNT, MAX_RESULTS
-from vault.entities import Balance, Canisters, VaultTransaction, app_data
+from vault.entities import ApplicationData, Balance, Canisters, VaultTransaction, app_data
 from vault.ic_util_calls import get_account_transactions
 
 logger = get_logger(__name__)
 
 storage = StableBTreeMap[str, str](memory_id=1, max_key_size=100, max_value_size=1000)
 Database.init(db_storage=storage)
+
+# Mock mode flag - when True, enables mock operations for testing
+MOCK_MODE = False
 
 
 @init
@@ -51,8 +54,14 @@ def init_(
     admin_principal: Opt[Principal] = None,
     max_results: Opt[nat] = None,
     max_iteration_count: Opt[nat] = None,
+    mock_mode: Opt[bool] = None,
 ) -> void:
     logger.info("Initializing vault...")
+
+    global MOCK_MODE
+    if mock_mode is not None:
+        MOCK_MODE = mock_mode
+        logger.info(f"Mock mode: {MOCK_MODE}")
 
     if canisters:
         for canister_name, principal_id in canisters:
@@ -112,7 +121,7 @@ def init_(
         Balance(_id=canister_id, amount=0)
 
     logger.info(
-        f"Canisters: {[canister.to_dict() for canister in Canisters.instances()]}"
+        f"Canisters: {[f'{canister._id}: {canister.principal}' for canister in Canisters.instances()]}"
     )
     logger.info(f"Admin principal: {app_data().admin_principal}")
     logger.info(f"Max results: {app_data().max_results}")
@@ -647,7 +656,7 @@ def get_transactions(principal: Principal) -> Response:
         txs = []
 
         for tx in VaultTransaction.instances():
-            logger.debug(f"Reading stored data for transaction {tx.to_dict()}")
+            logger.debug(f"Reading stored data for transaction {tx._id}")
 
             # Skip transactions not related to this principal
             if tx.principal_from != principal_id and tx.principal_to != principal_id:
@@ -797,4 +806,64 @@ def set_admin(new_admin: Principal) -> Response:
         return Response(
             success=False,
             data=ResponseData(Error=f"Error setting admin principal: {str(e)}"),
+        )
+
+
+@update
+@admin_only
+def mock_entity(entity_type: str, entity_data: str) -> Response:
+    """
+    Universal mock entity creator using Entity.deserialize().
+    Only works when vault is in mock mode.
+    
+    Args:
+        entity_type: Type of entity ("Balance", "VaultTransaction", "Canisters", "ApplicationData")
+        entity_data: JSON string of entity data to deserialize
+        
+    Returns:
+        Response with success status
+    """
+    try:
+        if not MOCK_MODE:
+            return Response(
+                success=False,
+                data=ResponseData(Error="Mock operations only available in mock mode")
+            )
+            
+        import json
+        data = json.loads(entity_data)
+        
+        # Map entity types to their classes
+        entity_classes = {
+            "Balance": Balance,
+            "VaultTransaction": VaultTransaction, 
+            "Canisters": Canisters,
+            "ApplicationData": ApplicationData
+        }
+        
+        if entity_type not in entity_classes:
+            return Response(
+                success=False,
+                data=ResponseData(Error=f"Unknown entity type: {entity_type}")
+            )
+            
+        # Add the required _type field for deserialization
+        data["_type"] = entity_type
+        
+        # Deserialize the entity
+        entity_class = entity_classes[entity_type]
+        entity = entity_class.deserialize(data)
+        
+        logger.info(f"Created mock {entity_type}: {entity._id}")
+        
+        return Response(
+            success=True,
+            data=ResponseData(Message=f"Mock {entity_type} created successfully")
+        )
+        
+    except Exception as e:
+        logger.error(f"Error creating mock {entity_type}: {e}")
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Failed to create mock entity: {str(e)}")
         )

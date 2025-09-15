@@ -58,8 +58,16 @@ class Balance(Entity, TimestampedMixin):
 def stats():
     """Gathers and returns various statistics from the vault's entities."""
     return {
-        "app_data": app_data().to_dict(),
-        "balances": [_.to_dict() for _ in Balance.instances()],
-        "vault_transactions": [_.to_dict() for _ in VaultTransaction.instances()],
-        "canisters": [_.to_dict() for _ in Canisters.instances()],
+        "app_data": {
+            "_id": app_data()._id,
+            "admin_principal": app_data().admin_principal,
+            "max_results": app_data().max_results,
+            "max_iteration_count": app_data().max_iteration_count,
+            "scan_end_tx_id": app_data().scan_end_tx_id,
+            "scan_start_tx_id": app_data().scan_start_tx_id,
+            "scan_oldest_tx_id": app_data().scan_oldest_tx_id,
+        },
+        "balances": [{"_id": b._id, "amount": b.amount} for b in Balance.instances()],
+        "vault_transactions": [{"_id": t._id, "principal_from": t.principal_from, "principal_to": t.principal_to, "amount": t.amount, "timestamp": t.timestamp, "kind": t.kind} for t in VaultTransaction.instances()],
+        "canisters": [{"_id": c._id, "principal": c.principal} for c in Canisters.instances()],
     }
