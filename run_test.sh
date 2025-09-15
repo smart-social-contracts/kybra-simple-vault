@@ -4,7 +4,7 @@ set -x
 
 # Get the test type from the first parameter, or run 'general' and 'transactions' tests if not provided
 if [ -z "$1" ]; then
-    TEST_TYPES=("general" "transactions")
+    TEST_TYPES=("general" "transactions" "mock")
 else
     TEST_TYPES=("$1")
 fi

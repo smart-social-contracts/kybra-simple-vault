@@ -7,6 +7,7 @@ A canister written in Python using [Kybra](https://github.com/demergent-labs/kyb
 
 [![Test General](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_general.yml/badge.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_general.yml)
 [![Test Transactions](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_transactions.yml/badge.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_transactions.yml)
+[![Test Mock Mode](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_mock.yml/badge.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_mock.yml)
 [![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3107/)
 [![License](https://img.shields.io/github/license/smart-social-contracts/kybra-simple-vault.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/blob/main/LICENSE)
 
@@ -159,6 +160,52 @@ pip install -r requirements.txt -r requirements-dev.txt
 # Running tests
 ./run_linters.sh --fix && ./run_test.sh
 ```
+
+## Mock Mode for Testing
+
+The vault supports a **mock mode** that enables testing without deploying ledger and indexer canisters. This is perfect for integration testing in other projects.
+
+### Enabling Mock Mode
+
+```bash
+# Deploy vault with mock mode enabled
+dfx deploy vault --argument '(null, null, null, null, opt true)'
+```
+
+### Creating Mock Data
+
+Use the `mock_entity` function to create test data instantly:
+
+```bash
+# Create a mock balance
+dfx canister call vault mock_entity '("Balance", "{\"_id\": \"user_principal\", \"amount\": 1000000}")'
+
+# Create a mock transaction
+dfx canister call vault mock_entity '("VaultTransaction", "{\"_id\": \"tx1\", \"principal_from\": \"ledger\", \"principal_to\": \"user_principal\", \"amount\": 1000000, \"timestamp\": 1640995200000000000, \"kind\": \"mint\"}")'
+
+# Create mock canister references
+dfx canister call vault mock_entity '("Canisters", "{\"_id\": \"test_ledger\", \"principal\": \"rdmx6-jaaaa-aaaah-qcaiq-cai\"}")'
+```
+
+### Testing Integration
+
+Mock entities work seamlessly with existing vault functions:
+
+```bash
+# Query the mock balance
+dfx canister call vault get_balance '(principal "user_principal")'
+
+# Get mock transactions
+dfx canister call vault get_transactions '(principal "user_principal")'
+```
+
+### Benefits
+
+- **No external dependencies**: No need to deploy ledger/indexer canisters
+- **Instant setup**: Create any test scenario immediately
+- **Flexible**: Support for all entity types with custom data
+- **Secure**: Mock functions only available when explicitly enabled
+- **Integration ready**: Perfect for testing vault integration in larger systems
 
 ### Syncing
 
