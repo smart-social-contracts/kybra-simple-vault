@@ -1,4 +1,4 @@
 kybra==0.7.*
 kybra-simple-logging==0.2.*
-kybra_simple_db>0.1.7,<0.2
+kybra-simple-db>=0.3.2
 cbor2==1.0.0
