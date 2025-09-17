@@ -44,7 +44,7 @@ from vault.entities import (
     app_data,
     test_mode_data,
 )
-from vault.ic_util_calls import get_account_transactions
+from vault.ic_util_calls import get_account_transactions, set_account_mock_transaction
 
 logger = get_logger(__name__)
 
@@ -305,6 +305,14 @@ def update_transaction_history() -> Async[Response]:
     try:
         canister_id = ic.id().to_str()
         logger.info(f"Updating transaction history for {canister_id}")
+
+        if test_mode_data().test_mode_enabled:
+            return Response(
+                success=True,
+                data=ResponseData(
+                    Message="Test mode enabled, skipping update_transaction_history"
+                ),
+            )
 
         # Get the configured indexer canister ID
         indexer_canister = Canisters["ckBTC indexer"]
@@ -858,4 +866,37 @@ def set_admin(new_admin: Principal) -> Response:
         return Response(
             success=False,
             data=ResponseData(Error=f"Error setting admin principal: {str(e)}"),
+        )
+
+
+@update
+@admin_only
+def test_mode_set_mock_transaction(
+    principal_from: Principal,
+    principal_to: Principal,
+    amount: nat,
+    kind: str = "transfer",
+    timestamp: Opt[nat] = None
+) -> Response:
+    try:
+        logger.info(f"Setting mock transaction from {principal_from} to {principal_to}, amount: {amount}")
+        
+        set_account_mock_transaction(
+            principal_from.to_str(),
+            principal_to.to_str(),
+            amount,
+            kind,
+            timestamp
+        )
+        return Response(
+            success=True,
+            data=ResponseData(
+                Message="Mock transaction set successfully"
+            ),
+        )
+    except Exception as e:
+        logger.error(f"Error setting mock transaction: {e}\n{traceback.format_exc()}")
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Error setting mock transaction: {str(e)}"),
         )
