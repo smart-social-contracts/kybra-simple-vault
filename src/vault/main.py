@@ -876,23 +876,19 @@ def test_mode_set_mock_transaction(
     principal_to: Principal,
     amount: nat,
     kind: str = "transfer",
-    timestamp: Opt[nat] = None
+    timestamp: Opt[nat] = None,
 ) -> Response:
     try:
-        logger.info(f"Setting mock transaction from {principal_from} to {principal_to}, amount: {amount}")
-        
+        logger.info(
+            f"Setting mock transaction from {principal_from} to {principal_to}, amount: {amount}"
+        )
+
         set_account_mock_transaction(
-            principal_from.to_str(),
-            principal_to.to_str(),
-            amount,
-            kind,
-            timestamp
+            principal_from.to_str(), principal_to.to_str(), amount, kind, timestamp
         )
         return Response(
             success=True,
-            data=ResponseData(
-                Message="Mock transaction set successfully"
-            ),
+            data=ResponseData(Message="Mock transaction set successfully"),
         )
     except Exception as e:
         logger.error(f"Error setting mock transaction: {e}\n{traceback.format_exc()}")
