@@ -48,6 +48,7 @@ class AppDataRecord(Record):
     sync_status: text
     sync_tx_id: nat
 
+
 class TestModeRecord(Record):
     test_mode_enabled: bool
     tx_id: nat

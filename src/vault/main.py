@@ -29,15 +29,21 @@ from vault.candid_types import (
     Response,
     ResponseData,
     StatsRecord,
+    TestModeRecord,
     TransactionIdRecord,
     TransactionRecord,
     TransactionSummaryRecord,
     TransferArg,
     TransferResult,
-    TestModeRecord,
 )
 from vault.constants import CANISTER_PRINCIPALS, MAX_ITERATION_COUNT, MAX_RESULTS
-from vault.entities import Balance, Canisters, VaultTransaction, app_data, test_mode_data
+from vault.entities import (
+    Balance,
+    Canisters,
+    VaultTransaction,
+    app_data,
+    test_mode_data,
+)
 from vault.ic_util_calls import get_account_transactions
 
 logger = get_logger(__name__)
@@ -231,7 +237,7 @@ def transfer(to: Principal, amount: nat) -> Async[Response]:
                     TransactionId=TransactionIdRecord(transaction_id=tx_id)
                 ),
             )
-        
+
         principal = Canisters["ckBTC ledger"].principal
         ledger = ICRCLedger(Principal.from_str(principal))
 
@@ -778,7 +784,9 @@ def status() -> Response:
         )
         return Response(
             success=False,
-            data=ResponseData(Error=f"Error retrieving vault statistics: {traceback.format_exc()}"),
+            data=ResponseData(
+                Error=f"Error retrieving vault statistics: {traceback.format_exc()}"
+            ),
         )
 
 
@@ -807,12 +815,12 @@ def test_mode_status() -> Response:
         )
 
     except Exception as e:
-        logger.error(
-            f"Error retrieving test mode data: {e}\n{traceback.format_exc()}"
-        )
+        logger.error(f"Error retrieving test mode data: {e}\n{traceback.format_exc()}")
         return Response(
             success=False,
-            data=ResponseData(Error=f"Error retrieving test mode data: {traceback.format_exc()}"),
+            data=ResponseData(
+                Error=f"Error retrieving test mode data: {traceback.format_exc()}"
+            ),
         )
 
 

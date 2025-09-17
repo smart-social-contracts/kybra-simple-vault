@@ -1,6 +1,6 @@
 from kybra_simple_db import (
-    Entity,
     Boolean,
+    Entity,
     Integer,
     ManyToMany,
     OneToMany,
@@ -23,6 +23,7 @@ class ApplicationData(Entity, TimestampedMixin):
 
 class TestModeData(Entity, TimestampedMixin):
     """Stores test mode configuration and state."""
+
     test_mode_enabled = Boolean(default=False)
     tx_id = Integer(default=0)
 
@@ -37,9 +38,11 @@ def app_data():
     """Retrieves the singleton ApplicationData instance, creating it if it doesn't exist."""
     return ApplicationData["main"] or ApplicationData(_id="main")
 
+
 def test_mode_data():
     """Retrieves the singleton TestModeData instance, creating it if it doesn't exist."""
     return TestModeData["main"] or TestModeData(_id="main")
+
 
 class Category(Entity, TimestampedMixin):
     """Defines a category that can be associated with transactions."""
@@ -73,6 +76,7 @@ def stats():
         "vault_transactions": [_.to_dict() for _ in VaultTransaction.instances()],
         "canisters": [_.to_dict() for _ in Canisters.instances()],
     }
+
 
 def test_mode_stats():
     """Gathers and returns various statistics from the vault's entities."""
