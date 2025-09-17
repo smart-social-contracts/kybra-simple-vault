@@ -48,6 +48,10 @@ class AppDataRecord(Record):
     sync_status: text
     sync_tx_id: nat
 
+class TestModeRecord(Record):
+    test_mode_enabled: bool
+    tx_id: nat
+
 
 # Statistics and state information for the application.
 class StatsRecord(Record):
@@ -216,6 +220,7 @@ class ResponseData(Variant, total=False):
     Stats: StatsRecord
     Error: str
     Message: str
+    TestMode: TestModeRecord
 
 
 # Standard API response with success flag and data payload.

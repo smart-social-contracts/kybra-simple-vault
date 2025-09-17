@@ -34,9 +34,10 @@ from vault.candid_types import (
     TransactionSummaryRecord,
     TransferArg,
     TransferResult,
+    TestModeRecord,
 )
 from vault.constants import CANISTER_PRINCIPALS, MAX_ITERATION_COUNT, MAX_RESULTS
-from vault.entities import Balance, Canisters, VaultTransaction, app_data
+from vault.entities import Balance, Canisters, VaultTransaction, app_data, test_mode_data
 from vault.ic_util_calls import get_account_transactions
 
 logger = get_logger(__name__)
@@ -51,6 +52,7 @@ def init_(
     admin_principal: Opt[Principal] = None,
     max_results: Opt[nat] = None,
     max_iteration_count: Opt[nat] = None,
+    test_mode_enabled: Opt[bool] = False,
 ) -> void:
     logger.info("Initializing vault...")
 
@@ -106,6 +108,8 @@ def init_(
         logger.info(f"Setting max iteration_count to {new_max_iteration_count}")
         app_data().max_iteration_count = new_max_iteration_count
 
+    test_mode_data().test_mode_enabled = True  # test_mode_enabled or False
+
     canister_id = ic.id().to_str()
     if not Balance[canister_id]:
         logger.info("Creating vault balance record")
@@ -117,6 +121,9 @@ def init_(
     logger.info(f"Admin principal: {app_data().admin_principal}")
     logger.info(f"Max results: {app_data().max_results}")
     logger.info(f"Max iteration_count: {app_data().max_iteration_count}")
+
+    if test_mode_data().test_mode_enabled:
+        logger.info(f"Test mode active: {test_mode_data().test_mode_enabled}")
 
     logger.info("Vault initialized.")
 
@@ -213,6 +220,18 @@ def transfer(to: Principal, amount: nat) -> Async[Response]:
             )
 
         logger.info(f"Transferring {amount} tokens to {to.to_str()}")
+
+        if test_mode_data().test_mode_enabled:
+            # TOOO: create a transaction
+            tx_id = test_mode_data().tx_id
+            test_mode_data().tx_id += 1
+            return Response(
+                success=True,
+                data=ResponseData(
+                    TransactionId=TransactionIdRecord(transaction_id=tx_id)
+                ),
+            )
+        
         principal = Canisters["ckBTC ledger"].principal
         ledger = ICRCLedger(Principal.from_str(principal))
 
@@ -759,7 +778,41 @@ def status() -> Response:
         )
         return Response(
             success=False,
-            data=ResponseData(Error=f"Error retrieving vault statistics: {str(e)}"),
+            data=ResponseData(Error=f"Error retrieving vault statistics: {traceback.format_exc()}"),
+        )
+
+
+@query
+def test_mode_status() -> Response:
+    """
+    Get data about the vault's test mode state.
+
+    Returns:
+        Response object with success status, message, and test mode data
+    """
+
+    try:
+        # Get app_data with proper typing
+        test_mode_data_obj = test_mode_data()
+
+        test_mode_record = TestModeRecord(
+            test_mode_enabled=test_mode_data_obj.test_mode_enabled,
+            tx_id=test_mode_data_obj.tx_id,
+        )
+
+        # Return response with stats
+        return Response(
+            success=True,
+            data=ResponseData(TestMode=test_mode_record),
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Error retrieving test mode data: {e}\n{traceback.format_exc()}"
+        )
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Error retrieving test mode data: {traceback.format_exc()}"),
         )
 
 
