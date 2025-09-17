@@ -114,7 +114,7 @@ def init_(
         logger.info(f"Setting max iteration_count to {new_max_iteration_count}")
         app_data().max_iteration_count = new_max_iteration_count
 
-    test_mode_data().test_mode_enabled = True  # test_mode_enabled or False
+    test_mode_data().test_mode_enabled = test_mode_enabled or False
 
     canister_id = ic.id().to_str()
     if not Balance[canister_id]:
