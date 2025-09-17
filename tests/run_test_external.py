@@ -39,11 +39,16 @@ def deploy_vault_from_wasm():
     indexer_id = get_canister_id("ckbtc_indexer")
 
     # Create install command with the same format as in deployment_tests.py
+    # Including all parameters: canisters, admin_principal, max_results, max_iteration_count, test_mode_enabled
     install_cmd = f"""dfx canister install vault --wasm .kybra/vault/vault.wasm --argument="(
       opt vec {{ 
         record {{ \\"ckBTC ledger\\"; principal \\"{ledger_id}\\" }};
         record {{ \\"ckBTC indexer\\"; principal \\"{indexer_id}\\" }}
-      }}
+      }},
+      opt principal \\"{get_current_principal()}\\",
+      opt 100,
+      opt 10,
+      opt false
     )" """
 
     return run_command(install_cmd)

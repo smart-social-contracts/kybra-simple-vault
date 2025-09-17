@@ -98,15 +98,16 @@ def test_deploy_vault_with_params(max_iteration_count, max_results):
     ledger_id = get_canister_id("ckbtc_ledger")
     indexer_id = get_canister_id("ckbtc_indexer")
 
-    # Create deploy command with all parameters
+    # Create deploy command with all parameters (including test_mode_enabled = false)
     deploy_cmd = f"""dfx deploy vault --argument="(
       opt vec {{ 
         record {{ \\"ckBTC ledger\\"; principal \\"{ledger_id}\\" }};
         record {{ \\"ckBTC indexer\\"; principal \\"{indexer_id}\\" }}
       }},
       opt principal \\"{get_current_principal()}\\",
+      opt {max_results},
       opt {max_iteration_count},
-      opt {max_results}
+      opt false
     )" """
     run_command(deploy_cmd)
 
@@ -136,6 +137,7 @@ def test_deploy_vault_without_params():
         max_iteration_count,
         "\nmax_results: ",
         max_results,
+        "\ntest_mode_enabled: false (default)",
     )
 
     # Deploy the vault without any arguments (relying on default values)

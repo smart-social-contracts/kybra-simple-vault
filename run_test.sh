@@ -2,9 +2,9 @@
 set -e
 set -x
 
-# Get the test type from the first parameter, or run 'general' and 'transactions' tests if not provided
+# Get the test type from the first parameter, or run 'general', 'transactions', and 'mode' tests if not provided
 if [ -z "$1" ]; then
-    TEST_TYPES=("general" "transactions")
+    TEST_TYPES=("general" "transactions" "mode")
 else
     TEST_TYPES=("$1")
 fi
