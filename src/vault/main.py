@@ -110,11 +110,15 @@ def init_(
         app_data().max_results = new_max_results
 
     if not app_data().max_iteration_count:
-        new_max_iteration_count = max_iteration_count or MAX_ITERATION_COUNT
+        new_max_iteration_count = (
+            max_iteration_count if max_iteration_count else MAX_ITERATION_COUNT
+        )
         logger.info(f"Setting max iteration_count to {new_max_iteration_count}")
         app_data().max_iteration_count = new_max_iteration_count
 
-    test_mode_data().test_mode_enabled = test_mode_enabled or False
+    if test_mode_enabled is not None:
+        logger.info(f"Setting test mode to {test_mode_enabled}")
+        test_mode_data().test_mode_enabled = test_mode_enabled
 
     canister_id = ic.id().to_str()
     if not Balance[canister_id]:
