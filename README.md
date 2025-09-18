@@ -7,6 +7,7 @@ A canister written in Python using [Kybra](https://github.com/demergent-labs/kyb
 
 [![Test General](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_general.yml/badge.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_general.yml)
 [![Test Transactions](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_transactions.yml/badge.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_transactions.yml)
+[![Test Mode](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_mode.yml/badge.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/actions/workflows/test_mode.yml)
 [![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3107/)
 [![License](https://img.shields.io/github/license/smart-social-contracts/kybra-simple-vault.svg)](https://github.com/smart-social-contracts/kybra-simple-vault/blob/main/LICENSE)
 
@@ -17,6 +18,7 @@ A canister written in Python using [Kybra](https://github.com/demergent-labs/kyb
 - Support for ckBTC.
 - Only the admin can transfer tokens out of the vault.
 - The canister makes calls to the [official ICRC compliant ledger and indexer canisters](https://github.com/dfinity/ic/releases?q=ledger-suite-icrc&expanded=true).
+- **Test mode support** for development and testing with mock transactions.
 
 
 This vault canister is mainly intended to be used as a treasury: users can deposit chain-key tokens (currently, only ckBTC is supported). The vault keeps track of the user's "balances", meaning the net number of tokens each user has deposited into the vault and have been withdrawn out from the vault to the user. 
@@ -35,6 +37,9 @@ Example:
 ```bash
 # Deploy a vault ready to be used being your principal the admin.
 $ dfx deploy vault
+
+# Deploy with custom parameters (canisters, admin_principal, max_results, max_iteration_count, test_mode_enabled)
+$ dfx deploy vault --argument "(null, opt principal \"$(dfx identity get-principal)\", opt 100, opt 10, opt false)"
 
 # Get an overview of the state of the vault.
 $ dfx canister call vault status --output json
@@ -137,6 +142,55 @@ $ dfx canister call vault transfer '(principal "...", 100)' --output json
 
 ```
 
+### Test Mode
+
+The vault supports a test mode for development and testing purposes. When test mode is enabled, the vault operates with mock functionality that allows testing without real token transfers.
+
+```bash
+# Deploy vault with test mode enabled
+$ dfx deploy vault --argument "(null, opt principal \"$(dfx identity get-principal)\", opt 100, opt 10, opt true)"
+
+# Check test mode status
+$ dfx canister call vault test_mode_status --output json
+{
+  "data": {
+    "TestMode": {
+      "test_mode_enabled": true,
+      "tx_id": "0"
+    }
+  },
+  "success": true
+}
+
+# In test mode, transfers increment the tx_id without real token movement
+$ dfx canister call vault transfer '(principal "...", 100)' --output json
+{
+  "data": {
+    "TransactionId": {
+      "transaction_id": "1"
+    }
+  },
+  "success": true
+}
+
+# Test mode also skips expensive operations like transaction history updates
+$ dfx canister call vault update_transaction_history --output json
+{
+  "data": {
+    "TransactionSummary": {
+      "message": "Test mode: skipping transaction history update"
+    }
+  },
+  "success": true
+}
+```
+
+**Test Mode Features:**
+- Mock transfers that increment transaction IDs without real token movement
+- Skips expensive ledger operations for faster testing
+- Isolated test environment for development
+- Compatible with all existing vault functions
+
 For more examples of how to interact with the vault canister from an external canister, see the [external_use](tests/external_use) directory.
 
 
@@ -158,6 +212,12 @@ pip install -r requirements.txt -r requirements-dev.txt
 
 # Running tests
 ./run_linters.sh --fix && ./run_test.sh
+
+# Run specific test types
+./run_test.sh general      # General functionality tests
+./run_test.sh transactions # Transaction-specific tests  
+./run_test.sh mode         # Test mode functionality tests
+./run_test.sh external     # External canister interaction tests
 ```
 
 ### Syncing
