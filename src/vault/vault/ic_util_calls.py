@@ -38,8 +38,6 @@ def set_account_mock_transaction(
     Returns:
         Dictionary containing the mock transaction data
     """
-    import time
-
     from kybra import ic
 
     from vault.entities import Balance, VaultTransaction, test_mode_data
@@ -52,7 +50,7 @@ def set_account_mock_transaction(
 
         # Use current time if timestamp not provided
         if timestamp is None:
-            timestamp = int(time.time() * 1_000_000_000)  # nanoseconds
+            timestamp = ic.time()  # nanoseconds
 
         logger.info(
             f"Creating mock transaction {tx_id}: {kind} from {principal_from} to {principal_to}, amount: {amount}"
