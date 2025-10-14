@@ -1,4 +1,5 @@
 from kybra_simple_db import (
+    Boolean,
     Entity,
     Integer,
     ManyToMany,
@@ -20,6 +21,13 @@ class ApplicationData(Entity, TimestampedMixin):
     scan_oldest_tx_id = Integer(default=0)
 
 
+class TestModeData(Entity, TimestampedMixin):
+    """Stores test mode configuration and state."""
+
+    test_mode_enabled = Boolean(default=False)
+    tx_id = Integer(default=0)
+
+
 class Canisters(Entity, TimestampedMixin):
     """Represents external canisters (e.g., ckBTC ledger, indexer) linked to the vault."""
 
@@ -29,6 +37,11 @@ class Canisters(Entity, TimestampedMixin):
 def app_data():
     """Retrieves the singleton ApplicationData instance, creating it if it doesn't exist."""
     return ApplicationData["main"] or ApplicationData(_id="main")
+
+
+def test_mode_data():
+    """Retrieves the singleton TestModeData instance, creating it if it doesn't exist."""
+    return TestModeData["main"] or TestModeData(_id="main")
 
 
 class Category(Entity, TimestampedMixin):
@@ -62,4 +75,11 @@ def stats():
         "balances": [_.to_dict() for _ in Balance.instances()],
         "vault_transactions": [_.to_dict() for _ in VaultTransaction.instances()],
         "canisters": [_.to_dict() for _ in Canisters.instances()],
+    }
+
+
+def test_mode_stats():
+    """Gathers and returns various statistics from the vault's entities."""
+    return {
+        "test_mode_data": test_mode_data().to_dict(),
     }

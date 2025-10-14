@@ -29,6 +29,7 @@ from vault.candid_types import (
     Response,
     ResponseData,
     StatsRecord,
+    TestModeRecord,
     TransactionIdRecord,
     TransactionRecord,
     TransactionSummaryRecord,
@@ -36,8 +37,14 @@ from vault.candid_types import (
     TransferResult,
 )
 from vault.constants import CANISTER_PRINCIPALS, MAX_ITERATION_COUNT, MAX_RESULTS
-from vault.entities import Balance, Canisters, VaultTransaction, app_data
-from vault.ic_util_calls import get_account_transactions
+from vault.entities import (
+    Balance,
+    Canisters,
+    VaultTransaction,
+    app_data,
+    test_mode_data,
+)
+from vault.ic_util_calls import get_account_transactions, set_account_mock_transaction
 
 logger = get_logger(__name__)
 
@@ -51,6 +58,7 @@ def init_(
     admin_principal: Opt[Principal] = None,
     max_results: Opt[nat] = None,
     max_iteration_count: Opt[nat] = None,
+    test_mode_enabled: Opt[bool] = False,
 ) -> void:
     logger.info("Initializing vault...")
 
@@ -102,9 +110,15 @@ def init_(
         app_data().max_results = new_max_results
 
     if not app_data().max_iteration_count:
-        new_max_iteration_count = max_iteration_count or MAX_ITERATION_COUNT
+        new_max_iteration_count = (
+            max_iteration_count if max_iteration_count else MAX_ITERATION_COUNT
+        )
         logger.info(f"Setting max iteration_count to {new_max_iteration_count}")
         app_data().max_iteration_count = new_max_iteration_count
+
+    if test_mode_enabled is not None:
+        logger.info(f"Setting test mode to {test_mode_enabled}")
+        test_mode_data().test_mode_enabled = test_mode_enabled
 
     canister_id = ic.id().to_str()
     if not Balance[canister_id]:
@@ -117,6 +131,9 @@ def init_(
     logger.info(f"Admin principal: {app_data().admin_principal}")
     logger.info(f"Max results: {app_data().max_results}")
     logger.info(f"Max iteration_count: {app_data().max_iteration_count}")
+
+    if test_mode_data().test_mode_enabled:
+        logger.info(f"Test mode active: {test_mode_data().test_mode_enabled}")
 
     logger.info("Vault initialized.")
 
@@ -135,6 +152,20 @@ def admin_only(func):
                 ),
             )
         # If caller is admin, proceed with the function
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def test_mode_only(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not test_mode_data().test_mode_enabled:
+            return Response(
+                success=False,
+                data=ResponseData(Error="Test mode is not enabled"),
+            )
+        # If test mode is enabled, proceed with the function
         return func(*args, **kwargs)
 
     return wrapper
@@ -213,6 +244,41 @@ def transfer(to: Principal, amount: nat) -> Async[Response]:
             )
 
         logger.info(f"Transferring {amount} tokens to {to.to_str()}")
+
+        if test_mode_data().test_mode_enabled:
+            # Create a mock transaction record for testing
+            tx_id = test_mode_data().tx_id
+            test_mode_data().tx_id += 1
+
+            # Create mock transaction record
+            from kybra import ic
+
+            timestamp = ic.time()
+            VaultTransaction(
+                _id=str(tx_id),
+                principal_from=ic.id().to_str(),
+                principal_to=to.to_str(),
+                amount=amount,
+                timestamp=timestamp,
+                kind="mock_transfer",
+            )
+
+            # Update balances for mock transaction
+            from_balance = Balance[ic.id().to_str()] or Balance(
+                _id=ic.id().to_str(), amount=0
+            )
+            to_balance = Balance[to.to_str()] or Balance(_id=to.to_str(), amount=0)
+
+            from_balance.amount -= amount
+            to_balance.amount += amount
+
+            return Response(
+                success=True,
+                data=ResponseData(
+                    TransactionId=TransactionIdRecord(transaction_id=tx_id)
+                ),
+            )
+
         principal = Canisters["ckBTC ledger"].principal
         ledger = ICRCLedger(Principal.from_str(principal))
 
@@ -280,6 +346,14 @@ def update_transaction_history() -> Async[Response]:
     try:
         canister_id = ic.id().to_str()
         logger.info(f"Updating transaction history for {canister_id}")
+
+        if test_mode_data().test_mode_enabled:
+            return Response(
+                success=True,
+                data=ResponseData(
+                    Message="Test mode enabled, skipping update_transaction_history"
+                ),
+            )
 
         # Get the configured indexer canister ID
         indexer_canister = Canisters["ckBTC indexer"]
@@ -601,19 +675,14 @@ def get_balance(principal: Principal) -> Response:
         # Look up the balance in the database
         balance = Balance[principal_id]
 
-        if not balance:
-            return Response(
-                success=False,
-                data=ResponseData(
-                    Error=f"Balance not found for principal: {principal_id}"
-                ),
-            )
+        # If no balance record exists, default to 0 (don't create a record)
+        balance_amount = balance.amount if balance else 0
 
         return Response(
             success=True,
             data=ResponseData(
                 Balance=BalanceRecord(
-                    principal_id=Principal.from_str(principal_id), amount=balance.amount
+                    principal_id=Principal.from_str(principal_id), amount=balance_amount
                 )
             ),
         )
@@ -654,8 +723,9 @@ def get_transactions(principal: Principal) -> Response:
                 continue
 
             amount = int(tx.amount)
-            if tx.principal_to == principal_id:
-                amount = -amount
+            if tx.principal_from == principal_id:
+                amount = -amount  # Negative for sender (outgoing)
+            # Positive for recipient (incoming) - no change needed
 
             try:
                 tx_record = TransactionRecord(
@@ -759,7 +829,43 @@ def status() -> Response:
         )
         return Response(
             success=False,
-            data=ResponseData(Error=f"Error retrieving vault statistics: {str(e)}"),
+            data=ResponseData(
+                Error=f"Error retrieving vault statistics: {traceback.format_exc()}"
+            ),
+        )
+
+
+@query
+def test_mode_status() -> Response:
+    """
+    Get data about the vault's test mode state.
+
+    Returns:
+        Response object with success status, message, and test mode data
+    """
+
+    try:
+        # Get app_data with proper typing
+        test_mode_data_obj = test_mode_data()
+
+        test_mode_record = TestModeRecord(
+            test_mode_enabled=test_mode_data_obj.test_mode_enabled,
+            tx_id=test_mode_data_obj.tx_id,
+        )
+
+        # Return response with stats
+        return Response(
+            success=True,
+            data=ResponseData(TestMode=test_mode_record),
+        )
+
+    except Exception as e:
+        logger.error(f"Error retrieving test mode data: {e}\n{traceback.format_exc()}")
+        return Response(
+            success=False,
+            data=ResponseData(
+                Error=f"Error retrieving test mode data: {traceback.format_exc()}"
+            ),
         )
 
 
@@ -797,4 +903,103 @@ def set_admin(new_admin: Principal) -> Response:
         return Response(
             success=False,
             data=ResponseData(Error=f"Error setting admin principal: {str(e)}"),
+        )
+
+
+@update
+@test_mode_only
+def test_mode_set_mock_transaction(
+    principal_from: Principal,
+    principal_to: Principal,
+    amount: nat,
+    kind: str = "mock_transfer",
+    timestamp: Opt[nat] = None,
+) -> Response:
+    try:
+        logger.info(
+            f"Setting mock transaction from {principal_from} to {principal_to}, amount: {amount}"
+        )
+
+        set_account_mock_transaction(
+            principal_from.to_str(), principal_to.to_str(), amount, kind, timestamp
+        )
+        return Response(
+            success=True,
+            data=ResponseData(Message="Mock transaction set successfully"),
+        )
+    except Exception as e:
+        logger.error(f"Error setting mock transaction: {e}\n{traceback.format_exc()}")
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Error setting mock transaction: {str(e)}"),
+        )
+
+
+@update
+@test_mode_only
+def test_mode_set_balance(principal: Principal, amount: nat) -> Response:
+    """
+    Set a specific balance for a principal in test mode.
+
+    Args:
+        principal: The principal to set balance for
+        amount: The balance amount to set
+
+    Returns:
+        Response object with success status and message
+    """
+    try:
+        principal_id = principal.to_str()
+        logger.info(f"Setting test mode balance for {principal_id} to {amount}")
+
+        # Create or update balance
+        balance = Balance[principal_id] or Balance(_id=principal_id, amount=0)
+        balance.amount = amount
+
+        return Response(
+            success=True,
+            data=ResponseData(Message=f"Balance set to {amount} for {principal_id}"),
+        )
+    except Exception as e:
+        logger.error(f"Error setting test mode balance: {e}\n{traceback.format_exc()}")
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Error setting test mode balance: {str(e)}"),
+        )
+
+
+@update
+@test_mode_only
+def test_mode_reset() -> Response:
+    """
+    Reset test mode state (clear transactions and balances).
+
+    Returns:
+        Response object with success status and message
+    """
+    try:
+
+        logger.info("Resetting test mode state")
+
+        # Reset transaction ID
+        test_mode_data().tx_id = 0
+
+        # Clear all transactions
+        for tx in VaultTransaction.instances():
+            if tx.kind == "mock_transfer":
+                tx.delete()
+
+        # Reset all balances to 0
+        for balance in Balance.instances():
+            balance.amount = 0
+
+        return Response(
+            success=True,
+            data=ResponseData(Message="Test mode state reset successfully"),
+        )
+    except Exception as e:
+        logger.error(f"Error resetting test mode: {e}\n{traceback.format_exc()}")
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Error resetting test mode: {str(e)}"),
         )
