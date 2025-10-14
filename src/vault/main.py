@@ -912,7 +912,7 @@ def test_mode_set_mock_transaction(
     principal_from: Principal,
     principal_to: Principal,
     amount: nat,
-    kind: str = "transfer",
+    kind: str = "mock_transfer",
     timestamp: Opt[nat] = None,
 ) -> Response:
     try:

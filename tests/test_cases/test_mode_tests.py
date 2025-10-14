@@ -613,6 +613,77 @@ def test_test_mode_utility_functions():
         return False
 
 
+def test_reset_clears_mock_transactions():
+    """Test that test_mode_reset clears transactions created via test_mode_set_mock_transaction."""
+    try:
+        print("Testing reset clears mock transactions...")
+
+        # Clean up any existing vault to ensure fresh deployment
+        run_command("dfx canister delete vault --yes || true")
+
+        # Deploy vault with test mode enabled
+        current_principal = get_current_principal()
+        deploy_cmd = f'dfx deploy vault --argument "(null, opt principal \\"{current_principal}\\", opt 100, opt 10, opt true)"'
+
+        result = run_command(deploy_cmd)
+        if not result:
+            print_error("Failed to deploy vault with test mode enabled")
+            return False
+
+        # Create mock transactions using test_mode_set_mock_transaction
+        # Use default kind parameter (should be "mock_transfer" after fix)
+        principal2 = "2vxsx-fae"  # Dummy principal
+        set_mock_cmd = f'dfx canister call vault test_mode_set_mock_transaction "(principal \\"{current_principal}\\", principal \\"{principal2}\\", 100)" --output json'
+        
+        set_result = run_command_expects_response_obj(set_mock_cmd)
+        if not set_result or not set_result.get("success"):
+            print_error("Failed to set mock transaction")
+            return False
+
+        # Verify transaction was created
+        get_transactions_cmd = f'dfx canister call vault get_transactions "(principal \\"{current_principal}\\")" --output json'
+        transactions_result = run_command_expects_response_obj(get_transactions_cmd)
+
+        if not transactions_result:
+            print_error("Failed to get transaction history")
+            return False
+
+        transactions = transactions_result.get("data", {}).get("Transactions", [])
+        if len(transactions) != 1:
+            print_error(f"Expected 1 transaction before reset, got {len(transactions)}")
+            return False
+
+        print(f"Created {len(transactions)} mock transaction(s)")
+
+        # Call test_mode_reset
+        reset_cmd = "dfx canister call vault test_mode_reset --output json"
+        reset_result = run_command_expects_response_obj(reset_cmd)
+
+        if not reset_result or not reset_result.get("success"):
+            print_error("Failed to reset test mode")
+            return False
+
+        # Verify transactions were cleared
+        transactions_result_after = run_command_expects_response_obj(get_transactions_cmd)
+
+        if not transactions_result_after:
+            print_error("Failed to get transaction history after reset")
+            return False
+
+        transactions_after = transactions_result_after.get("data", {}).get("Transactions", [])
+        if len(transactions_after) != 0:
+            print_error(f"Expected 0 transactions after reset, got {len(transactions_after)}")
+            print_error(f"Transactions after reset: {transactions_after}")
+            return False
+
+        print_ok("✓ test_mode_reset properly cleared mock transactions")
+        return True
+
+    except Exception as e:
+        print_error(f"Error testing reset clears mock transactions: {e}\n{traceback.format_exc()}")
+        return False
+
+
 def run_all_test_mode_tests():
     """Run all test mode tests and return results."""
     tests = [
@@ -626,6 +697,7 @@ def run_all_test_mode_tests():
         ("Mock Transaction History", test_mock_transaction_history),
         ("Balance Consistency with History", test_balance_consistency_with_history),
         ("Test Mode Utility Functions", test_test_mode_utility_functions),
+        ("Reset Clears Mock Transactions", test_reset_clears_mock_transactions),
     ]
 
     results = {}
