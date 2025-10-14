@@ -634,7 +634,7 @@ def test_reset_clears_mock_transactions():
         # Use default kind parameter (should be "mock_transfer" after fix)
         principal2 = "2vxsx-fae"  # Dummy principal
         set_mock_cmd = f'dfx canister call vault test_mode_set_mock_transaction "(principal \\"{current_principal}\\", principal \\"{principal2}\\", 100)" --output json'
-        
+
         set_result = run_command_expects_response_obj(set_mock_cmd)
         if not set_result or not set_result.get("success"):
             print_error("Failed to set mock transaction")
@@ -664,15 +664,21 @@ def test_reset_clears_mock_transactions():
             return False
 
         # Verify transactions were cleared
-        transactions_result_after = run_command_expects_response_obj(get_transactions_cmd)
+        transactions_result_after = run_command_expects_response_obj(
+            get_transactions_cmd
+        )
 
         if not transactions_result_after:
             print_error("Failed to get transaction history after reset")
             return False
 
-        transactions_after = transactions_result_after.get("data", {}).get("Transactions", [])
+        transactions_after = transactions_result_after.get("data", {}).get(
+            "Transactions", []
+        )
         if len(transactions_after) != 0:
-            print_error(f"Expected 0 transactions after reset, got {len(transactions_after)}")
+            print_error(
+                f"Expected 0 transactions after reset, got {len(transactions_after)}"
+            )
             print_error(f"Transactions after reset: {transactions_after}")
             return False
 
@@ -680,7 +686,9 @@ def test_reset_clears_mock_transactions():
         return True
 
     except Exception as e:
-        print_error(f"Error testing reset clears mock transactions: {e}\n{traceback.format_exc()}")
+        print_error(
+            f"Error testing reset clears mock transactions: {e}\n{traceback.format_exc()}"
+        )
         return False
 
 
