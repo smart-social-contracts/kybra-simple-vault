@@ -35,6 +35,9 @@ class TransactionRecord(Record):
     id: nat
     amount: int
     timestamp: nat
+    principal_from: Principal
+    principal_to: Principal
+    kind: text
 
 
 # Application metadata containing settings and status information.
