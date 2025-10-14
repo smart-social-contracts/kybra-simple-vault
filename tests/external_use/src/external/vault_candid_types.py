@@ -16,7 +16,7 @@ from kybra import (
 class TransactionRecord(Record):
     id: nat
     amount: int
-    timestamp: nat64
+    timestamp: nat
 
 
 class BalanceRecord(Record):

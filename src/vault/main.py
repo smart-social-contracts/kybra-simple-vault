@@ -157,6 +157,20 @@ def admin_only(func):
     return wrapper
 
 
+def test_mode_only(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not test_mode_data().test_mode_enabled:
+            return Response(
+                success=False,
+                data=ResponseData(Error="Test mode is not enabled"),
+            )
+        # If test mode is enabled, proceed with the function
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 @update
 @admin_only
 def set_canister(canister_name: str, principal: Principal) -> Response:
@@ -232,9 +246,32 @@ def transfer(to: Principal, amount: nat) -> Async[Response]:
         logger.info(f"Transferring {amount} tokens to {to.to_str()}")
 
         if test_mode_data().test_mode_enabled:
-            # TOOO: create a transaction
+            # Create a mock transaction record for testing
             tx_id = test_mode_data().tx_id
             test_mode_data().tx_id += 1
+
+            # Create mock transaction record
+            from kybra import ic
+
+            timestamp = ic.time()
+            VaultTransaction(
+                _id=str(tx_id),
+                principal_from=ic.id().to_str(),
+                principal_to=to.to_str(),
+                amount=amount,
+                timestamp=timestamp,
+                kind="mock_transfer",
+            )
+
+            # Update balances for mock transaction
+            from_balance = Balance[ic.id().to_str()] or Balance(
+                _id=ic.id().to_str(), amount=0
+            )
+            to_balance = Balance[to.to_str()] or Balance(_id=to.to_str(), amount=0)
+
+            from_balance.amount -= amount
+            to_balance.amount += amount
+
             return Response(
                 success=True,
                 data=ResponseData(
@@ -638,19 +675,14 @@ def get_balance(principal: Principal) -> Response:
         # Look up the balance in the database
         balance = Balance[principal_id]
 
-        if not balance:
-            return Response(
-                success=False,
-                data=ResponseData(
-                    Error=f"Balance not found for principal: {principal_id}"
-                ),
-            )
+        # If no balance record exists, default to 0 (don't create a record)
+        balance_amount = balance.amount if balance else 0
 
         return Response(
             success=True,
             data=ResponseData(
                 Balance=BalanceRecord(
-                    principal_id=Principal.from_str(principal_id), amount=balance.amount
+                    principal_id=Principal.from_str(principal_id), amount=balance_amount
                 )
             ),
         )
@@ -691,8 +723,9 @@ def get_transactions(principal: Principal) -> Response:
                 continue
 
             amount = int(tx.amount)
-            if tx.principal_to == principal_id:
-                amount = -amount
+            if tx.principal_from == principal_id:
+                amount = -amount  # Negative for sender (outgoing)
+            # Positive for recipient (incoming) - no change needed
 
             try:
                 tx_record = TransactionRecord(
@@ -874,7 +907,7 @@ def set_admin(new_admin: Principal) -> Response:
 
 
 @update
-@admin_only
+@test_mode_only
 def test_mode_set_mock_transaction(
     principal_from: Principal,
     principal_to: Principal,
@@ -899,4 +932,74 @@ def test_mode_set_mock_transaction(
         return Response(
             success=False,
             data=ResponseData(Error=f"Error setting mock transaction: {str(e)}"),
+        )
+
+
+@update
+@test_mode_only
+def test_mode_set_balance(principal: Principal, amount: nat) -> Response:
+    """
+    Set a specific balance for a principal in test mode.
+
+    Args:
+        principal: The principal to set balance for
+        amount: The balance amount to set
+
+    Returns:
+        Response object with success status and message
+    """
+    try:
+        principal_id = principal.to_str()
+        logger.info(f"Setting test mode balance for {principal_id} to {amount}")
+
+        # Create or update balance
+        balance = Balance[principal_id] or Balance(_id=principal_id, amount=0)
+        balance.amount = amount
+
+        return Response(
+            success=True,
+            data=ResponseData(Message=f"Balance set to {amount} for {principal_id}"),
+        )
+    except Exception as e:
+        logger.error(f"Error setting test mode balance: {e}\n{traceback.format_exc()}")
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Error setting test mode balance: {str(e)}"),
+        )
+
+
+@update
+@test_mode_only
+def test_mode_reset() -> Response:
+    """
+    Reset test mode state (clear transactions and balances).
+
+    Returns:
+        Response object with success status and message
+    """
+    try:
+
+        logger.info("Resetting test mode state")
+
+        # Reset transaction ID
+        test_mode_data().tx_id = 0
+
+        # Clear all transactions
+        for tx in VaultTransaction.instances():
+            if tx.kind == "mock_transfer":
+                tx.delete()
+
+        # Reset all balances to 0
+        for balance in Balance.instances():
+            balance.amount = 0
+
+        return Response(
+            success=True,
+            data=ResponseData(Message="Test mode state reset successfully"),
+        )
+    except Exception as e:
+        logger.error(f"Error resetting test mode: {e}\n{traceback.format_exc()}")
+        return Response(
+            success=False,
+            data=ResponseData(Error=f"Error resetting test mode: {str(e)}"),
         )

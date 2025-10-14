@@ -202,14 +202,16 @@ def test_mock_transfer_in_test_mode():
             print_error("Failed to get test mode status after transfer")
             return False
 
-        new_tx_id = int(
-            status_result.get("data", {}).get("TestMode", {}).get("tx_id", 0)
-        )
+        new_tx_id = status_result.get("data", {}).get("TestMode", {}).get("tx_id", "0")
         print(f"New tx_id after transfer: {new_tx_id}")
 
-        if new_tx_id != initial_tx_id + 1:
+        # Convert to int for comparison since tx_id should increment from 0 to 1
+        initial_tx_id_int = int(initial_tx_id)
+        new_tx_id_int = int(new_tx_id)
+
+        if new_tx_id_int != initial_tx_id_int + 1:
             print_error(
-                f"Expected tx_id to increment from {initial_tx_id} to {initial_tx_id + 1}, but got {new_tx_id}"
+                f"Expected tx_id to increment from {initial_tx_id} to {initial_tx_id_int + 1}, but got {new_tx_id}"
             )
             return False
 
@@ -290,7 +292,7 @@ def test_multiple_transfers_increment_tx_id():
             print_error("Failed to get initial test mode status")
             return False
 
-        initial_tx_id = int(result.get("data", {}).get("TestMode", {}).get("tx_id", 0))
+        initial_tx_id = result.get("data", {}).get("TestMode", {}).get("tx_id", "0")
         print(f"Initial tx_id: {initial_tx_id}")
 
         # Perform multiple transfers
@@ -309,10 +311,10 @@ def test_multiple_transfers_increment_tx_id():
             print_error("Failed to get final test mode status")
             return False
 
-        final_tx_id = int(
-            status_result.get("data", {}).get("TestMode", {}).get("tx_id", 0)
+        final_tx_id = (
+            status_result.get("data", {}).get("TestMode", {}).get("tx_id", "0")
         )
-        expected_tx_id = initial_tx_id + num_transfers
+        expected_tx_id = str(int(initial_tx_id) + num_transfers)
 
         print(f"Final tx_id: {final_tx_id}, Expected: {expected_tx_id}")
 
@@ -385,6 +387,232 @@ def test_test_mode_status_response_format():
         return False
 
 
+def test_mock_transaction_history():
+    """Test that mock transfers create proper transaction history."""
+    try:
+        print("Testing mock transaction history creation...")
+
+        # Clean up any existing vault to ensure fresh deployment
+        run_command("dfx canister delete vault --yes || true")
+
+        # Deploy vault with test mode enabled
+        current_principal = get_current_principal()
+        deploy_cmd = f'dfx deploy vault --argument "(null, opt principal \\"{current_principal}\\", opt 100, opt 10, opt true)"'
+
+        result = run_command(deploy_cmd)
+        if not result:
+            print_error("Failed to deploy vault with test mode enabled")
+            return False
+
+        # Perform a mock transfer
+        transfer_cmd = f'dfx canister call vault transfer "(principal \\"{current_principal}\\", 100)" --output json'
+        transfer_result = run_command_expects_response_obj(transfer_cmd)
+
+        if not transfer_result:
+            print_error("Mock transfer failed")
+            return False
+
+        # Check transaction history
+        get_transactions_cmd = f'dfx canister call vault get_transactions "(principal \\"{current_principal}\\")" --output json'
+        transactions_result = run_command_expects_response_obj(get_transactions_cmd)
+
+        if not transactions_result:
+            print_error("Failed to get transaction history")
+            return False
+
+        transactions = transactions_result.get("data", {}).get("Transactions", [])
+        if not transactions:
+            print_error("No transactions found in history")
+            return False
+
+        # Verify transaction details
+        transaction = transactions[0]
+        if transaction.get("amount") != "100":
+            print_error(
+                f"Expected transaction amount 100, got {transaction.get('amount')}"
+            )
+            return False
+
+        if "timestamp" not in transaction:
+            print_error("Transaction missing timestamp")
+            return False
+
+        print_ok("✓ Mock transaction history created correctly")
+        return True
+
+    except Exception as e:
+        print_error(
+            f"Error testing mock transaction history: {e}\n{traceback.format_exc()}"
+        )
+        return False
+
+
+def test_balance_consistency_with_history():
+    """Test that balances are consistent with transaction history."""
+    try:
+        print("Testing balance consistency with transaction history...")
+
+        # Clean up any existing vault to ensure fresh deployment
+        run_command("dfx canister delete vault --yes || true")
+
+        # Deploy vault with test mode enabled
+        current_principal = get_current_principal()
+        deploy_cmd = f'dfx deploy vault --argument "(null, opt principal \\"{current_principal}\\", opt 100, opt 10, opt true)"'
+
+        result = run_command(deploy_cmd)
+        if not result:
+            print_error("Failed to deploy vault with test mode enabled")
+            return False
+
+        # Get initial balance (should be 0)
+        get_balance_cmd = f'dfx canister call vault get_balance "(principal \\"{current_principal}\\")" --output json'
+        initial_balance_result = run_command_expects_response_obj(get_balance_cmd)
+
+        if not initial_balance_result:
+            print_error("Failed to get initial balance")
+            return False
+
+        initial_balance = int(
+            initial_balance_result.get("data", {}).get("Balance", {}).get("amount", "0")
+        )
+
+        # Perform multiple mock transfers
+        transfer_amounts = [100, 50, 25]
+        total_received = sum(transfer_amounts)
+
+        for amount in transfer_amounts:
+            transfer_cmd = f'dfx canister call vault transfer "(principal \\"{current_principal}\\", {amount})" --output json'
+            transfer_result = run_command_expects_response_obj(transfer_cmd)
+
+            if not transfer_result:
+                print_error(f"Mock transfer of {amount} failed")
+                return False
+
+        # Check final balance
+        final_balance_result = run_command_expects_response_obj(get_balance_cmd)
+        if not final_balance_result:
+            print_error("Failed to get final balance")
+            return False
+
+        final_balance = int(
+            final_balance_result.get("data", {}).get("Balance", {}).get("amount", "0")
+        )
+        expected_balance = initial_balance + total_received
+
+        if final_balance != expected_balance:
+            print_error(f"Expected balance {expected_balance}, got {final_balance}")
+            return False
+
+        # Verify transaction count matches
+        get_transactions_cmd = f'dfx canister call vault get_transactions "(principal \\"{current_principal}\\")" --output json'
+        transactions_result = run_command_expects_response_obj(get_transactions_cmd)
+
+        if not transactions_result:
+            print_error("Failed to get transaction history")
+            return False
+
+        transactions = transactions_result.get("data", {}).get("Transactions", [])
+        if len(transactions) != len(transfer_amounts):
+            print_error(
+                f"Expected {len(transfer_amounts)} transactions, got {len(transactions)}"
+            )
+            return False
+
+        print_ok("✓ Balance consistency with transaction history verified")
+        return True
+
+    except Exception as e:
+        print_error(f"Error testing balance consistency: {e}\n{traceback.format_exc()}")
+        return False
+
+
+def test_test_mode_utility_functions():
+    """Test the test mode utility functions (set_balance, reset)."""
+    try:
+        print("Testing test mode utility functions...")
+
+        # Clean up any existing vault to ensure fresh deployment
+        run_command("dfx canister delete vault --yes || true")
+
+        # Deploy vault with test mode enabled
+        current_principal = get_current_principal()
+        deploy_cmd = f'dfx deploy vault --argument "(null, opt principal \\"{current_principal}\\", opt 100, opt 10, opt true)"'
+
+        result = run_command(deploy_cmd)
+        if not result:
+            print_error("Failed to deploy vault with test mode enabled")
+            return False
+
+        # Test set_balance function
+        set_balance_cmd = f'dfx canister call vault test_mode_set_balance "(principal \\"{current_principal}\\", 500)" --output json'
+        set_balance_result = run_command_expects_response_obj(set_balance_cmd)
+
+        if not set_balance_result or not set_balance_result.get("success"):
+            print_error("Failed to set balance in test mode")
+            return False
+
+        # Verify balance was set
+        get_balance_cmd = f'dfx canister call vault get_balance "(principal \\"{current_principal}\\")" --output json'
+        balance_result = run_command_expects_response_obj(get_balance_cmd)
+
+        if not balance_result:
+            print_error("Failed to get balance after setting")
+            return False
+
+        balance = int(
+            balance_result.get("data", {}).get("Balance", {}).get("amount", "0")
+        )
+        if balance != 500:
+            print_error(f"Expected balance 500, got {balance}")
+            return False
+
+        # Perform a transfer to create transaction history
+        transfer_cmd = f'dfx canister call vault transfer "(principal \\"{current_principal}\\", 100)" --output json'
+        transfer_result = run_command_expects_response_obj(transfer_cmd)
+
+        if not transfer_result:
+            print_error("Mock transfer failed")
+            return False
+
+        # Test reset function
+        reset_cmd = "dfx canister call vault test_mode_reset --output json"
+        reset_result = run_command_expects_response_obj(reset_cmd)
+
+        if not reset_result or not reset_result.get("success"):
+            print_error("Failed to reset test mode")
+            return False
+
+        # Verify reset worked - check tx_id
+        status_cmd = "dfx canister call vault test_mode_status --output json"
+        status_result = run_command_expects_response_obj(status_cmd)
+
+        if not status_result:
+            print_error("Failed to get test mode status after reset")
+            return False
+
+        tx_id = status_result.get("data", {}).get("TestMode", {}).get("tx_id", "0")
+        if tx_id != "0":
+            print_error(f"Expected tx_id to be 0 after reset, got {tx_id}")
+            return False
+
+        # Verify balance was reset
+        balance_result = run_command_expects_response_obj(get_balance_cmd)
+        if balance_result:
+            balance = int(
+                balance_result.get("data", {}).get("Balance", {}).get("amount", "0")
+            )
+            if balance != 0:
+                print_error(f"Expected balance to be 0 after reset, got {balance}")
+                return False
+
+        print_ok("✓ Test mode utility functions work correctly")
+        return True
+
+    except Exception as e:
+        print_error(f"Error testing utility functions: {e}\n{traceback.format_exc()}")
+        return False
+
+
 def run_all_test_mode_tests():
     """Run all test mode tests and return results."""
     tests = [
@@ -395,6 +623,9 @@ def run_all_test_mode_tests():
         ("Transaction History Skip", test_transaction_history_skip_in_test_mode),
         ("Multiple Transfers Increment TX ID", test_multiple_transfers_increment_tx_id),
         ("Test Mode Status Response Format", test_test_mode_status_response_format),
+        ("Mock Transaction History", test_mock_transaction_history),
+        ("Balance Consistency with History", test_balance_consistency_with_history),
+        ("Test Mode Utility Functions", test_test_mode_utility_functions),
     ]
 
     results = {}
