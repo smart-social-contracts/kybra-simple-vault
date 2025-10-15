@@ -732,6 +732,9 @@ def get_transactions(principal: Principal) -> Response:
                     id=int(tx._id),
                     amount=amount,
                     timestamp=int(tx.timestamp),
+                    principal_from=Principal.from_str(tx.principal_from),
+                    principal_to=Principal.from_str(tx.principal_to),
+                    kind=tx.kind,
                 )
                 txs.append(tx_record)
                 logger.debug(f"Added transaction record: {tx_record}")

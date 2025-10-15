@@ -114,15 +114,21 @@ $ dfx canister call vault get_transactions '(principal "...")' --output json
   "data": {
     "Transactions": [
       {
-        "amount": "1_005",
         "id": "5",
-        "timestamp": "1_746_721_396_182_936_275"
+        "amount": "1_005",
+        "timestamp": "1_746_721_396_182_936_275",
+        "principal_from": "ah6ac-cc73l-bb2zc-ni7bh-jov4q-roeyj-6k2ob-mkg5j-pequi-vuaa6-2ae",
+        "principal_to": "guja4-2aaaa-aaaam-qdhjq-cai",
+        "kind": "transfer"
       },
       ...
       {
-        "amount": "1_002",
         "id": "2",
-        "timestamp": "1_746_721_392_122_493_649"
+        "amount": "1_002",
+        "timestamp": "1_746_721_392_122_493_649",
+        "principal_from": "64fpo-jgpms-fpewi-hrskb-f3n6u-3z5fy-bv25f-zxjzg-q5m55-xmfpq-hqe",
+        "principal_to": "guja4-2aaaa-aaaam-qdhjq-cai",
+        "kind": "transfer"
       }
     ]
   },
@@ -136,6 +142,24 @@ $ dfx canister call vault transfer '(principal "...", 100)' --output json
     "TransactionId": {
       "transaction_id": "6"
     }
+  },
+  "success": true
+}
+
+# Change the admin principal (only current admin can do this).
+$ dfx canister call vault set_admin '(principal "...")' --output json
+{
+  "data": {
+    "Message": "Admin principal updated successfully to ..."
+  },
+  "success": true
+}
+
+# Set or update a canister principal (only admin can do this).
+$ dfx canister call vault set_canister '("ckBTC ledger", principal "...")' --output json
+{
+  "data": {
+    "Message": "Canister 'ckBTC ledger' updated successfully"
   },
   "success": true
 }
@@ -190,6 +214,39 @@ $ dfx canister call vault update_transaction_history --output json
 - Skips expensive ledger operations for faster testing
 - Isolated test environment for development
 - Compatible with all existing vault functions
+- Utility functions for setting balances and transactions directly
+- Reset functionality to clear test state
+
+**Test Mode API Functions:**
+
+```bash
+# Set a specific balance for a principal (test mode only)
+$ dfx canister call vault test_mode_set_balance '(principal "...", 1000)' --output json
+{
+  "data": {
+    "Message": "Balance set to 1000 for ..."
+  },
+  "success": true
+}
+
+# Create a mock transaction (test mode only)
+$ dfx canister call vault test_mode_set_mock_transaction '(principal "from...", principal "to...", 100, "mock_transfer", null)' --output json
+{
+  "data": {
+    "Message": "Mock transaction set successfully"
+  },
+  "success": true
+}
+
+# Reset test mode state (clears all mock transactions and resets balances)
+$ dfx canister call vault test_mode_reset --output json
+{
+  "data": {
+    "Message": "Test mode state reset successfully"
+  },
+  "success": true
+}
+```
 
 For more examples of how to interact with the vault canister from an external canister, see the [external_use](tests/external_use) directory.
 

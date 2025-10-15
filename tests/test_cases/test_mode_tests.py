@@ -631,9 +631,9 @@ def test_reset_clears_mock_transactions():
             return False
 
         # Create mock transactions using test_mode_set_mock_transaction
-        # Use default kind parameter (should be "mock_transfer" after fix)
+        # Use default kind parameter value "mock_transfer"
         principal2 = "2vxsx-fae"  # Dummy principal
-        set_mock_cmd = f'dfx canister call vault test_mode_set_mock_transaction "(principal \\"{current_principal}\\", principal \\"{principal2}\\", 100)" --output json'
+        set_mock_cmd = f'dfx canister call vault test_mode_set_mock_transaction "(principal \\"{current_principal}\\", principal \\"{principal2}\\", 100, \\"mock_transfer\\", null)" --output json'
 
         set_result = run_command_expects_response_obj(set_mock_cmd)
         if not set_result or not set_result.get("success"):
