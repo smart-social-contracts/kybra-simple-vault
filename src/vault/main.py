@@ -347,14 +347,6 @@ def update_transaction_history() -> Async[Response]:
         canister_id = ic.id().to_str()
         logger.info(f"Updating transaction history for {canister_id}")
 
-        if test_mode_data().test_mode_enabled:
-            return Response(
-                success=True,
-                data=ResponseData(
-                    Message="Test mode enabled, skipping update_transaction_history"
-                ),
-            )
-
         # Get the configured indexer canister ID
         indexer_canister = Canisters["ckBTC indexer"]
         indexer_canister_id = indexer_canister.principal
