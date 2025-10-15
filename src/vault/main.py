@@ -915,7 +915,7 @@ def test_mode_set_mock_transaction(
     principal_from: Principal,
     principal_to: Principal,
     amount: nat,
-    kind: str = "mock_transfer",
+    kind: Opt[str] = None,
     timestamp: Opt[nat] = None,
 ) -> Response:
     try:
@@ -923,8 +923,11 @@ def test_mode_set_mock_transaction(
             f"Setting mock transaction from {principal_from} to {principal_to}, amount: {amount}"
         )
 
+        # Use default value if kind is not provided
+        actual_kind = kind if kind is not None else "mock_transfer"
+        
         set_account_mock_transaction(
-            principal_from.to_str(), principal_to.to_str(), amount, kind, timestamp
+            principal_from.to_str(), principal_to.to_str(), amount, actual_kind, timestamp
         )
         return Response(
             success=True,
